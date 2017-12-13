@@ -1,0 +1,104 @@
+# Project-specific files
+setup/bin/
+
+# User-specific files
+*.suo
+*.user
+*.sln.docstates
+.vs/
+*.lock.json
+
+# Downloaded NuGet packages
+/packages/*/
+
+# Build results
+[aA]rtifacts
+[oO]bj
+[bB]in
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+
+# Windows Store app package directory
+AppPackages/
+
+# SQL Server files
+App_Data/*.mdf
+App_Data/*.ldf
+
+# Others
+*_i.c
+*_p.c
+*_i.h
+*.ilk
+*.meta
+*.obj
+*.pch
+*.pdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+sql/
+*.[Cc]ache
+ClientBin/
+[Ss]tyle[Cc]op.*
+~$*
+*~
+*.dbmdl
+*.dbproj.schemaview
+*.[Pp]ublish.xml
+*.pfx
+*.p12
+*.publishsettings
+*.bak
+.internal
+.local
+.tmp
+
+# ReSharper is a .NET coding add-in
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# TeamCity is a build add-in
+_TeamCity*
+
+# DotCover is a Code Coverage Tool
+*.dotCover
+
+# NCrunch
+*.ncrunch*
+_NCrunch_*
+.*crunch*.local.xml
+
+# Dotfuscator
+Dotfuscated/
+
+# PowerShell build framework tools
+build/buildscript/private.ps1
+
+# Windows/other detritus
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
