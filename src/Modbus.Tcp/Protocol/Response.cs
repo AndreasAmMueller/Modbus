@@ -27,11 +27,11 @@ namespace Modbus.Tcp.Protocol
 			if ((fn & Consts.ErrorMask) > 0)
 			{
 				IsError = true;
-				Function = (byte)(fn ^ Consts.ErrorMask);
+				Function = (FunctionCode)(fn ^ Consts.ErrorMask);
 			}
 			else
 			{
-				Function = fn;
+				Function = (FunctionCode)fn;
 			}
 
 			if (IsError)
@@ -68,7 +68,7 @@ namespace Modbus.Tcp.Protocol
 
 		public byte DeviceId { get; private set; }
 
-		public byte Function { get; private set; }
+		public FunctionCode Function { get; private set; }
 
 		public bool IsError { get; private set; }
 

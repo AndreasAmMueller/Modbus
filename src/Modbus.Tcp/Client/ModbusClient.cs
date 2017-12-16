@@ -86,7 +86,7 @@ namespace Modbus.Tcp.Client
 		/// <param name="startAddress">The first coil number to read.</param>
 		/// <param name="count">The number of coils to read.</param>
 		/// <returns>A list of coils or null on error.</returns>
-		public async Task<List<Coil>> ReadCoils(int deviceId, int startAddress, int count)
+		public async Task<List<Coil>> ReadCoils(byte deviceId, ushort startAddress, ushort count)
 		{
 			if (isDisposed)
 			{
@@ -111,15 +111,12 @@ namespace Modbus.Tcp.Client
 			{
 				var request = new Request(MessageType.Read)
 				{
-					DeviceId = (byte)deviceId,
-					Function = Consts.ReadCoilsFunctionNumber,
-					Address = (ushort)startAddress,
-					Count = (ushort)count
+					DeviceId = deviceId,
+					Function = FunctionCode.ReadCoils,
+					Address = startAddress,
+					Count = count
 				};
-
-				var bytes = await SendRequest(request);
-				var response = new Response(MessageType.Read, bytes);
-
+				var response = await SendRequest(request);
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -130,10 +127,10 @@ namespace Modbus.Tcp.Client
 					list = new List<Coil>();
 					for (int i = 0; i < count; i++)
 					{
-						var by = i / 8;
-						var bi = i % 8;
+						var posByte = i / 8;
+						var posBit = i % 8;
 
-						var val = response.Data[by] & (byte)Math.Pow(2, bi);
+						var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
 
 						list.Add(new Coil
 						{
@@ -162,7 +159,7 @@ namespace Modbus.Tcp.Client
 		/// <param name="startAddress">The first discrete input number to read.</param>
 		/// <param name="count">The number of discrete inputs to read.</param>
 		/// <returns>A list of discrete inputs or null on error.</returns>
-		public async Task<List<DiscreteInput>> ReadDiscreteInputs(int deviceId, int startAddress, int count)
+		public async Task<List<DiscreteInput>> ReadDiscreteInputs(byte deviceId, ushort startAddress, ushort count)
 		{
 			if (isDisposed)
 			{
@@ -187,15 +184,12 @@ namespace Modbus.Tcp.Client
 			{
 				var request = new Request(MessageType.Read)
 				{
-					DeviceId = (byte)deviceId,
-					Function = Consts.ReadDiscreteInputsFunctionNumber,
-					Address = (ushort)startAddress,
-					Count = (ushort)count
+					DeviceId = deviceId,
+					Function = FunctionCode.ReadDiscreteInputs,
+					Address = startAddress,
+					Count = count
 				};
-
-				var bytes = await SendRequest(request);
-				var response = new Response(MessageType.Read, bytes);
-
+				var response = await SendRequest(request);
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -206,10 +200,10 @@ namespace Modbus.Tcp.Client
 					list = new List<DiscreteInput>();
 					for (int i = 0; i < count; i++)
 					{
-						var by = i / 8;
-						var bi = i % 8;
+						var posByte = i / 8;
+						var posBit = i % 8;
 
-						var val = response.Data[by] & (byte)Math.Pow(2, bi);
+						var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
 
 						list.Add(new DiscreteInput
 						{
@@ -238,7 +232,7 @@ namespace Modbus.Tcp.Client
 		/// <param name="startAddress">The first register number to read.</param>
 		/// <param name="count">The number of registers to read.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		public async Task<List<Register>> ReadHoldingRegisters(int deviceId, int startAddress, int count)
+		public async Task<List<Register>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count)
 		{
 			if (isDisposed)
 			{
@@ -263,15 +257,12 @@ namespace Modbus.Tcp.Client
 			{
 				var request = new Request(MessageType.Read)
 				{
-					DeviceId = (byte)deviceId,
-					Function = Consts.ReadHoldingRegistersFunctionNumber,
-					Address = (ushort)startAddress,
-					Count = (ushort)count
+					DeviceId = deviceId,
+					Function = FunctionCode.ReadHoldingRegisters,
+					Address = startAddress,
+					Count = count
 				};
-
-				var bytes = await SendRequest(request);
-				var response = new Response(MessageType.Read, bytes);
-
+				var response = await SendRequest(request);
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -310,7 +301,7 @@ namespace Modbus.Tcp.Client
 		/// <param name="startAddress">The first register number to read.</param>
 		/// <param name="count">The number of registers to read.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		public async Task<List<Register>> ReadInputRegisters(int deviceId, int startAddress, int count)
+		public async Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count)
 		{
 			if (isDisposed)
 			{
@@ -335,15 +326,12 @@ namespace Modbus.Tcp.Client
 			{
 				var request = new Request(MessageType.Read)
 				{
-					DeviceId = (byte)deviceId,
-					Function = Consts.ReadInputRegistersFunctionNumber,
-					Address = (ushort)startAddress,
-					Count = (ushort)count
+					DeviceId = deviceId,
+					Function = FunctionCode.ReadInputRegisters,
+					Address = startAddress,
+					Count = count
 				};
-
-				var bytes = await SendRequest(request);
-				var response = new Response(MessageType.Read, bytes);
-
+				var response = await SendRequest(request);
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -385,7 +373,7 @@ namespace Modbus.Tcp.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="coil">The coil to write.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteSingleCoil(int deviceId, Coil coil)
+		public async Task<bool> WriteSingleCoil(byte deviceId, Coil coil)
 		{
 			if (isDisposed)
 			{
@@ -409,17 +397,14 @@ namespace Modbus.Tcp.Client
 			{
 				var request = new Request(MessageType.WriteSingle)
 				{
-					DeviceId = (byte)deviceId,
-					Function = Consts.WriteSingleCoilFunctionNumber,
+					DeviceId = deviceId,
+					Function = FunctionCode.WriteSingleCoil,
 					Address = coil.Address,
 					Data = new DataBuffer(2)
 				};
 				var value = (ushort)(coil.Value ? 0xFF00 : 0x0000);
 				request.Data.SetUInt16(0, value);
-
-				var bytes = await SendRequest(request);
-				var response = new Response(MessageType.WriteSingle, bytes);
-
+				var response = await SendRequest(request);
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -449,7 +434,7 @@ namespace Modbus.Tcp.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="register">The register to write.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteSingleRegister(int deviceId, Register register)
+		public async Task<bool> WriteSingleRegister(byte deviceId, Register register)
 		{
 			if (isDisposed)
 			{
@@ -473,15 +458,12 @@ namespace Modbus.Tcp.Client
 			{
 				var request = new Request(MessageType.WriteSingle)
 				{
-					DeviceId = (byte)deviceId,
-					Function = Consts.WriteSingleRegisterFunctionNumber,
+					DeviceId = deviceId,
+					Function = FunctionCode.WriteSingleRegister,
 					Address = register.Address,
 					Data = new DataBuffer(new[] { register.HiByte, register.LoByte })
 				};
-
-				var bytes = await SendRequest(request);
-				var response = new Response(MessageType.WriteSingle, bytes);
-
+				var response = await SendRequest(request);
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -511,7 +493,7 @@ namespace Modbus.Tcp.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="coils">A list of coils to write.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteCoils(int deviceId, IEnumerable<Coil> coils)
+		public async Task<bool> WriteCoils(byte deviceId, IEnumerable<Coil> coils)
 		{
 			if (isDisposed)
 			{
@@ -550,27 +532,24 @@ namespace Modbus.Tcp.Client
 
 			for (int i = 0; i < orderedList.Count; i++)
 			{
-				var by = i / 8;
-				var bi = i % 8;
+				var posByte = i / 8;
+				var posBit = i % 8;
 
-				var mask = (byte)Math.Pow(2, bi);
-				coilBytes[by] = (byte)(coilBytes[by] | mask);
+				var mask = (byte)Math.Pow(2, posBit);
+				coilBytes[posByte] = (byte)(coilBytes[posByte] | mask);
 			}
 
 			try
 			{
 				var request = new Request(MessageType.WriteMultiple)
 				{
-					DeviceId = (byte)deviceId,
-					Function = Consts.WriteMultipleCoilsFunctionNumber,
+					DeviceId = deviceId,
+					Function = FunctionCode.WriteMultipleCoils,
 					Address = firstAddress,
 					Count = (ushort)orderedList.Count,
 					Data = new DataBuffer(coilBytes)
 				};
-
-				var bytes = await SendRequest(request);
-				var response = new Response(MessageType.WriteMultiple, bytes);
-
+				var response = await SendRequest(request);
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -598,7 +577,7 @@ namespace Modbus.Tcp.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="registers">A list of registers to write.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteRegisters(int deviceId, IEnumerable<Register> registers)
+		public async Task<bool> WriteRegisters(byte deviceId, IEnumerable<Register> registers)
 		{
 			if (isDisposed)
 			{
@@ -636,8 +615,8 @@ namespace Modbus.Tcp.Client
 			{
 				var request = new Request(MessageType.WriteMultiple)
 				{
-					DeviceId = (byte)deviceId,
-					Function = Consts.WriteMultipleRegistersFunctionNumber,
+					DeviceId = deviceId,
+					Function = FunctionCode.WriteMultipleRegisters,
 					Address = firstAddress,
 					Count = (ushort)orderedList.Count,
 					Data = new DataBuffer(orderedList.Count * 2 + 1)
@@ -648,10 +627,7 @@ namespace Modbus.Tcp.Client
 				{
 					request.Data.SetUInt16(i * 2 + 1, orderedList[i].Value);
 				}
-
-				var bytes = await SendRequest(request);
-				var response = new Response(MessageType.WriteMultiple, bytes);
-
+				var response = await SendRequest(request);
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -679,14 +655,14 @@ namespace Modbus.Tcp.Client
 
 		#region Private methods
 
-		private void Connect()
+		private async void Connect()
 		{
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			Task.Run((Action)Reconnect).Wait(1000);
+			await Task.Run((Action)Reconnect);
 		}
 
 		private void Reconnect()
@@ -763,8 +739,13 @@ namespace Modbus.Tcp.Client
 			}
 		}
 
-		private async Task<byte[]> SendRequest(Request request)
+		private async Task<Response> SendRequest(Request request)
 		{
+			if (!IsConnected)
+			{
+				throw new InvalidOperationException("No connection");
+			}
+
 			var stream = tcpClient.GetStream();
 			var bytes = request.Serialize();
 			await stream.WriteAsync(bytes, 0, bytes.Length);
@@ -791,7 +772,7 @@ namespace Modbus.Tcp.Client
 			}
 			while (following > 0);
 
-			return responseBytes.ToArray();
+			return new Response(request.Type, responseBytes.ToArray());
 		}
 
 		#endregion Private methods

@@ -1,18 +1,18 @@
 ﻿using Modbus.Tcp.Utils;
 using System;
 using System.Linq;
+using System.Threading;
 
 namespace Modbus.Tcp.Protocol
 {
 	internal class Request
 	{
-		private static ushort transactionNumber = 0;
+		private static int transactionNumber = 0;
 		private static ushort NextTransactionId
 		{
 			get
 			{
-				transactionNumber++;
-				return transactionNumber;
+				return (ushort)Interlocked.Increment(ref transactionNumber);
 			}
 		}
 
@@ -28,7 +28,7 @@ namespace Modbus.Tcp.Protocol
 
 		public byte DeviceId { get; set; }
 
-		public byte Function { get; set; }
+		public FunctionCode Function { get; set; }
 
 		public ushort Address { get; set; }
 
@@ -44,7 +44,7 @@ namespace Modbus.Tcp.Protocol
 			buffer.SetUInt16(2, 0x0000); // Protocol ID
 
 			buffer.SetByte(6, DeviceId);
-			buffer.SetByte(7, Function);
+			buffer.SetByte(7, (byte)Function);
 
 			buffer.SetUInt16(8, Address);
 

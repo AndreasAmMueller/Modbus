@@ -2,6 +2,18 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Version>0.9.0</Version>
+    <Authors>Andreas Müller</Authors>
+    <Company />
+    <Product>Modbus.TCP</Product>
+    <Description>Small library to connect via Modbus TCP on remote devices.</Description>
+    <Copyright>Copyright (c) 2017 Andreas Müller</Copyright>
+    <PackageLicenseUrl>https://github.com/BlackyPanther/Modbus/blob/master/LICENSE.txt</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/BlackyPanther/Modbus</PackageProjectUrl>
+    <RepositoryUrl />
+    <PackageTags>Modbus</PackageTags>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>

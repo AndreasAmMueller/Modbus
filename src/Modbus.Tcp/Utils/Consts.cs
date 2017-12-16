@@ -1,10 +1,13 @@
 ﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Modbus.Tcp.Utils
 {
 	internal class Consts
 	{
-		public static readonly Dictionary<byte, string> ErrorMessages = new Dictionary<byte, string>
+		#region Error/Exception
+
+		private static Dictionary<byte, string> exceptions = new Dictionary<byte, string>
 		{
 			{  0, "No Error" },
 			{  1, "Illegal Function" },
@@ -19,23 +22,13 @@ namespace Modbus.Tcp.Utils
 			{ 11, "Gateway Target Device Failed to Respond" }
 		};
 
+		public static ReadOnlyDictionary<byte, string> ErrorMessages => new ReadOnlyDictionary<byte, string>(exceptions);
+
 		public const byte ErrorMask = 0x80;
 
-		public const byte ReadCoilsFunctionNumber = 0x01;
+		#endregion Error/Exception
 
-		public const byte ReadDiscreteInputsFunctionNumber = 0x02;
-
-		public const byte ReadHoldingRegistersFunctionNumber = 0x03;
-
-		public const byte ReadInputRegistersFunctionNumber = 0x04;
-
-		public const byte WriteSingleCoilFunctionNumber = 0x05;
-
-		public const byte WriteSingleRegisterFunctionNumber = 0x06;
-
-		public const byte WriteMultipleCoilsFunctionNumber = 0x0F;
-
-		public const byte WriteMultipleRegistersFunctionNumber = 0x10;
+		#region Protocol limitations
 
 		public const int MinDeviceId = 0x0000;
 
@@ -54,5 +47,7 @@ namespace Modbus.Tcp.Utils
 		public const int MaxRegisterCountRead = 0x7D; // 125
 
 		public const int MaxRegisterCountWrite = 0x7B; // 123
+
+		#endregion Protocol limitations
 	}
 }

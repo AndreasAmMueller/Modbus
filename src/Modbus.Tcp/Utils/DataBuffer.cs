@@ -8,6 +8,12 @@ namespace Modbus.Tcp.Utils
 	/// </summary>
 	internal class DataBuffer
 	{
+		#region Fields
+
+		private static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+
+		#endregion Fields
+
 		#region Constructors
 
 		/// <summary>
@@ -281,7 +287,7 @@ namespace Modbus.Tcp.Utils
 		public void SetDateTime(int index, DateTime value)
 		{
 			var dt = value.ToUniversalTime();
-			var ts = value.Subtract(new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc));
+			var ts = value.Subtract(UnixEpoch);
 			SetTimeSpan(index, ts);
 		}
 
@@ -480,7 +486,7 @@ namespace Modbus.Tcp.Utils
 		public void AddDateTime(DateTime value)
 		{
 			var dt = value.ToUniversalTime();
-			var ts = value.Subtract(new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc));
+			var ts = value.Subtract(UnixEpoch);
 			AddTimeSpan(ts);
 		}
 
@@ -703,7 +709,7 @@ namespace Modbus.Tcp.Utils
 		public DateTime GetDateTime(int index, bool localTime = false)
 		{
 			var ts = GetTimeSpan(index);
-			var dt = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc).Add(ts);
+			var dt = UnixEpoch.Add(ts);
 			return localTime ? dt.ToLocalTime() : dt;
 		}
 
@@ -811,15 +817,16 @@ namespace Modbus.Tcp.Utils
 		public override string ToString()
 		{
 			var sb = new StringBuilder();
-			sb.AppendLine($"Buffer, Length = {Length}, LittleEndian = {IsLittleEndian}");
+			sb.AppendLine($"DataBuffer | Length: {Length} Bytes | LittleEndian: {IsLittleEndian}");
 
+			sb.Append("         0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F");
 			for (int i = 0; i < Length; i++)
 			{
 				if (i % 16 == 0)
 				{
 					sb.AppendLine();
-					sb.Append(i.ToString("X4"));
-					sb.Append(":");
+					sb.Append("0x" + i.ToString("X4"));
+					sb.Append(" ");
 				}
 				var hex = Buffer[i].ToString("X2");
 				sb.Append($" {hex}");
