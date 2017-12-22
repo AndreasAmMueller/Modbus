@@ -1,5 +1,6 @@
-﻿using Modbus.Tcp.Client;
-using Modbus.Tcp.Utils;
+﻿using Modbus.Common;
+using Modbus.Common.Structures;
+using Modbus.Tcp.Client;
 using System;
 using System.Collections.Generic;
 using System.Linq;

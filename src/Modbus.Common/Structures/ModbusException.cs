@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Modbus.Tcp.Utils
+namespace Modbus.Common.Structures
 {
 	/// <summary>
 	/// Represents errors that occurr during Modbus requests.

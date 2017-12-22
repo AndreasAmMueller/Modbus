@@ -1,4 +1,6 @@
-﻿using Modbus.Tcp.Protocol;
+﻿using Modbus.Common;
+using Modbus.Common.Structures;
+using Modbus.Tcp.Protocol;
 using Modbus.Tcp.Utils;
 using System;
 using System.Collections.Generic;
@@ -13,7 +15,7 @@ namespace Modbus.Tcp.Client
 	/// <summary>
 	/// A client to communicate with modbus devices via TCP.
 	/// </summary>
-	public class ModbusClient : IDisposable
+	public class ModbusClient : IModbusClient
 	{
 		#region Fields
 
@@ -109,7 +111,7 @@ namespace Modbus.Tcp.Client
 			List<Coil> list = null;
 			try
 			{
-				var request = new Request(MessageType.Read)
+				var request = new Request
 				{
 					DeviceId = deviceId,
 					Function = FunctionCode.ReadCoils,
@@ -182,7 +184,7 @@ namespace Modbus.Tcp.Client
 			List<DiscreteInput> list = null;
 			try
 			{
-				var request = new Request(MessageType.Read)
+				var request = new Request
 				{
 					DeviceId = deviceId,
 					Function = FunctionCode.ReadDiscreteInputs,
@@ -255,7 +257,7 @@ namespace Modbus.Tcp.Client
 			List<Register> list = null;
 			try
 			{
-				var request = new Request(MessageType.Read)
+				var request = new Request
 				{
 					DeviceId = deviceId,
 					Function = FunctionCode.ReadHoldingRegisters,
@@ -324,7 +326,7 @@ namespace Modbus.Tcp.Client
 			List<Register> list = null;
 			try
 			{
-				var request = new Request(MessageType.Read)
+				var request = new Request
 				{
 					DeviceId = deviceId,
 					Function = FunctionCode.ReadInputRegisters,
@@ -395,7 +397,7 @@ namespace Modbus.Tcp.Client
 
 			try
 			{
-				var request = new Request(MessageType.WriteSingle)
+				var request = new Request
 				{
 					DeviceId = deviceId,
 					Function = FunctionCode.WriteSingleCoil,
@@ -456,7 +458,7 @@ namespace Modbus.Tcp.Client
 
 			try
 			{
-				var request = new Request(MessageType.WriteSingle)
+				var request = new Request
 				{
 					DeviceId = deviceId,
 					Function = FunctionCode.WriteSingleRegister,
@@ -541,7 +543,7 @@ namespace Modbus.Tcp.Client
 
 			try
 			{
-				var request = new Request(MessageType.WriteMultiple)
+				var request = new Request
 				{
 					DeviceId = deviceId,
 					Function = FunctionCode.WriteMultipleCoils,
@@ -613,7 +615,7 @@ namespace Modbus.Tcp.Client
 
 			try
 			{
-				var request = new Request(MessageType.WriteMultiple)
+				var request = new Request
 				{
 					DeviceId = deviceId,
 					Function = FunctionCode.WriteMultipleRegisters,
@@ -772,7 +774,7 @@ namespace Modbus.Tcp.Client
 			}
 			while (following > 0);
 
-			return new Response(request.Type, responseBytes.ToArray());
+			return new Response(responseBytes.ToArray());
 		}
 
 		#endregion Private methods
