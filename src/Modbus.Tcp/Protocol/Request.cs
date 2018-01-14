@@ -9,7 +9,7 @@ namespace Modbus.Tcp.Protocol
 	/// <summary>
 	/// Represents the request from a client to the server.
 	/// </summary>
-	public class Request
+	internal class Request
 	{
 		#region Fields
 
@@ -71,7 +71,7 @@ namespace Modbus.Tcp.Protocol
 		public ushort Address { get; set; }
 
 		/// <summary>
-		/// Gets or sets the number of registers.
+		/// Gets or sets the number of elements.
 		/// </summary>
 		public ushort Count { get; set; }
 

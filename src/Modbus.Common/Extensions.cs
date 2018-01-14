@@ -1,6 +1,7 @@
 ﻿using Modbus.Common.Structures;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,8 +14,6 @@ namespace Modbus.Common
 	public static class Extensions
 	{
 		#region Register handling
-
-		#region From Register
 
 		#region To unsigned data types
 
@@ -255,8 +254,22 @@ namespace Modbus.Common
 
 		#endregion To string
 
-		#endregion From Register
-
 		#endregion Register handling
+
+		#region Enums
+
+		/// <summary>
+		/// Tries to read the description of an enum-value.
+		/// </summary>
+		/// <param name="value">The enum value.</param>
+		/// <returns>The description or the <see cref="Enum.ToString()"/></returns>
+		public static string GetDescription(this Enum value)
+		{
+			var fi = value.GetType().GetField(value.ToString());
+			var attrs = (DescriptionAttribute[])fi?.GetCustomAttributes(typeof(DescriptionAttribute), inherit: false);
+			return attrs?.FirstOrDefault()?.Description ?? value.ToString();
+		}
+
+		#endregion
 	}
 }

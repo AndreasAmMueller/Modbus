@@ -1,4 +1,5 @@
 ﻿using Modbus.Common;
+using Modbus.Common.Interfaces;
 using Modbus.Common.Structures;
 using Modbus.Tcp.Protocol;
 using Modbus.Tcp.Utils;
@@ -119,6 +120,10 @@ namespace Modbus.Tcp.Client
 					Count = count
 				};
 				var response = await SendRequest(request);
+				if (response.IsTimeout)
+				{
+					throw new ModbusException("Response timed out. Device id invalid?");
+				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -192,6 +197,10 @@ namespace Modbus.Tcp.Client
 					Count = count
 				};
 				var response = await SendRequest(request);
+				if (response.IsTimeout)
+				{
+					throw new ModbusException("Response timed out. Device id invalid?");
+				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -265,6 +274,10 @@ namespace Modbus.Tcp.Client
 					Count = count
 				};
 				var response = await SendRequest(request);
+				if (response.IsTimeout)
+				{
+					throw new ModbusException("Response timed out. Device id invalid?");
+				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -334,6 +347,10 @@ namespace Modbus.Tcp.Client
 					Count = count
 				};
 				var response = await SendRequest(request);
+				if (response.IsTimeout)
+				{
+					throw new ModbusException("Response timed out. Device id invalid?");
+				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -407,6 +424,10 @@ namespace Modbus.Tcp.Client
 				var value = (ushort)(coil.Value ? 0xFF00 : 0x0000);
 				request.Data.SetUInt16(0, value);
 				var response = await SendRequest(request);
+				if (response.IsTimeout)
+				{
+					throw new ModbusException("Response timed out. Device id invalid?");
+				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -466,6 +487,10 @@ namespace Modbus.Tcp.Client
 					Data = new DataBuffer(new[] { register.HiByte, register.LoByte })
 				};
 				var response = await SendRequest(request);
+				if (response.IsTimeout)
+				{
+					throw new ModbusException("Response timed out. Device id invalid?");
+				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -531,14 +556,16 @@ namespace Modbus.Tcp.Client
 
 			var numBytes = (int)Math.Ceiling(orderedList.Count / 8.0);
 			var coilBytes = new byte[numBytes];
-
 			for (int i = 0; i < orderedList.Count; i++)
 			{
-				var posByte = i / 8;
-				var posBit = i % 8;
+				if (orderedList[i].Value)
+				{
+					var posByte = i / 8;
+					var posBit = i % 8;
 
-				var mask = (byte)Math.Pow(2, posBit);
-				coilBytes[posByte] = (byte)(coilBytes[posByte] | mask);
+					var mask = (byte)Math.Pow(2, posBit);
+					coilBytes[posByte] = (byte)(coilBytes[posByte] | mask);
+				}
 			}
 
 			try
@@ -552,6 +579,10 @@ namespace Modbus.Tcp.Client
 					Data = new DataBuffer(coilBytes)
 				};
 				var response = await SendRequest(request);
+				if (response.IsTimeout)
+				{
+					throw new ModbusException("Response timed out. Device id invalid?");
+				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
@@ -630,6 +661,10 @@ namespace Modbus.Tcp.Client
 					request.Data.SetUInt16(i * 2 + 1, orderedList[i].Value);
 				}
 				var response = await SendRequest(request);
+				if (response.IsTimeout)
+				{
+					throw new ModbusException("Response timed out. Device id invalid?");
+				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);

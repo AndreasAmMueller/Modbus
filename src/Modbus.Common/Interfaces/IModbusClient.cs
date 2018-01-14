@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Modbus.Common
+namespace Modbus.Common.Interfaces
 {
 	/// <summary>
 	/// Represents the interface for a Modbus client.

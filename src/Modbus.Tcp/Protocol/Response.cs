@@ -8,7 +8,7 @@ namespace Modbus.Tcp.Protocol
 	/// <summary>
 	/// Represents the response from the server to a client.
 	/// </summary>
-	public class Response
+	internal class Response
 	{
 		#region Constructors
 
@@ -61,12 +61,12 @@ namespace Modbus.Tcp.Protocol
 		/// <summary>
 		/// Gets or sets the error/exception code.
 		/// </summary>
-		public byte ErrorCode { get; set; }
+		public ErrorCode ErrorCode { get; set; }
 
 		/// <summary>
 		/// Gets the error message.
 		/// </summary>
-		public string ErrorMessage => Consts.ErrorMessages[ErrorCode];
+		public string ErrorMessage => ErrorCode.GetDescription();
 
 		/// <summary>
 		/// Gets or sets the register address.
@@ -77,20 +77,13 @@ namespace Modbus.Tcp.Protocol
 		/// Gets or sets the number of registers.
 		/// </summary>
 		public ushort Count { get; set; }
-
-		/// <summary>
-		/// Gets or sets the data bytes.
-		/// </summary>
-		public byte[] Bytes
-		{
-			get { return Data.Buffer; }
-			set { Data = new DataBuffer(value); }
-		}
-
+		
 		/// <summary>
 		/// Gets or sets the data.
 		/// </summary>
-		internal DataBuffer Data { get; set; }
+		public DataBuffer Data { get; set; }
+
+		public bool IsTimeout { get; private set; }
 
 		#endregion Properties
 
@@ -108,7 +101,7 @@ namespace Modbus.Tcp.Protocol
 			if (IsError)
 			{
 				fn = (byte)(fn & Consts.ErrorMask);
-				buffer.AddByte(ErrorCode);
+				buffer.AddByte((byte)ErrorCode);
 			}
 			else
 			{
@@ -146,6 +139,13 @@ namespace Modbus.Tcp.Protocol
 
 		private void Deserialize(byte[] bytes)
 		{
+			// Response timed out => device not available
+			if (bytes.All(b => b == 0))
+			{
+				IsTimeout = true;
+				return;
+			}
+
 			var buffer = new DataBuffer(bytes);
 			var ident = buffer.GetUInt16(2);
 			if (ident != 0)
@@ -165,7 +165,7 @@ namespace Modbus.Tcp.Protocol
 			if ((fn & Consts.ErrorMask) > 0)
 			{
 				Function = (FunctionCode)(fn ^ Consts.ErrorMask);
-				ErrorCode = buffer.GetByte(8);
+				ErrorCode = (ErrorCode)buffer.GetByte(8);
 			}
 			else
 			{
@@ -219,7 +219,7 @@ namespace Modbus.Tcp.Protocol
 				Function.GetHashCode() ^
 				Address.GetHashCode() ^
 				Count.GetHashCode() ^
-				Bytes.GetHashCode();
+				Data.GetHashCode();
 		}
 
 		/// <inheritdoc/>
