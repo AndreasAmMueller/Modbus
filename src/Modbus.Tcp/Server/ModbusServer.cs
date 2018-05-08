@@ -24,7 +24,7 @@ namespace Modbus.Tcp.Server
 		private TcpListener tcpListener;
 		private List<TcpClient> tcpClients = new List<TcpClient>();
 
-		private FunctionCode[] availableFunctionCodes = Enum.GetValues(typeof(FunctionCode))
+		private readonly FunctionCode[] availableFunctionCodes = Enum.GetValues(typeof(FunctionCode))
 			.Cast<FunctionCode>()
 			.ToArray();
 
@@ -424,10 +424,19 @@ namespace Modbus.Tcp.Server
 			}
 			catch (EndOfStreamException)
 			{
-				// client closed connection
+				// client closed connection (connecting)
+			}
+			catch (IOException)
+			{
+				// server stopped
+			}
+			catch (ArgumentOutOfRangeException)
+			{
+				// client closed connection (request parsing)
 			}
 
-			ClientDisconnected?.Invoke(this, new ClientEventArgs((IPEndPoint)client.Client.RemoteEndPoint));
+			if (!isDisposed)
+				ClientDisconnected?.Invoke(this, new ClientEventArgs((IPEndPoint)client.Client.RemoteEndPoint));
 
 			lock (tcpClients)
 			{

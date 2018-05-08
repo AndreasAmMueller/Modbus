@@ -28,6 +28,20 @@ namespace Modbus.Tcp.Client
 
 		#endregion Fields
 
+		#region Events
+
+		/// <summary>
+		/// Raised when the client has the connection successfully established.
+		/// </summary>
+		public event EventHandler Connected;
+
+		/// <summary>
+		/// Raised when the client has closed the connection.
+		/// </summary>
+		public event EventHandler Disconnected;
+
+		#endregion
+
 		#region Constructors
 
 		/// <summary>
@@ -122,7 +136,7 @@ namespace Modbus.Tcp.Client
 				var response = await SendRequest(request);
 				if (response.IsTimeout)
 				{
-					throw new ModbusException("Response timed out. Device id invalid?");
+					throw new SocketException((int)SocketError.TimedOut);
 				}
 				if (response.IsError)
 				{
@@ -199,7 +213,7 @@ namespace Modbus.Tcp.Client
 				var response = await SendRequest(request);
 				if (response.IsTimeout)
 				{
-					throw new ModbusException("Response timed out. Device id invalid?");
+					throw new SocketException((int)SocketError.TimedOut);
 				}
 				if (response.IsError)
 				{
@@ -276,7 +290,7 @@ namespace Modbus.Tcp.Client
 				var response = await SendRequest(request);
 				if (response.IsTimeout)
 				{
-					throw new ModbusException("Response timed out. Device id invalid?");
+					throw new SocketException((int)SocketError.TimedOut);
 				}
 				if (response.IsError)
 				{
@@ -349,7 +363,7 @@ namespace Modbus.Tcp.Client
 				var response = await SendRequest(request);
 				if (response.IsTimeout)
 				{
-					throw new ModbusException("Response timed out. Device id invalid?");
+					throw new SocketException((int)SocketError.TimedOut);
 				}
 				if (response.IsError)
 				{
@@ -720,6 +734,11 @@ namespace Modbus.Tcp.Client
 					return;
 				}
 
+				if (wasConnected)
+				{
+					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty));
+				}
+
 				var timeout = 4;
 				var maxTimeout = 20;
 				var startTime = DateTime.UtcNow;
@@ -771,6 +790,7 @@ namespace Modbus.Tcp.Client
 						wasConnected = true;
 					}
 
+					Task.Run(() => Connected?.Invoke(this, EventArgs.Empty));
 					break;
 				}
 			}
@@ -831,7 +851,6 @@ namespace Modbus.Tcp.Client
 		{
 			if (disposing)
 			{
-				tcpClient?.GetStream()?.Dispose();
 				tcpClient?.Dispose();
 				tcpClient = null;
 			}

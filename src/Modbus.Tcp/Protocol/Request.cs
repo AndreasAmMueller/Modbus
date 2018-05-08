@@ -207,8 +207,7 @@ namespace Modbus.Tcp.Protocol
 		/// <inheritdoc/>
 		public override bool Equals(object obj)
 		{
-			var req = obj as Request;
-			if (req == null)
+			if (!(obj is Request req))
 			{
 				return false;
 			}

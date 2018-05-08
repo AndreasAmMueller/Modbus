@@ -791,15 +791,18 @@ namespace Modbus.Tcp.Utils
 		/// <inheritdoc/>
 		public override bool Equals(object obj)
 		{
-			var block = obj as DataBuffer;
-			if (block == null)
+			if (!(obj is DataBuffer block))
+			{
 				return false;
-
+			}
 			if (block.IsLittleEndian != IsLittleEndian)
+			{
 				return false;
-
+			}
 			if (block.Length != Length)
+			{
 				return false;
+			}
 
 			return IsEqual(0, block.Buffer);
 		}
