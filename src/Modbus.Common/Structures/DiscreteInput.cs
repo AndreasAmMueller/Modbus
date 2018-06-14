@@ -1,4 +1,4 @@
-﻿namespace Modbus.Common.Structures
+﻿namespace AMWD.Modbus.Common.Structures
 {
 	/// <summary>
 	/// Represents the contents of a discrete input on a Modbus device.
@@ -18,7 +18,7 @@
 		/// <inheritdoc/>
 		public override string ToString()
 		{
-			return $"Coil#{Address} | {Value}";
+			return $"DiscreteInput#{Address} | {Value}";
 		}
 	}
 }

@@ -1,9 +1,9 @@
-﻿using Modbus.Common.Structures;
+﻿using AMWD.Modbus.Common.Structures;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Modbus.Common.Interfaces
+namespace AMWD.Modbus.Common.Interfaces
 {
 	/// <summary>
 	/// Represents the interface for a Modbus client.
@@ -21,6 +21,16 @@ namespace Modbus.Common.Interfaces
 		/// Gets or sets the max reconnect timespan until the reconnect is aborted.
 		/// </summary>
 		TimeSpan ReconnectTimeSpan { get; set; }
+
+		/// <summary>
+		/// Gets or sets the send timeout in milliseconds. Default: 1000.
+		/// </summary>
+		int SendTimeout { get; set; }
+
+		/// <summary>
+		/// Gets ors sets the receive timeout in milliseconds. Default: 1000;
+		/// </summary>
+		int ReceiveTimeout { get; set; }
 
 		#endregion Properties
 

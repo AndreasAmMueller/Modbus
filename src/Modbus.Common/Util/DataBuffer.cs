@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Text;
 
-namespace Modbus.Tcp.Utils
+namespace AMWD.Modbus.Common.Util
 {
 	/// <summary>
 	/// Implements a more flexible handling of a byte array.
 	/// </summary>
-	internal class DataBuffer
+	public class DataBuffer
 	{
 		#region Fields
 

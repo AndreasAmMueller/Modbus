@@ -1,4 +1,4 @@
-﻿using Modbus.Common.Structures;
+﻿using AMWD.Modbus.Common.Structures;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Modbus.Common
+namespace AMWD.Modbus.Common.Util
 {
 	/// <summary>
 	/// Contains some extensions to handle some features more easily.
@@ -271,5 +271,18 @@ namespace Modbus.Common
 		}
 
 		#endregion
+
+		#region Task handling
+
+		/// <summary>
+		/// Forgets about the result of the task. (Prevent compiler warning).
+		/// </summary>
+		/// <param name="task">The task to forget.</param>
+		public async static void Forget(this Task task)
+		{
+			await task;
+		}
+
+		#endregion Task handling
 	}
 }

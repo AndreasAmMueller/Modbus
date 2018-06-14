@@ -6,17 +6,17 @@
     <Version>0.9.0</Version>
     <Authors>Andreas Müller</Authors>
     <Company />
-    <Product>Modbus.Common</Product>
-    <Description>Common files for AMWD.Modbus.TCP and AMWD.Modbus.Serial packages.</Description>
+    <Product>Modbus.Serial</Product>
+    <Description>Small library to connect via Modbus RTU on remote devices.</Description>
     <Copyright>Copyright (c) 2018 Andreas Müller</Copyright>
     <PackageLicenseUrl>https://github.com/AndreasAmMueller/Modbus/blob/master/LICENSE.txt</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/AndreasAmMueller/Modbus</PackageProjectUrl>
     <RepositoryUrl>https://github.com/AndreasAmMueller/Modbus.git</RepositoryUrl>
-    <PackageTags>Modbus</PackageTags>
+    <PackageTags>Modbus, Serial, RTU</PackageTags>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageId>AMWD.Modbus.Common</PackageId>
-    <AssemblyName>AMWD.Modbus.Common</AssemblyName>
-    <RootNamespace>AMWD.Modbus.Common</RootNamespace>
+    <PackageId>AMWD.Modbus.Serial</PackageId>
+    <AssemblyName>AMWD.Modbus.Serial</AssemblyName>
+    <RootNamespace>AMWD.Modbus.Serial</RootNamespace>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -42,5 +42,13 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DocumentationFile>$(OutputPath)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Modbus.Common\Modbus.Common.csproj" />
+  </ItemGroup>
 
 </Project>

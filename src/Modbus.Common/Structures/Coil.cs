@@ -1,4 +1,4 @@
-﻿namespace Modbus.Common.Structures
+﻿namespace AMWD.Modbus.Common.Structures
 {
 	/// <summary>
 	/// Represents the contents of a coil on a Modbus device.

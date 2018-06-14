@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace Modbus.Common
+namespace AMWD.Modbus.Common
 {
 	/// <summary>
 	/// Lists the Modbus request types.

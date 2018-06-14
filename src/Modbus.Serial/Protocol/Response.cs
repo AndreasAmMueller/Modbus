@@ -3,7 +3,7 @@ using AMWD.Modbus.Common.Util;
 using System;
 using System.Linq;
 
-namespace AMWD.Modbus.Tcp.Protocol
+namespace AMWD.Modbus.Serial.Protocol
 {
 	/// <summary>
 	/// Represents the response from the server to a client.
@@ -18,7 +18,6 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// <param name="request">The corresponding request.</param>
 		public Response(Request request)
 		{
-			TransactionId = request.TransactionId;
 			DeviceId = request.DeviceId;
 			Function = request.Function;
 			Address = request.Address;
@@ -37,11 +36,6 @@ namespace AMWD.Modbus.Tcp.Protocol
 		#endregion Constructors
 
 		#region Properties
-
-		/// <summary>
-		/// Gets the unique transaction id.
-		/// </summary>
-		public ushort TransactionId { get; private set; }
 
 		/// <summary>
 		/// Gets the id to identify the device.
@@ -83,6 +77,9 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// </summary>
 		public DataBuffer Data { get; set; }
 
+		/// <summary>
+		/// Gets a value indicating whether the response is a result of an timeout.
+		/// </summary>
 		public bool IsTimeout { get; private set; }
 
 		#endregion Properties
@@ -91,11 +88,9 @@ namespace AMWD.Modbus.Tcp.Protocol
 
 		internal byte[] Serialize()
 		{
-			var buffer = new DataBuffer(8);
+			var buffer = new DataBuffer(2);
 
-			buffer.SetUInt16(0, TransactionId);
-			buffer.SetUInt16(2, 0x0000);
-			buffer.SetByte(6, DeviceId);
+			buffer.SetByte(0, DeviceId);
 
 			var fn = (byte)Function;
 			if (IsError)
@@ -129,10 +124,10 @@ namespace AMWD.Modbus.Tcp.Protocol
 				}
 			}
 
-			buffer.SetByte(7, fn);
+			buffer.SetByte(1, fn);
 
-			var len = buffer.Length - 6;
-			buffer.SetUInt16(4, (ushort)len);
+			var crc = Checksum.CRC16(buffer.Buffer);
+			buffer.AddBytes(crc);
 
 			return buffer.Buffer;
 		}
@@ -147,25 +142,22 @@ namespace AMWD.Modbus.Tcp.Protocol
 			}
 
 			var buffer = new DataBuffer(bytes);
-			var ident = buffer.GetUInt16(2);
-			if (ident != 0)
+
+			var crcBuff = buffer.GetBytes(buffer.Length - 3, 2);
+			var crcCalc = Checksum.CRC16(bytes, 0, bytes.Length - 2);
+
+			if (crcBuff[0] != crcCalc[0] || crcBuff[1] != crcCalc[1])
 			{
-				throw new ArgumentException("Response not valid Modbus TCP protocol");
-			}
-			var len = buffer.GetUInt16(4);
-			if (buffer.Length != len + 6)
-			{
-				throw new ArgumentException("Response incomplete");
+				throw new InvalidOperationException("Data not valid (CRC check failed).");
 			}
 
-			TransactionId = buffer.GetUInt16(0);
-			DeviceId = buffer.GetByte(6);
+			DeviceId = buffer.GetByte(0);
 
-			var fn = buffer.GetByte(7);
+			var fn = buffer.GetByte(1);
 			if ((fn & Consts.ErrorMask) > 0)
 			{
 				Function = (FunctionCode)(fn ^ Consts.ErrorMask);
-				ErrorCode = (ErrorCode)buffer.GetByte(8);
+				ErrorCode = (ErrorCode)buffer.GetByte(2);
 			}
 			else
 			{
@@ -177,22 +169,22 @@ namespace AMWD.Modbus.Tcp.Protocol
 					case FunctionCode.ReadDiscreteInputs:
 					case FunctionCode.ReadHoldingRegisters:
 					case FunctionCode.ReadInputRegisters:
-						len = buffer.GetByte(8);
-						if (buffer.Length != len + 9)
+						var len = buffer.GetByte(2);
+						if (buffer.Length != len + 3)
 						{
 							throw new ArgumentException("Response incomplete");
 						}
-						Data = new DataBuffer(buffer.Buffer.Skip(9).ToArray());
+						Data = new DataBuffer(buffer.GetBytes(3, buffer.Length - 5));
 						break;
 					case FunctionCode.WriteMultipleCoils:
 					case FunctionCode.WriteMultipleRegisters:
-						Address = buffer.GetUInt16(8);
-						Count = buffer.GetUInt16(10);
+						Address = buffer.GetUInt16(2);
+						Count = buffer.GetUInt16(4);
 						break;
 					case FunctionCode.WriteSingleCoil:
 					case FunctionCode.WriteSingleRegister:
-						Address = buffer.GetUInt16(8);
-						Data = new DataBuffer(buffer.Buffer.Skip(10).ToArray());
+						Address = buffer.GetUInt16(2);
+						Data = new DataBuffer(buffer.GetBytes(4, buffer.Length - 6));
 						break;
 					default:
 						throw new NotImplementedException();
@@ -207,14 +199,13 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// <inheritdoc/>
 		public override string ToString()
 		{
-			return $"Response#{TransactionId} | Device#{DeviceId}, Fn: {Function}, Error: {IsError}, Address: {Address}, Count: {Count} | {string.Join(" ", Data.Buffer.Select(b => b.ToString("X2")).ToArray())}";
+			return $"Response | Device#{DeviceId}, Fn: {Function}, Error: {IsError}, Address: {Address}, Count: {Count} | {string.Join(" ", Data.Buffer.Select(b => b.ToString("X2")).ToArray())}";
 		}
 
 		/// <inheritdoc/>
 		public override int GetHashCode()
 		{
 			return base.GetHashCode() ^
-				TransactionId.GetHashCode() ^
 				DeviceId.GetHashCode() ^
 				Function.GetHashCode() ^
 				Address.GetHashCode() ^
@@ -230,8 +221,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 				return false;
 			}
 
-			return res.TransactionId == TransactionId &&
-				res.DeviceId == DeviceId &&
+			return res.DeviceId == DeviceId &&
 				res.Function == Function &&
 				res.Address == Address &&
 				res.Count == Count &&

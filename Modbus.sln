@@ -21,6 +21,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleDemo", "src\ConsoleD
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Modbus.Common", "src\Modbus.Common\Modbus.Common.csproj", "{71D10922-FE10-4A77-B4AC-E947797E9CFE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modbus.Serial", "src\Modbus.Serial\Modbus.Serial.csproj", "{30629B0B-B815-4951-AE56-9A0038210ECB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{71D10922-FE10-4A77-B4AC-E947797E9CFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{71D10922-FE10-4A77-B4AC-E947797E9CFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{71D10922-FE10-4A77-B4AC-E947797E9CFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30629B0B-B815-4951-AE56-9A0038210ECB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30629B0B-B815-4951-AE56-9A0038210ECB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30629B0B-B815-4951-AE56-9A0038210ECB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30629B0B-B815-4951-AE56-9A0038210ECB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -47,6 +53,7 @@ Global
 		{BF60D1D4-3767-4EC4-AC53-C1772958BE14} = {D4E6650D-2156-4660-B531-0B2AAD475BA1}
 		{2E6A165D-23DE-40D2-8A43-FE6EFA86F076} = {D4E6650D-2156-4660-B531-0B2AAD475BA1}
 		{71D10922-FE10-4A77-B4AC-E947797E9CFE} = {D4E6650D-2156-4660-B531-0B2AAD475BA1}
+		{30629B0B-B815-4951-AE56-9A0038210ECB} = {D4E6650D-2156-4660-B531-0B2AAD475BA1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FC7F1581-0E3C-4E35-9DBC-CC7952DE19C1}

@@ -1,8 +1,8 @@
-﻿using Modbus.Common.Structures;
+﻿using AMWD.Modbus.Common.Structures;
 using System;
 using System.Collections.Generic;
 
-namespace Modbus.Common.Interfaces
+namespace AMWD.Modbus.Common.Interfaces
 {
 	/// <summary>
 	/// Represents the interface of a Modbus server.

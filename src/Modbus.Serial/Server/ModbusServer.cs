@@ -2,27 +2,32 @@
 using AMWD.Modbus.Common.Interfaces;
 using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
-using AMWD.Modbus.Tcp.Protocol;
+using AMWD.Modbus.Serial.Protocol;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
+using System.IO.Ports;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading.Tasks;
 
-namespace AMWD.Modbus.Tcp.Server
+namespace AMWD.Modbus.Serial.Server
 {
 	/// <summary>
-	/// A server to communicate via Modbus TCP.
+	/// A server to communicate via Modbus RTU.
 	/// </summary>
 	public class ModbusServer : IModbusServer
 	{
 		#region Fields
 
-		private TcpListener tcpListener;
-		private List<TcpClient> tcpClients = new List<TcpClient>();
+		private SerialPort serialPort;
+
+		private BaudRate baudRate = BaudRate.Baud38400;
+		private int dataBits = 8;
+		private Parity parity = Parity.None;
+		private StopBits stopBits = StopBits.None;
+		private Handshake handshake = Handshake.None;
+		private int bufferSize = 4096;
+		private int sendTimeout = 1000;
+		private int receiveTimeout = 1000;
 
 		private readonly FunctionCode[] availableFunctionCodes = Enum.GetValues(typeof(FunctionCode))
 			.Cast<FunctionCode>()
@@ -33,16 +38,6 @@ namespace AMWD.Modbus.Tcp.Server
 		#endregion Fields
 
 		#region Events
-
-		/// <summary>
-		/// Raised when a client has connected to the server.
-		/// </summary>
-		public event EventHandler<ClientEventArgs> ClientConnected;
-
-		/// <summary>
-		/// Raised when a client has disconnected from the server.
-		/// </summary>
-		public event EventHandler<ClientEventArgs> ClientDisconnected;
 
 		/// <summary>
 		/// Raised when a coil was written.
@@ -61,10 +56,17 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ModbusServer"/> class.
 		/// </summary>
-		/// <param name="port">The port to listen. (Default: 502)</param>
-		public ModbusServer(int port = 502)
+		/// <param name="portName">The serial port name.</param>
+		public ModbusServer(string portName)
 		{
-			Initialize(port);
+			if (string.IsNullOrWhiteSpace(portName))
+			{
+				throw new ArgumentNullException(nameof(portName));
+			}
+
+			PortName = portName;
+
+			Initialize();
 		}
 
 		#endregion Constructors
@@ -72,14 +74,172 @@ namespace AMWD.Modbus.Tcp.Server
 		#region Properties
 
 		/// <summary>
+		/// Gets the serial port name.
+		/// </summary>
+		public string PortName { get; private set; }
+
+		/// <summary>
+		/// Gets or sets the baud rate. Default: 38400.
+		/// </summary>
+		public BaudRate BaudRate
+		{
+			get
+			{
+				return baudRate;
+			}
+			set
+			{
+				baudRate = value;
+				if (serialPort != null)
+				{
+					serialPort.BaudRate = (int)value;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets the number of data bits. Default: 8.
+		/// </summary>
+		public int DataBits
+		{
+			get
+			{
+				return dataBits;
+			}
+			set
+			{
+				dataBits = value;
+				if (serialPort != null)
+				{
+					serialPort.DataBits = value;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets the parity. Default: None.
+		/// </summary>
+		public Parity Parity
+		{
+			get
+			{
+				return parity;
+			}
+			set
+			{
+				parity = value;
+				if (serialPort != null)
+				{
+					serialPort.Parity = value;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets the number of stop bits. Default: None.
+		/// </summary>
+		public StopBits StopBits
+		{
+			get
+			{
+				return stopBits;
+			}
+			set
+			{
+				stopBits = value;
+				if (serialPort != null)
+				{
+					serialPort.StopBits = value;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets the handshake. Default: None.
+		/// </summary>
+		public Handshake Handshake
+		{
+			get
+			{
+				return handshake;
+			}
+			set
+			{
+				handshake = value;
+				if (serialPort != null)
+				{
+					serialPort.Handshake = value;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets buffer size in bytes.
+		/// </summary>
+		public int BufferSize
+		{
+			get
+			{
+				return bufferSize;
+			}
+			set
+			{
+				bufferSize = value;
+				if (serialPort != null)
+				{
+					serialPort.ReadBufferSize = value;
+					serialPort.WriteBufferSize = value;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets the send timeout in milliseconds. Default 1000 (recommended).
+		/// </summary>
+		public int SendTimeout
+		{
+			get
+			{
+				return sendTimeout;
+			}
+			set
+			{
+				sendTimeout = value;
+				if (serialPort != null)
+				{
+					serialPort.WriteTimeout = value;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets the receive timeout in milliseconds. Default 1000 (recommended).
+		/// </summary>
+		public int ReceiveTimeout
+		{
+			get
+			{
+				return receiveTimeout;
+			}
+			set
+			{
+				receiveTimeout = value;
+				if (serialPort != null)
+				{
+					serialPort.ReadTimeout = value;
+				}
+			}
+		}
+
+		/// <summary>
 		/// Gets the UTC timestamp of the server start.
 		/// </summary>
-		public DateTime StartTime { get; private set; }
+		public DateTime StartTime { get; set; }
 
 		/// <summary>
 		/// Gets a value indicating whether the server is running.
 		/// </summary>
-		public bool IsRunning { get; private set; }
+		public bool IsRunning => serialPort?.IsOpen ?? false;
 
 		/// <summary>
 		/// Gets a list of device ids the server handles.
@@ -326,121 +486,60 @@ namespace AMWD.Modbus.Tcp.Server
 
 		#region Server
 
-		private void Initialize(int port)
+		private void Initialize()
 		{
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
 			}
-			if (port < 1 || port > 65535)
-			{
-				throw new ArgumentOutOfRangeException(nameof(port));
-			}
-
-			tcpListener = new TcpListener(IPAddress.IPv6Any, port);
-			tcpListener.Server.DualMode = true;
-			tcpListener.Start();
-
-			StartTime = DateTime.UtcNow;
-			IsRunning = true;
-
-			Console.WriteLine("Modbus server started to listen on " + port + "/tcp");
-
-			Task.Run((Action)WaitForClient);
-		}
-
-		private async void WaitForClient()
-		{
-			TcpClient client = null;
-			try
-			{
-				client = await tcpListener.AcceptTcpClientAsync();
-				Task.Run((Action)WaitForClient).Forget();
-			}
-			catch (NullReferenceException)
-			{
-				// Server stopping
-				return;
-			}
-			catch (AggregateException)
-			{
-				// Server stopping
-				return;
-			}
-			catch (ObjectDisposedException)
-			{
-				// Server stopping
-				return;
-			}
-
-			lock (tcpClients)
-			{
-				tcpClients.Add(client);
-			}
-
-			HandleClient(client);
-		}
-
-		private async void HandleClient(TcpClient client)
-		{
-			ClientConnected?.Invoke(this, new ClientEventArgs((IPEndPoint)client.Client.RemoteEndPoint));
 
 			try
 			{
-				var stream = client.GetStream();
-				while (true)
+				serialPort = new SerialPort
 				{
-					var requestBytes = new List<byte>();
+					PortName = PortName,
+					BaudRate = (int)BaudRate,
+					DataBits = DataBits,
+					Parity = Parity,
+					StopBits = StopBits,
+					Handshake = Handshake,
+					ReadBufferSize = BufferSize,
+					WriteBufferSize = BufferSize,
+					ReadTimeout = ReceiveTimeout,
+					WriteTimeout = SendTimeout
+				};
 
-					var buffer = new byte[6];
-					var count = await stream.ReadAsync(buffer, 0, buffer.Length);
-					requestBytes.AddRange(buffer.Take(count));
+				serialPort.DataReceived += OnDataReceived;
+				serialPort.Open();
 
-					var bytes = buffer.Skip(4).Take(2).ToArray();
-					if (BitConverter.IsLittleEndian)
-					{
-						Array.Reverse(bytes);
-					}
-					int following = BitConverter.ToUInt16(bytes, 0);
-
-					do
-					{
-						buffer = new byte[following];
-						count = await stream.ReadAsync(buffer, 0, buffer.Length);
-						following -= count;
-						requestBytes.AddRange(buffer.Take(count));
-					}
-					while (following > 0);
-
-					var request = new Request(requestBytes.ToArray());
-					var response = HandleRequest(request);
-
-					if (response != null)
-					{
-						bytes = response.Serialize();
-						await stream.WriteAsync(bytes, 0, bytes.Length);
-					}
-				}
+				StartTime = DateTime.UtcNow;
 			}
-			catch (EndOfStreamException)
+			catch
 			{
-				// client closed connection (connecting)
+				serialPort?.Dispose();
+				serialPort = null;
+				throw;
 			}
-			catch (IOException)
-			{
-				// server stopped
-			}
-			catch (ArgumentOutOfRangeException)
-			{
-				// client closed connection (request parsing)
-			}
+		}
 
-			if (!isDisposed)
-				ClientDisconnected?.Invoke(this, new ClientEventArgs((IPEndPoint)client.Client.RemoteEndPoint));
-
-			lock (tcpClients)
+		private void OnDataReceived(object sender, SerialDataReceivedEventArgs args)
+		{
+			var requestBytes = new List<byte>();
+			do
 			{
-				tcpClients.Remove(client);
+				var buffer = new byte[BufferSize];
+				var count = serialPort.Read(buffer, 0, buffer.Length);
+				requestBytes.AddRange(buffer.Take(count));
+			}
+			while (serialPort.BytesToRead > 0);
+
+			var request = new Request(requestBytes.ToArray());
+			var response = HandleRequest(request);
+
+			if (response != null)
+			{
+				var bytes = response.Serialize();
+				serialPort.Write(bytes, 0, bytes.Length);
 			}
 		}
 
@@ -866,44 +965,14 @@ namespace AMWD.Modbus.Tcp.Server
 		{
 			if (disposing)
 			{
-				tcpListener?.Stop();
-
-				lock (tcpClients)
-				{
-					foreach (var client in tcpClients)
-					{
-						client?.GetStream()?.Dispose();
-						client?.Dispose();
-					}
-					tcpClients.Clear();
-				}
-
-				tcpListener = null;
+				serialPort?.Close();
+				serialPort?.Dispose();
+				serialPort = null;
 			}
 
 			isDisposed = true;
 		}
 
 		#endregion IDisposable implementation
-	}
-
-	/// <summary>
-	/// Provides connection information of a client.
-	/// </summary>
-	public class ClientEventArgs : EventArgs
-	{
-		/// <summary>
-		/// Initializes a new instance of the <see cref="ClientEventArgs"/> class.
-		/// </summary>
-		/// <param name="ep">The client end point.</param>
-		public ClientEventArgs(IPEndPoint ep)
-		{
-			EndPoint = ep;
-		}
-
-		/// <summary>
-		/// Gets the endpoint information of the client.
-		/// </summary>
-		public IPEndPoint EndPoint { get; private set; }
 	}
 }

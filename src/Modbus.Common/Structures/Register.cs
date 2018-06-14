@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Modbus.Common.Structures
+namespace AMWD.Modbus.Common.Structures
 {
 	/// <summary>
 	/// Represents a register on a Modbus device.
@@ -397,8 +397,7 @@ namespace Modbus.Common.Structures
 		/// <inheritdoc/>
 		public override bool Equals(object obj)
 		{
-			var reg = obj as Register;
-			if (reg == null)
+			if (!(obj is Register reg))
 			{
 				return false;
 			}

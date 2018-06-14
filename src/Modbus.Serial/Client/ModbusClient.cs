@@ -2,19 +2,19 @@
 using AMWD.Modbus.Common.Interfaces;
 using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
-using AMWD.Modbus.Tcp.Protocol;
+using AMWD.Modbus.Serial.Protocol;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Ports;
 using System.Linq;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AMWD.Modbus.Tcp.Client
+namespace AMWD.Modbus.Serial.Client
 {
 	/// <summary>
-	/// A client to communicate with modbus devices via TCP.
+	/// A client to communicate with modbus devices via serial port.
 	/// </summary>
 	public class ModbusClient : IModbusClient
 	{
@@ -22,10 +22,16 @@ namespace AMWD.Modbus.Tcp.Client
 
 		private readonly object reconnectLock = new object();
 		private readonly object sendLock = new object();
-		private TcpClient tcpClient;
+		private SerialPort serialPort;
 		private bool reconnectFailed = false;
 		private bool wasConnected = false;
 
+		private BaudRate baudRate = BaudRate.Baud38400;
+		private int dataBits = 8;
+		private Parity parity = Parity.None;
+		private StopBits stopBits = StopBits.None;
+		private Handshake handshake = Handshake.None;
+		private int bufferSize = 4096;
 		private int sendTimeout = 1000;
 		private int receiveTimeout = 1000;
 
@@ -50,21 +56,15 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ModbusClient"/> class.
 		/// </summary>
-		/// <param name="host">The remote host name or ip.</param>
-		/// <param name="port">The remote port.</param>
-		public ModbusClient(string host, int port = 502)
+		/// <param name="portName">The serial port name.</param>
+		public ModbusClient(string portName)
 		{
-			if (string.IsNullOrWhiteSpace(host))
+			if (string.IsNullOrWhiteSpace(portName))
 			{
-				throw new ArgumentNullException(nameof(host));
-			}
-			if (port < 1 || port > 65535)
-			{
-				throw new ArgumentOutOfRangeException(nameof(port));
+				throw new ArgumentNullException(nameof(portName));
 			}
 
-			Host = host;
-			Port = port;
+			PortName = portName;
 
 			Connect();
 		}
@@ -74,27 +74,127 @@ namespace AMWD.Modbus.Tcp.Client
 		#region Properties
 
 		/// <summary>
-		/// Gets or sets the host name.
+		/// Gets the serial port name.
 		/// </summary>
-		public string Host { get; private set; }
+		public string PortName { get; private set; }
 
 		/// <summary>
-		/// Gets or sets the port.
+		/// Gets or sets the baud rate. Default: 38400.
 		/// </summary>
-		public int Port { get; private set; }
+		public BaudRate BaudRate
+		{
+			get
+			{
+				return baudRate;
+			}
+			set
+			{
+				baudRate = value;
+				if (serialPort != null)
+				{
+					serialPort.BaudRate = (int)value;
+				}
+			}
+		}
 
 		/// <summary>
-		/// Gets a value indicating whether the connection is established.
+		/// Gets or sets the number of data bits. Default: 8.
 		/// </summary>
-		public bool IsConnected => tcpClient?.Connected ?? false;
+		public int DataBits
+		{
+			get
+			{
+				return dataBits;
+			}
+			set
+			{
+				dataBits = value;
+				if (serialPort != null)
+				{
+					serialPort.DataBits = value;
+				}
+			}
+		}
 
 		/// <summary>
-		/// Gets or sets the max. reconnect timespan until the reconnect is aborted.
+		/// Gets or sets the parity. Default: None.
 		/// </summary>
-		public TimeSpan ReconnectTimeSpan { get; set; } = TimeSpan.MaxValue;
+		public Parity Parity
+		{
+			get
+			{
+				return parity;
+			}
+			set
+			{
+				parity = value;
+				if (serialPort != null)
+				{
+					serialPort.Parity = value;
+				}
+			}
+		}
 
 		/// <summary>
-		/// Gets or sets the send timeout in milliseconds. Default: 1000.
+		/// Gets or sets the number of stop bits. Default: None.
+		/// </summary>
+		public StopBits StopBits
+		{
+			get
+			{
+				return stopBits;
+			}
+			set
+			{
+				stopBits = value;
+				if (serialPort != null)
+				{
+					serialPort.StopBits = value;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets the handshake. Default: None.
+		/// </summary>
+		public Handshake Handshake
+		{
+			get
+			{
+				return handshake;
+			}
+			set
+			{
+				handshake = value;
+				if (serialPort != null)
+				{
+					serialPort.Handshake = value;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets buffer size in bytes.
+		/// </summary>
+		public int BufferSize
+		{
+			get
+			{
+				return bufferSize;
+			}
+			set
+			{
+				bufferSize = value;
+				if (serialPort != null)
+				{
+					serialPort.ReadBufferSize = value;
+					serialPort.WriteBufferSize = value;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets the send timeout in milliseconds. Default 1000 (recommended).
 		/// </summary>
 		public int SendTimeout
 		{
@@ -105,15 +205,15 @@ namespace AMWD.Modbus.Tcp.Client
 			set
 			{
 				sendTimeout = value;
-				if (tcpClient != null)
+				if (serialPort != null)
 				{
-					tcpClient.SendTimeout = value;
+					serialPort.WriteTimeout = value;
 				}
 			}
 		}
 
 		/// <summary>
-		/// Gets ors sets the receive timeout in milliseconds. Default: 1000;
+		/// Gets or sets the receive timeout in milliseconds. Default 1000 (recommended).
 		/// </summary>
 		public int ReceiveTimeout
 		{
@@ -124,12 +224,22 @@ namespace AMWD.Modbus.Tcp.Client
 			set
 			{
 				receiveTimeout = value;
-				if (tcpClient != null)
+				if (serialPort != null)
 				{
-					tcpClient.ReceiveTimeout = value;
+					serialPort.ReadTimeout = value;
 				}
 			}
 		}
+
+		/// <summary>
+		/// Gets a value indicating whether the connection is established.
+		/// </summary>
+		public bool IsConnected => serialPort?.IsOpen ?? false;
+
+		/// <summary>
+		/// Gets or sets the max reconnect timespan until the reconnect is aborted.
+		/// </summary>
+		public TimeSpan ReconnectTimeSpan { get; set; } = TimeSpan.MaxValue;
 
 		#endregion Properties
 
@@ -177,34 +287,27 @@ namespace AMWD.Modbus.Tcp.Client
 				var response = await SendRequest(request);
 				if (response.IsTimeout)
 				{
-					throw new SocketException((int)SocketError.TimedOut);
+					throw new IOException("Request timed out");
 				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
 
-				if (request.TransactionId == response.TransactionId)
+				list = new List<Coil>();
+				for (int i = 0; i < count; i++)
 				{
-					list = new List<Coil>();
-					for (int i = 0; i < count; i++)
+					var posByte = i / 8;
+					var posBit = i % 8;
+
+					var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
+
+					list.Add(new Coil
 					{
-						var posByte = i / 8;
-						var posBit = i % 8;
-
-						var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
-
-						list.Add(new Coil
-						{
-							Address = (ushort)(startAddress + i),
-							Value = val > 0
-						});
-					}
+						Address = (ushort)(startAddress + i),
+						Value = val > 0
+					});
 				}
-			}
-			catch (SocketException)
-			{
-				Task.Run((Action)Reconnect).Forget();
 			}
 			catch (IOException)
 			{
@@ -254,34 +357,27 @@ namespace AMWD.Modbus.Tcp.Client
 				var response = await SendRequest(request);
 				if (response.IsTimeout)
 				{
-					throw new SocketException((int)SocketError.TimedOut);
+					throw new IOException("Request timed out");
 				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
 
-				if (request.TransactionId == response.TransactionId)
+				list = new List<DiscreteInput>();
+				for (int i = 0; i < count; i++)
 				{
-					list = new List<DiscreteInput>();
-					for (int i = 0; i < count; i++)
+					var posByte = i / 8;
+					var posBit = i % 8;
+
+					var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
+
+					list.Add(new DiscreteInput
 					{
-						var posByte = i / 8;
-						var posBit = i % 8;
-
-						var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
-
-						list.Add(new DiscreteInput
-						{
-							Address = (ushort)(startAddress + i),
-							Value = val > 0
-						});
-					}
+						Address = (ushort)(startAddress + i),
+						Value = val > 0
+					});
 				}
-			}
-			catch (SocketException)
-			{
-				Task.Run((Action)Reconnect).Forget();
 			}
 			catch (IOException)
 			{
@@ -331,30 +427,23 @@ namespace AMWD.Modbus.Tcp.Client
 				var response = await SendRequest(request);
 				if (response.IsTimeout)
 				{
-					throw new SocketException((int)SocketError.TimedOut);
+					throw new IOException("Request timed out");
 				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
 
-				if (request.TransactionId == response.TransactionId)
+				list = new List<Register>();
+				for (int i = 0; i < count; i++)
 				{
-					list = new List<Register>();
-					for (int i = 0; i < count; i++)
+					list.Add(new Register
 					{
-						list.Add(new Register
-						{
-							Address = (ushort)(startAddress + i),
-							HiByte = response.Data[i * 2],
-							LoByte = response.Data[i * 2 + 1]
-						});
-					}
+						Address = (ushort)(startAddress + i),
+						HiByte = response.Data[i * 2],
+						LoByte = response.Data[i * 2 + 1]
+					});
 				}
-			}
-			catch (SocketException)
-			{
-				Task.Run((Action)Reconnect).Forget();
 			}
 			catch (IOException)
 			{
@@ -404,30 +493,23 @@ namespace AMWD.Modbus.Tcp.Client
 				var response = await SendRequest(request);
 				if (response.IsTimeout)
 				{
-					throw new SocketException((int)SocketError.TimedOut);
+					throw new IOException("Request timed out");
 				}
 				if (response.IsError)
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
 
-				if (request.TransactionId == response.TransactionId)
+				list = new List<Register>();
+				for (int i = 0; i < count; i++)
 				{
-					list = new List<Register>();
-					for (int i = 0; i < count; i++)
+					list.Add(new Register
 					{
-						list.Add(new Register
-						{
-							Address = (ushort)(startAddress + i),
-							HiByte = response.Data[i * 2],
-							LoByte = response.Data[i * 2 + 1]
-						});
-					}
+						Address = (ushort)(startAddress + i),
+						HiByte = response.Data[i * 2],
+						LoByte = response.Data[i * 2 + 1]
+					});
 				}
-			}
-			catch (SocketException)
-			{
-				Task.Run((Action)Reconnect).Forget();
 			}
 			catch (IOException)
 			{
@@ -488,15 +570,10 @@ namespace AMWD.Modbus.Tcp.Client
 					throw new ModbusException(response.ErrorMessage);
 				}
 
-				return request.TransactionId == response.TransactionId &&
-					request.DeviceId == response.DeviceId &&
+				return request.DeviceId == response.DeviceId &&
 					request.Function == response.Function &&
 					request.Address == response.Address &&
 					request.Data.Equals(response.Data);
-			}
-			catch (SocketException)
-			{
-				Task.Run((Action)Reconnect).Forget();
 			}
 			catch (IOException)
 			{
@@ -551,15 +628,10 @@ namespace AMWD.Modbus.Tcp.Client
 					throw new ModbusException(response.ErrorMessage);
 				}
 
-				return request.TransactionId == response.TransactionId &&
-					request.DeviceId == response.DeviceId &&
+				return request.DeviceId == response.DeviceId &&
 					request.Function == response.Function &&
 					request.Address == response.Address &&
 					request.Data.Equals(response.Data);
-			}
-			catch (SocketException)
-			{
-				Task.Run((Action)Reconnect).Forget();
 			}
 			catch (IOException)
 			{
@@ -643,13 +715,8 @@ namespace AMWD.Modbus.Tcp.Client
 					throw new ModbusException(response.ErrorMessage);
 				}
 
-				return request.TransactionId == response.TransactionId &&
-					request.Address == response.Address &&
+				return request.Address == response.Address &&
 					request.Count == response.Count;
-			}
-			catch (SocketException)
-			{
-				Task.Run((Action)Reconnect).Forget();
 			}
 			catch (IOException)
 			{
@@ -725,13 +792,8 @@ namespace AMWD.Modbus.Tcp.Client
 					throw new ModbusException(response.ErrorMessage);
 				}
 
-				return request.TransactionId == response.TransactionId &&
-					request.Address == response.Address &&
+				return request.Address == response.Address &&
 					request.Count == response.Count;
-			}
-			catch (SocketException)
-			{
-				Task.Run((Action)Reconnect).Forget();
 			}
 			catch (IOException)
 			{
@@ -770,7 +832,7 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					throw new InvalidOperationException("Reconnecting has failed");
 				}
-				if (tcpClient?.Connected == true)
+				if (serialPort?.IsOpen == true)
 				{
 					return;
 				}
@@ -780,33 +842,31 @@ namespace AMWD.Modbus.Tcp.Client
 					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty));
 				}
 
-				var timeout = 4;
-				var maxTimeout = 20;
 				var startTime = DateTime.UtcNow;
-
 				while (true)
 				{
 					try
 					{
-						tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
-						tcpClient.Client.DualMode = true;
-						var result = tcpClient.BeginConnect(Host, Port, null, null);
-						var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(timeout));
-						timeout += 2;
-						if (timeout > maxTimeout)
-						{
-							timeout = maxTimeout;
-						}
-						if (!success)
-						{
-							throw new SocketException((int)SocketError.TimedOut);
-						}
-						tcpClient.EndConnect(result);
+						serialPort?.Dispose();
+						serialPort = null;
 
-						tcpClient.SendTimeout = SendTimeout;
-						tcpClient.ReceiveTimeout = ReceiveTimeout;
+						serialPort = new SerialPort
+						{
+							PortName = PortName,
+							BaudRate = (int)BaudRate,
+							DataBits = DataBits,
+							Parity = Parity,
+							StopBits = StopBits,
+							Handshake = Handshake,
+							ReadBufferSize = BufferSize,
+							WriteBufferSize = BufferSize,
+							ReadTimeout = ReceiveTimeout,
+							WriteTimeout = SendTimeout
+						};
+
+						serialPort.Open();
 					}
-					catch (SocketException) when (ReconnectTimeSpan == TimeSpan.MaxValue || DateTime.UtcNow <= startTime + ReconnectTimeSpan)
+					catch (IOException) when (ReconnectTimeSpan == TimeSpan.MaxValue || DateTime.UtcNow <= startTime + ReconnectTimeSpan)
 					{
 						Thread.Sleep(1000);
 						continue;
@@ -847,33 +907,22 @@ namespace AMWD.Modbus.Tcp.Client
 				throw new InvalidOperationException("No connection");
 			}
 
-			var stream = tcpClient.GetStream();
-			var bytes = request.Serialize();
-			await stream.WriteAsync(bytes, 0, bytes.Length);
-
-			var responseBytes = new List<byte>();
-
-			var buffer = new byte[6];
-			var count = await stream.ReadAsync(buffer, 0, buffer.Length);
-			responseBytes.AddRange(buffer.Take(count));
-
-			bytes = buffer.Skip(4).Take(2).ToArray();
-			if (BitConverter.IsLittleEndian)
+			return await Task.Run(() =>
 			{
-				Array.Reverse(bytes);
-			}
-			int following = BitConverter.ToUInt16(bytes, 0);
+				var bytes = request.Serialize();
+				serialPort.Write(bytes, 0, bytes.Length);
 
-			do
-			{
-				buffer = new byte[following];
-				count = await stream.ReadAsync(buffer, 0, buffer.Length);
-				following -= count;
-				responseBytes.AddRange(buffer.Take(count));
-			}
-			while (following > 0);
+				var responseBytes = new List<byte>();
+				do
+				{
+					var buffer = new byte[BufferSize];
+					var count = serialPort.Read(buffer, 0, buffer.Length);
+					responseBytes.AddRange(buffer.Take(count));
+				}
+				while (serialPort.BytesToRead > 0);
 
-			return new Response(responseBytes.ToArray());
+				return new Response(responseBytes.ToArray());
+			});
 		}
 
 		#endregion Private methods
@@ -895,8 +944,8 @@ namespace AMWD.Modbus.Tcp.Client
 		{
 			if (disposing)
 			{
-				tcpClient?.Dispose();
-				tcpClient = null;
+				//tcpClient?.Dispose();
+				//tcpClient = null;
 			}
 
 			isDisposed = true;
@@ -914,7 +963,7 @@ namespace AMWD.Modbus.Tcp.Client
 				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			return $"Modbus TCP {Host}:{Port} - Connected: {IsConnected}";
+			return $"Modbus Serial {PortName} - Connected: {IsConnected}";
 		}
 
 		#endregion Overrides

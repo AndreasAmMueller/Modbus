@@ -1,25 +1,39 @@
-﻿using Modbus.Common.Structures;
-using System;
+﻿using AMWD.Modbus.Common.Structures;
 using System.Collections.Generic;
 
-namespace Modbus.Tcp.Utils
+namespace AMWD.Modbus.Common.Util
 {
-	internal class ModbusDevice
+	/// <summary>
+	/// Represents a Modbus device.
+	/// </summary>
+	public class ModbusDevice
 	{
 		private List<ushort> coils = new List<ushort>();
 		private List<ushort> discreteInputs = new List<ushort>();
 		private Dictionary<ushort, ushort> inputRegisters = new Dictionary<ushort, ushort>();
 		private Dictionary<ushort, ushort> holdingRegisters = new Dictionary<ushort, ushort>();
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ModbusDevice"/> class.
+		/// </summary>
+		/// <param name="id">The device id.</param>
 		public ModbusDevice(byte id)
 		{
 			DeviceId = id;
 		}
 
+		/// <summary>
+		/// Gets the device id.
+		/// </summary>
 		public byte DeviceId { get; private set; }
 
 		#region Coils
 
+		/// <summary>
+		/// Gets a coil at an address.
+		/// </summary>
+		/// <param name="address">The address of the coil.</param>
+		/// <returns></returns>
 		public Coil GetCoil(ushort address)
 		{
 			lock (coils)
@@ -28,6 +42,11 @@ namespace Modbus.Tcp.Utils
 			}
 		}
 
+		/// <summary>
+		/// Sets a coil value.
+		/// </summary>
+		/// <param name="address">The address.</param>
+		/// <param name="value">A value indicating whether the coil is active.</param>
 		public void SetCoil(ushort address, bool value)
 		{
 			lock (coils)
@@ -47,6 +66,11 @@ namespace Modbus.Tcp.Utils
 
 		#region Discrete Input
 
+		/// <summary>
+		/// Gets an input.
+		/// </summary>
+		/// <param name="address">The address.</param>
+		/// <returns></returns>
 		public DiscreteInput GetInput(ushort address)
 		{
 			lock (discreteInputs)
@@ -55,6 +79,11 @@ namespace Modbus.Tcp.Utils
 			}
 		}
 
+		/// <summary>
+		/// Sets an input.
+		/// </summary>
+		/// <param name="address">The address.</param>
+		/// <param name="value">A value indicating whether the input is active.</param>
 		public void SetInput(ushort address, bool value)
 		{
 			lock (discreteInputs)
@@ -74,6 +103,11 @@ namespace Modbus.Tcp.Utils
 
 		#region Input Register
 
+		/// <summary>
+		/// Gets an input register.
+		/// </summary>
+		/// <param name="address">The address.</param>
+		/// <returns></returns>
 		public Register GetInputRegister(ushort address)
 		{
 			lock (inputRegisters)
@@ -86,6 +120,11 @@ namespace Modbus.Tcp.Utils
 			return new Register { Address = address };
 		}
 
+		/// <summary>
+		/// Sets an input register.
+		/// </summary>
+		/// <param name="address">The address.</param>
+		/// <param name="value">The value.</param>
 		public void SetInputRegister(ushort address, ushort value)
 		{
 			lock (inputRegisters)
@@ -105,6 +144,11 @@ namespace Modbus.Tcp.Utils
 
 		#region Holding Register
 
+		/// <summary>
+		/// Gets an holding register.
+		/// </summary>
+		/// <param name="address">The address.</param>
+		/// <returns></returns>
 		public Register GetHoldingRegister(ushort address)
 		{
 			lock (holdingRegisters)
@@ -117,6 +161,11 @@ namespace Modbus.Tcp.Utils
 			return new Register { Address = address };
 		}
 
+		/// <summary>
+		/// Sets an holding register.
+		/// </summary>
+		/// <param name="address">The address.</param>
+		/// <param name="value">The value to set.</param>
 		public void SetHoldingRegister(ushort address, ushort value)
 		{
 			lock (holdingRegisters)

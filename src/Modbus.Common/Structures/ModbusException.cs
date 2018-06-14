@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Modbus.Common.Structures
+namespace AMWD.Modbus.Common.Structures
 {
 	/// <summary>
 	/// Represents errors that occurr during Modbus requests.

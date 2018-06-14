@@ -1,4 +1,4 @@
-﻿namespace Modbus.Common
+﻿namespace AMWD.Modbus.Common
 {
 	/// <summary>
 	/// Contains all constants used in Modbus.
