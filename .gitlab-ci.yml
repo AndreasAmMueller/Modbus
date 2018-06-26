@@ -1,0 +1,18 @@
+image: microsoft/dotnet
+
+stages:
+  - build
+
+release:
+  stage: build
+  script:
+    - dotnet restore
+    - dotnet build -c Release
+  tags:
+    - docker
+  artifacts:
+    paths:
+      - artifacts/bin/AMWD.Modbus.Common/Release/*.nupkg
+      - artifacts/bin/AMWD.Modbus.Serial/Release/*.nupkg
+      - artifacts/bin/AMWD.Modbus.Tcp/Release/*.nupkg
+    expire_in: 1 month
