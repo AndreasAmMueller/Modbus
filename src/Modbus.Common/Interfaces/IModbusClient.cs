@@ -13,6 +13,11 @@ namespace AMWD.Modbus.Common.Interfaces
 		#region Properties
 
 		/// <summary>
+		/// Gets the result of the asynchronous initialization of this instance.
+		/// </summary>
+		Task Initialization { get; }
+
+		/// <summary>
 		/// Gets a value indicating whether the connection is established.
 		/// </summary>
 		bool IsConnected { get; }

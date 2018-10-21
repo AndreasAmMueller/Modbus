@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace AMWD.Modbus.Tcp.Client
@@ -20,8 +19,8 @@ namespace AMWD.Modbus.Tcp.Client
 	{
 		#region Fields
 
-		private readonly object reconnectLock = new object();
-		private readonly object sendLock = new object();
+		private volatile bool isReconnecting;
+
 		private TcpClient tcpClient;
 		private bool reconnectFailed = false;
 		private bool wasConnected = false;
@@ -66,12 +65,17 @@ namespace AMWD.Modbus.Tcp.Client
 			Host = host;
 			Port = port;
 
-			Connect();
+			Initialization = Reconnect();
 		}
 
 		#endregion Constructors
 
 		#region Properties
+
+		/// <summary>
+		/// Gets the result of the asynchronous initialization of this instance.
+		/// </summary>
+		public Task Initialization { get; }
 
 		/// <summary>
 		/// Gets or sets the host name.
@@ -204,11 +208,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 
 			return list;
@@ -281,11 +285,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 
 			return list;
@@ -354,11 +358,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 
 			return list;
@@ -427,11 +431,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 
 			return list;
@@ -496,11 +500,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 
 			return false;
@@ -559,11 +563,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 
 			return false;
@@ -649,11 +653,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 
 			return false;
@@ -731,11 +735,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				Reconnect().Forget();
 			}
 
 			return false;
@@ -747,97 +751,84 @@ namespace AMWD.Modbus.Tcp.Client
 
 		#region Private methods
 
-		private async void Connect()
+		private async Task Reconnect()
 		{
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			await Task.Run((Action)Reconnect);
-		}
-
-		private void Reconnect()
-		{
-			if (isDisposed)
+			if (isReconnecting)
 			{
-				throw new ObjectDisposedException(GetType().FullName);
+				return;
+			}
+			isReconnecting = true;
+			tcpClient?.Dispose();
+			tcpClient = null;
+
+			if (reconnectFailed)
+			{
+				throw new InvalidOperationException("Reconnect failed");
+			}
+			if (wasConnected)
+			{
+				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
 			}
 
-			lock (reconnectLock)
+			var timeout = 2;
+			var maxTimeout = 20;
+			var startTime = DateTime.UtcNow;
+
+			while (true)
 			{
-				if (reconnectFailed)
+				try
 				{
-					throw new InvalidOperationException("Reconnecting has failed");
-				}
-				if (tcpClient?.Connected == true)
-				{
-					return;
-				}
-
-				if (wasConnected)
-				{
-					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty));
-				}
-
-				var timeout = 4;
-				var maxTimeout = 20;
-				var startTime = DateTime.UtcNow;
-
-				while (true)
-				{
-					try
+					tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
+					tcpClient.Client.DualMode = true;
+					var connectTask = tcpClient.ConnectAsync(Host, Port);
+					if (await Task.WhenAny(new[] { connectTask, Task.Delay(TimeSpan.FromSeconds(timeout)) }) == connectTask)
 					{
-						tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
-						tcpClient.Client.DualMode = true;
-						var result = tcpClient.BeginConnect(Host, Port, null, null);
-						var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(timeout));
+						tcpClient.SendTimeout = SendTimeout;
+						tcpClient.ReceiveTimeout = ReceiveTimeout;
+					}
+					else
+					{
 						timeout += 2;
 						if (timeout > maxTimeout)
 						{
 							timeout = maxTimeout;
 						}
-						if (!success)
-						{
-							throw new SocketException((int)SocketError.TimedOut);
-						}
-						tcpClient.EndConnect(result);
-
-						tcpClient.SendTimeout = SendTimeout;
-						tcpClient.ReceiveTimeout = ReceiveTimeout;
+						throw new SocketException((int)SocketError.TimedOut);
 					}
-					catch (SocketException) when (ReconnectTimeSpan == TimeSpan.MaxValue || DateTime.UtcNow <= startTime + ReconnectTimeSpan)
-					{
-						Thread.Sleep(1000);
-						continue;
-					}
-					catch (Exception ex)
-					{
-						reconnectFailed = true;
-						if (isDisposed)
-						{
-							return;
-						}
-
-						if (wasConnected)
-						{
-							throw new IOException("Server connection lost, reconnect failed.", ex);
-						}
-						else
-						{
-							throw new IOException("Could not connect to the server.", ex);
-						}
-					}
-
-					if (!wasConnected)
-					{
-						wasConnected = true;
-					}
-
-					Task.Run(() => Connected?.Invoke(this, EventArgs.Empty));
-					break;
 				}
+				catch (SocketException) when (ReconnectTimeSpan == TimeSpan.MaxValue || DateTime.UtcNow <= startTime + ReconnectTimeSpan)
+				{
+					await Task.Delay(1000);
+					continue;
+				}
+				catch (Exception ex)
+				{
+					reconnectFailed = true;
+					if (isDisposed)
+					{
+						return;
+					}
+					if (wasConnected)
+					{
+						throw new IOException("Server connection lost, reconnect failed", ex);
+					}
+					else
+					{
+						throw new IOException("Could not connect to the server", ex);
+					}
+				}
+
+				wasConnected = true;
+				Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
+				break;
 			}
+
+			isReconnecting = false;
 		}
 
 		private async Task<Response> SendRequest(Request request)
@@ -849,31 +840,38 @@ namespace AMWD.Modbus.Tcp.Client
 
 			var stream = tcpClient.GetStream();
 			var bytes = request.Serialize();
-			await stream.WriteAsync(bytes, 0, bytes.Length);
-
-			var responseBytes = new List<byte>();
-
-			var buffer = new byte[6];
-			var count = await stream.ReadAsync(buffer, 0, buffer.Length);
-			responseBytes.AddRange(buffer.Take(count));
-
-			bytes = buffer.Skip(4).Take(2).ToArray();
-			if (BitConverter.IsLittleEndian)
+			var writeTask = stream.WriteAsync(bytes, 0, bytes.Length);
+			if (await Task.WhenAny(new[] { writeTask, Task.Delay(SendTimeout) }) == writeTask)
 			{
-				Array.Reverse(bytes);
-			}
-			int following = BitConverter.ToUInt16(bytes, 0);
+				var responseBytes = new List<byte>();
+				var buffer = new byte[6];
+				var readTask = stream.ReadAsync(buffer, 0, buffer.Length);
+				if (await Task.WhenAny(new[] { readTask, Task.Delay(ReceiveTimeout) }) == readTask)
+				{
+					var count = readTask.Result;
+					responseBytes.AddRange(buffer.Take(count));
 
-			do
-			{
-				buffer = new byte[following];
-				count = await stream.ReadAsync(buffer, 0, buffer.Length);
-				following -= count;
-				responseBytes.AddRange(buffer.Take(count));
-			}
-			while (following > 0);
+					bytes = buffer.Skip(4).Take(2).ToArray();
+					if (BitConverter.IsLittleEndian)
+					{
+						Array.Reverse(bytes);
+					}
+					int following = BitConverter.ToUInt16(bytes, 0);
 
-			return new Response(responseBytes.ToArray());
+					do
+					{
+						buffer = new byte[following];
+						count = await stream.ReadAsync(buffer, 0, buffer.Length);
+						following -= count;
+						responseBytes.AddRange(buffer.Take(count));
+					}
+					while (following > 0);
+
+					return new Response(responseBytes.ToArray());
+				}
+			}
+
+			return new Response(new byte[] { 0, 0, 0, 0, 0, 0 });
 		}
 
 		#endregion Private methods
@@ -889,7 +887,7 @@ namespace AMWD.Modbus.Tcp.Client
 			GC.SuppressFinalize(this);
 		}
 
-		private bool isDisposed;
+		private volatile bool isDisposed;
 
 		private void Dispose(bool disposing)
 		{

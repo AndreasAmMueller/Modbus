@@ -66,12 +66,17 @@ namespace AMWD.Modbus.Serial.Client
 
 			PortName = portName;
 
-			Connect();
+			Initialization = Connect();
 		}
 
 		#endregion Constructors
 
 		#region Properties
+
+		/// <summary>
+		/// Gets the result of the asynchronous initialization of this instance.
+		/// </summary>
+		public Task Initialization { get; }
 
 		/// <summary>
 		/// Gets the serial port name.
@@ -809,7 +814,7 @@ namespace AMWD.Modbus.Serial.Client
 
 		#region Private methods
 
-		private async void Connect()
+		private async Task Connect()
 		{
 			if (isDisposed)
 			{
