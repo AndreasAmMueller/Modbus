@@ -20,5 +20,25 @@
 		{
 			return $"Coil#{Address} | {Value}";
 		}
+
+		/// <inheritdoc/>
+		public override int GetHashCode()
+		{
+			return base.GetHashCode() ^
+				Address.GetHashCode() ^
+				Value.GetHashCode();
+		}
+
+		/// <inheritdoc/>
+		public override bool Equals(object obj)
+		{
+			if (!(obj is Coil coil))
+			{
+				return false;
+			}
+
+			return Address == coil.Address &&
+				Value == coil.Value;
+		}
 	}
 }

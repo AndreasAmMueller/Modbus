@@ -259,15 +259,32 @@ namespace AMWD.Modbus.Common.Util
 		#region Enums
 
 		/// <summary>
-		/// Tries to read the description of an enum-value.
+		/// Tries to return an attribute of an enum value.
 		/// </summary>
-		/// <param name="value">The enum value.</param>
-		/// <returns>The description or the <see cref="Enum.ToString()"/></returns>
-		public static string GetDescription(this Enum value)
+		/// <typeparam name="T">The attribute type.</typeparam>
+		/// <param name="enumValue">The enum value.</param>
+		/// <returns>The first attribute of the type present or null.</returns>
+		public static T GetAttribute<T>(this Enum enumValue)
+			where T : Attribute
 		{
-			var fi = value.GetType().GetField(value.ToString());
-			var attrs = (DescriptionAttribute[])fi?.GetCustomAttributes(typeof(DescriptionAttribute), inherit: false);
-			return attrs?.FirstOrDefault()?.Description ?? value.ToString();
+			if (enumValue != null)
+			{
+				var fi = enumValue.GetType().GetField(enumValue.ToString());
+				var attrs = (T[])fi?.GetCustomAttributes(typeof(T), inherit: false);
+				return attrs?.FirstOrDefault();
+			}
+			return default(T);
+		}
+
+
+		/// <summary>
+		/// Tries to read the description of an enum value.
+		/// </summary>
+		/// <param name="enumValue">The enum value.</param>
+		/// <returns>The description or the <see cref="Enum.ToString()"/></returns>
+		public static string GetDescription(this Enum enumValue)
+		{
+			return enumValue.GetAttribute<DescriptionAttribute>()?.Description ?? enumValue.ToString();
 		}
 
 		#endregion

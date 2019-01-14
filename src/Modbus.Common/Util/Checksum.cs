@@ -5,16 +5,16 @@ namespace AMWD.Modbus.Common.Util
 	/// <summary>
 	/// Helper class for checksums.
 	/// </summary>
-	public class Checksum
+	public static class Checksum
 	{
 		/// <summary>
 		/// Calculates the CRC checksum with 16 bits of an array.
 		/// </summary>
 		/// <param name="array">The array with data.</param>
 		/// <returns>CRC16 Checksum as byte array. [0] = low byte, [1] = high byte.</returns>
-		public static byte[] CRC16(byte[] array)
+		public static byte[] CRC16(this byte[] array)
 		{
-			return CRC16(array, 0, array.Length);
+			return array.CRC16(0, array.Length);
 		}
 
 		/// <summary>
@@ -24,7 +24,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="start">The first byte to use.</param>
 		/// <param name="length">The number of bytes to use.</param>
 		/// <returns>CRC16 Checksum as byte array. [0] = low byte, [1] = high byte.</returns>
-		public static byte[] CRC16(byte[] array, int start, int length)
+		public static byte[] CRC16(this byte[] array, int start, int length)
 		{
 			if (array == null || array.Length == 0)
 			{

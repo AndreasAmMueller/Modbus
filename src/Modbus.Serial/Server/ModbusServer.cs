@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace AMWD.Modbus.Serial.Server
 {
@@ -66,12 +67,17 @@ namespace AMWD.Modbus.Serial.Server
 
 			PortName = portName;
 
-			Initialize();
+			Initialization = Task.Run((Action)Initialize);
 		}
 
 		#endregion Constructors
 
 		#region Properties
+
+		/// <summary>
+		/// Gets the result of the asynchronous initialization of this instance.
+		/// </summary>
+		public Task Initialization { get; }
 
 		/// <summary>
 		/// Gets the serial port name.
@@ -234,7 +240,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <summary>
 		/// Gets the UTC timestamp of the server start.
 		/// </summary>
-		public DateTime StartTime { get; set; }
+		public DateTime StartTime { get; private set; }
 
 		/// <summary>
 		/// Gets a value indicating whether the server is running.

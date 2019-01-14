@@ -15,7 +15,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <summary>
 		/// Gets the result of the asynchronous initialization of this instance.
 		/// </summary>
-		Task Initialization { get; }
+		Task ConnectingTask { get; }
 
 		/// <summary>
 		/// Gets a value indicating whether the connection is established.
@@ -38,6 +38,22 @@ namespace AMWD.Modbus.Common.Interfaces
 		int ReceiveTimeout { get; set; }
 
 		#endregion Properties
+
+		#region Control
+
+		/// <summary>
+		/// Connects the client to the server.
+		/// </summary>
+		/// <returns>An awaitable task.</returns>
+		Task Connect();
+
+		/// <summary>
+		/// Disconnects the client.
+		/// </summary>
+		/// <returns>An awaitable task.</returns>
+		Task Disconnect();
+
+		#endregion Control
 
 		#region Read methods
 

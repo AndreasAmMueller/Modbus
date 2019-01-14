@@ -20,6 +20,8 @@ namespace AMWD.Modbus.Serial.Client
 	{
 		#region Fields
 
+		private volatile bool isStarted;
+
 		private readonly object reconnectLock = new object();
 		private readonly object sendLock = new object();
 		private SerialPort serialPort;
@@ -65,8 +67,6 @@ namespace AMWD.Modbus.Serial.Client
 			}
 
 			PortName = portName;
-
-			Initialization = Connect();
 		}
 
 		#endregion Constructors
@@ -76,7 +76,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <summary>
 		/// Gets the result of the asynchronous initialization of this instance.
 		/// </summary>
-		public Task Initialization { get; }
+		public Task ConnectingTask { get; private set; }
 
 		/// <summary>
 		/// Gets the serial port name.
@@ -250,6 +250,49 @@ namespace AMWD.Modbus.Serial.Client
 
 		#region Public methods
 
+		#region Control
+
+		/// <summary>
+		/// Connects the client to the device.
+		/// </summary>
+		/// <returns>An awaitable task.</returns>
+		public Task Connect()
+		{
+			if (isDisposed)
+			{
+				throw new ObjectDisposedException(GetType().FullName);
+			}
+
+			if (!isStarted)
+			{
+				isStarted = true;
+				ConnectingTask = Task.Run((Action)Reconnect);
+			}
+
+			return ConnectingTask;
+		}
+
+		/// <summary>
+		/// Disconnects the client.
+		/// </summary>
+		/// <returns>An awaitable task.</returns>
+		public Task Disconnect()
+		{
+			if (isDisposed)
+			{
+				throw new ObjectDisposedException(GetType().FullName);
+			}
+
+			if (isStarted)
+			{
+				serialPort?.Dispose();
+				serialPort = null;
+			}
+			return Task.CompletedTask;
+		}
+
+		#endregion Control
+
 		#region Read methods
 
 		/// <summary>
@@ -316,7 +359,7 @@ namespace AMWD.Modbus.Serial.Client
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				ConnectingTask = Task.Run((Action)Reconnect);
 			}
 
 			return list;
@@ -386,7 +429,7 @@ namespace AMWD.Modbus.Serial.Client
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				ConnectingTask = Task.Run((Action)Reconnect);
 			}
 
 			return list;
@@ -452,7 +495,7 @@ namespace AMWD.Modbus.Serial.Client
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				ConnectingTask = Task.Run((Action)Reconnect);
 			}
 
 			return list;
@@ -518,7 +561,7 @@ namespace AMWD.Modbus.Serial.Client
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				ConnectingTask = Task.Run((Action)Reconnect);
 			}
 
 			return list;
@@ -582,7 +625,7 @@ namespace AMWD.Modbus.Serial.Client
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				ConnectingTask = Task.Run((Action)Reconnect);
 			}
 
 			return false;
@@ -640,7 +683,7 @@ namespace AMWD.Modbus.Serial.Client
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				ConnectingTask = Task.Run((Action)Reconnect);
 			}
 
 			return false;
@@ -725,7 +768,7 @@ namespace AMWD.Modbus.Serial.Client
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				ConnectingTask = Task.Run((Action)Reconnect);
 			}
 
 			return false;
@@ -802,7 +845,7 @@ namespace AMWD.Modbus.Serial.Client
 			}
 			catch (IOException)
 			{
-				Task.Run((Action)Reconnect).Forget();
+				ConnectingTask = Task.Run((Action)Reconnect);
 			}
 
 			return false;
@@ -813,16 +856,6 @@ namespace AMWD.Modbus.Serial.Client
 		#endregion Public methods
 
 		#region Private methods
-
-		private async Task Connect()
-		{
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
-			await Task.Run((Action)Reconnect);
-		}
 
 		private void Reconnect()
 		{
@@ -947,12 +980,11 @@ namespace AMWD.Modbus.Serial.Client
 
 		private void Dispose(bool disposing)
 		{
-			if (disposing)
+			if (isDisposed)
 			{
-				//tcpClient?.Dispose();
-				//tcpClient = null;
+				return;
 			}
-
+			Disconnect().Wait();
 			isDisposed = true;
 		}
 

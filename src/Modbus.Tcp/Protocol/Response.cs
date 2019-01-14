@@ -2,6 +2,7 @@
 using AMWD.Modbus.Common.Util;
 using System;
 using System.Linq;
+using System.Text;
 
 namespace AMWD.Modbus.Tcp.Protocol
 {
@@ -207,7 +208,20 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// <inheritdoc/>
 		public override string ToString()
 		{
-			return $"Response#{TransactionId} | Device#{DeviceId}, Fn: {Function}, Error: {IsError}, Address: {Address}, Count: {Count} | {string.Join(" ", Data.Buffer.Select(b => b.ToString("X2")).ToArray())}";
+			var sb = new StringBuilder();
+			if (Data != null)
+			{
+				foreach (var b in Data.Buffer)
+				{
+					if (sb.Length > 0)
+					{
+						sb.Append(" ");
+					}
+					sb.Append(b.ToString("X2"));
+				}
+			}
+
+			return $"Response#{TransactionId} | Device#{DeviceId}, Fn: {Function}, Error: {IsError}, Address: {Address}, Count: {Count} | {sb}";
 		}
 
 		/// <inheritdoc/>

@@ -1,6 +1,7 @@
 ﻿using AMWD.Modbus.Common.Structures;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace AMWD.Modbus.Common.Interfaces
 {
@@ -26,6 +27,11 @@ namespace AMWD.Modbus.Common.Interfaces
 		#region Properties
 
 		/// <summary>
+		/// Gets the result of the asynchronous initialization of this instance.
+		/// </summary>
+		Task Initialization { get; }
+
+		/// <summary>
 		/// Gets the UTC timestamp of the server start.
 		/// </summary>
 		DateTime StartTime { get; }
@@ -43,6 +49,10 @@ namespace AMWD.Modbus.Common.Interfaces
 		#endregion Properties
 
 		#region Public methods
+
+		//void Start();
+
+		//void Stop();
 
 		#region Coils
 

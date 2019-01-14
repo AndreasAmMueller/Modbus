@@ -93,7 +93,7 @@ namespace AMWD.Modbus.Common
 		[Description("Illegal data address")]
 		IllegalDataAddress = 2,
 		/// <summary>
-		/// The data value to set not valid.
+		/// The data value to set is not valid.
 		/// </summary>
 		[Description("Illegal data value")]
 		IllegalDataValue = 3,

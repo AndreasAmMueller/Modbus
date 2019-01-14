@@ -120,6 +120,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 				case FunctionCode.WriteMultipleCoils:
 				case FunctionCode.WriteMultipleRegisters:
 					buffer.AddUInt16(Count);
+					buffer.AddByte((byte)(Data?.Length ?? 0));
 					if (Data?.Length > 0)
 					{
 						buffer.AddBytes(Data.Buffer);

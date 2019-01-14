@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AMWD.Modbus.Tcp.Client
@@ -20,6 +21,7 @@ namespace AMWD.Modbus.Tcp.Client
 		#region Fields
 
 		private volatile bool isReconnecting;
+		private volatile bool isStarted;
 
 		private TcpClient tcpClient;
 		private bool reconnectFailed = false;
@@ -27,6 +29,8 @@ namespace AMWD.Modbus.Tcp.Client
 
 		private int sendTimeout = 1000;
 		private int receiveTimeout = 1000;
+
+		private CancellationTokenSource cts;
 
 		#endregion Fields
 
@@ -64,8 +68,6 @@ namespace AMWD.Modbus.Tcp.Client
 
 			Host = host;
 			Port = port;
-
-			Initialization = Reconnect();
 		}
 
 		#endregion Constructors
@@ -75,7 +77,7 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <summary>
 		/// Gets the result of the asynchronous initialization of this instance.
 		/// </summary>
-		public Task Initialization { get; }
+		public Task ConnectingTask { get; private set; }
 
 		/// <summary>
 		/// Gets or sets the host name.
@@ -139,6 +141,61 @@ namespace AMWD.Modbus.Tcp.Client
 
 		#region Public methods
 
+		#region Control
+
+		/// <summary>
+		/// Connects the client to the server.
+		/// </summary>
+		/// <returns>An awaitable task.</returns>
+		public Task Connect()
+		{
+			if (isDisposed)
+			{
+				throw new ObjectDisposedException(GetType().FullName);
+			}
+
+			if (!isStarted)
+			{
+				isStarted = true;
+				cts = new CancellationTokenSource();
+				ConnectingTask = Task.Run(() => Reconnect());
+			}
+			return ConnectingTask;
+		}
+
+		/// <summary>
+		/// Disconnects the client.
+		/// </summary>
+		/// <returns>An awaitable task.</returns>
+		public async Task Disconnect()
+		{
+			if (isDisposed)
+			{
+				throw new ObjectDisposedException(GetType().FullName);
+			}
+
+			if (isStarted)
+			{
+				var connected = IsConnected;
+
+				cts.Cancel();
+
+				await ConnectingTask;
+
+				tcpClient.Dispose();
+				tcpClient = null;
+
+				if (connected)
+				{
+					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
+				}
+
+				isStarted = false;
+			}
+		}
+
+		#endregion Control
+
 		#region Read methods
 
 		/// <summary>
@@ -187,32 +244,33 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
-
-				if (request.TransactionId == response.TransactionId)
+				if (request.TransactionId != response.TransactionId)
 				{
-					list = new List<Coil>();
-					for (int i = 0; i < count; i++)
+					throw new ModbusException(nameof(response.TransactionId) + " does not match");
+				}
+
+				list = new List<Coil>();
+				for (int i = 0; i < count; i++)
+				{
+					var posByte = i / 8;
+					var posBit = i % 8;
+
+					var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
+
+					list.Add(new Coil
 					{
-						var posByte = i / 8;
-						var posBit = i % 8;
-
-						var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
-
-						list.Add(new Coil
-						{
-							Address = (ushort)(startAddress + i),
-							Value = val > 0
-						});
-					}
+						Address = (ushort)(startAddress + i),
+						Value = val > 0
+					});
 				}
 			}
 			catch (SocketException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 			catch (IOException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 
 			return list;
@@ -264,32 +322,33 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
-
-				if (request.TransactionId == response.TransactionId)
+				if (request.TransactionId != response.TransactionId)
 				{
-					list = new List<DiscreteInput>();
-					for (int i = 0; i < count; i++)
+					throw new ModbusException(nameof(response.TransactionId) + " does not match");
+				}
+
+				list = new List<DiscreteInput>();
+				for (int i = 0; i < count; i++)
+				{
+					var posByte = i / 8;
+					var posBit = i % 8;
+
+					var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
+
+					list.Add(new DiscreteInput
 					{
-						var posByte = i / 8;
-						var posBit = i % 8;
-
-						var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
-
-						list.Add(new DiscreteInput
-						{
-							Address = (ushort)(startAddress + i),
-							Value = val > 0
-						});
-					}
+						Address = (ushort)(startAddress + i),
+						Value = val > 0
+					});
 				}
 			}
 			catch (SocketException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 			catch (IOException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 
 			return list;
@@ -341,28 +400,29 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
-
-				if (request.TransactionId == response.TransactionId)
+				if (request.TransactionId != response.TransactionId)
 				{
-					list = new List<Register>();
-					for (int i = 0; i < count; i++)
+					throw new ModbusException(nameof(response.TransactionId) + " does not match");
+				}
+
+				list = new List<Register>();
+				for (int i = 0; i < count; i++)
+				{
+					list.Add(new Register
 					{
-						list.Add(new Register
-						{
-							Address = (ushort)(startAddress + i),
-							HiByte = response.Data[i * 2],
-							LoByte = response.Data[i * 2 + 1]
-						});
-					}
+						Address = (ushort)(startAddress + i),
+						HiByte = response.Data[i * 2],
+						LoByte = response.Data[i * 2 + 1]
+					});
 				}
 			}
 			catch (SocketException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 			catch (IOException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 
 			return list;
@@ -414,28 +474,29 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
-
-				if (request.TransactionId == response.TransactionId)
+				if (request.TransactionId != response.TransactionId)
 				{
-					list = new List<Register>();
-					for (int i = 0; i < count; i++)
+					throw new ModbusException(nameof(response.TransactionId) + " does not match");
+				}
+
+				list = new List<Register>();
+				for (int i = 0; i < count; i++)
+				{
+					list.Add(new Register
 					{
-						list.Add(new Register
-						{
-							Address = (ushort)(startAddress + i),
-							HiByte = response.Data[i * 2],
-							LoByte = response.Data[i * 2 + 1]
-						});
-					}
+						Address = (ushort)(startAddress + i),
+						HiByte = response.Data[i * 2],
+						LoByte = response.Data[i * 2 + 1]
+					});
 				}
 			}
 			catch (SocketException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 			catch (IOException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 
 			return list;
@@ -491,6 +552,10 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
+				if (request.TransactionId != response.TransactionId)
+				{
+					throw new ModbusException(nameof(response.TransactionId) + " does not match");
+				}
 
 				return request.TransactionId == response.TransactionId &&
 					request.DeviceId == response.DeviceId &&
@@ -500,11 +565,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 			catch (IOException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 
 			return false;
@@ -554,6 +619,10 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
+				if (request.TransactionId != response.TransactionId)
+				{
+					throw new ModbusException(nameof(response.TransactionId) + " does not match");
+				}
 
 				return request.TransactionId == response.TransactionId &&
 					request.DeviceId == response.DeviceId &&
@@ -563,11 +632,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 			catch (IOException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 
 			return false;
@@ -646,6 +715,10 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
+				if (request.TransactionId != response.TransactionId)
+				{
+					throw new ModbusException(nameof(response.TransactionId) + " does not match");
+				}
 
 				return request.TransactionId == response.TransactionId &&
 					request.Address == response.Address &&
@@ -653,11 +726,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 			catch (IOException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 
 			return false;
@@ -703,6 +776,12 @@ namespace AMWD.Modbus.Tcp.Client
 				throw new ArgumentOutOfRangeException("Address");
 			}
 
+			var data = new DataBuffer(orderedList.Count * 2);
+			for (int i = 0; i < orderedList.Count; i++)
+			{
+				data.SetUInt16(i * 2, orderedList[i].Value);
+			}
+
 			try
 			{
 				var request = new Request
@@ -711,14 +790,8 @@ namespace AMWD.Modbus.Tcp.Client
 					Function = FunctionCode.WriteMultipleRegisters,
 					Address = firstAddress,
 					Count = (ushort)orderedList.Count,
-					Data = new DataBuffer(orderedList.Count * 2 + 1)
+					Data = data
 				};
-
-				request.Data.SetByte(0, (byte)(orderedList.Count * 2));
-				for (int i = 0; i < orderedList.Count; i++)
-				{
-					request.Data.SetUInt16(i * 2 + 1, orderedList[i].Value);
-				}
 				var response = await SendRequest(request);
 				if (response.IsTimeout)
 				{
@@ -728,6 +801,10 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					throw new ModbusException(response.ErrorMessage);
 				}
+				if (request.TransactionId != response.TransactionId)
+				{
+					throw new ModbusException(nameof(response.TransactionId) + " does not match");
+				}
 
 				return request.TransactionId == response.TransactionId &&
 					request.Address == response.Address &&
@@ -735,11 +812,11 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 			catch (IOException)
 			{
-				Reconnect().Forget();
+				ConnectingTask = Task.Run(() => Reconnect());
 			}
 
 			return false;
@@ -753,11 +830,10 @@ namespace AMWD.Modbus.Tcp.Client
 
 		private async Task Reconnect()
 		{
-			if (isDisposed)
+			if (cts.Token.IsCancellationRequested)
 			{
-				throw new ObjectDisposedException(GetType().FullName);
+				return;
 			}
-
 			if (isReconnecting)
 			{
 				return;
@@ -779,17 +855,21 @@ namespace AMWD.Modbus.Tcp.Client
 			var maxTimeout = 20;
 			var startTime = DateTime.UtcNow;
 
-			while (true)
+			while (!cts.Token.IsCancellationRequested)
 			{
 				try
 				{
 					tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
 					tcpClient.Client.DualMode = true;
 					var connectTask = tcpClient.ConnectAsync(Host, Port);
-					if (await Task.WhenAny(new[] { connectTask, Task.Delay(TimeSpan.FromSeconds(timeout)) }) == connectTask)
+					if (await Task.WhenAny(connectTask, Task.Delay(TimeSpan.FromSeconds(timeout), cts.Token)) == connectTask)
 					{
 						tcpClient.SendTimeout = SendTimeout;
 						tcpClient.ReceiveTimeout = ReceiveTimeout;
+					}
+					else if (cts.Token.IsCancellationRequested)
+					{
+						return;
 					}
 					else
 					{
@@ -803,7 +883,7 @@ namespace AMWD.Modbus.Tcp.Client
 				}
 				catch (SocketException) when (ReconnectTimeSpan == TimeSpan.MaxValue || DateTime.UtcNow <= startTime + ReconnectTimeSpan)
 				{
-					await Task.Delay(1000);
+					await Task.Delay(1000, cts.Token);
 					continue;
 				}
 				catch (Exception ex)
@@ -840,18 +920,19 @@ namespace AMWD.Modbus.Tcp.Client
 
 			var stream = tcpClient.GetStream();
 			var bytes = request.Serialize();
-			var writeTask = stream.WriteAsync(bytes, 0, bytes.Length);
-			if (await Task.WhenAny(new[] { writeTask, Task.Delay(SendTimeout) }) == writeTask)
+			var writeTask = stream.WriteAsync(bytes, 0, bytes.Length, cts.Token);
+			if (await Task.WhenAny(writeTask, Task.Delay(SendTimeout, cts.Token)) == writeTask && !cts.Token.IsCancellationRequested)
 			{
 				var responseBytes = new List<byte>();
 				var buffer = new byte[6];
-				var readTask = stream.ReadAsync(buffer, 0, buffer.Length);
-				if (await Task.WhenAny(new[] { readTask, Task.Delay(ReceiveTimeout) }) == readTask)
+				var readTask = stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
+				if (await Task.WhenAny(readTask, Task.Delay(ReceiveTimeout, cts.Token)) == readTask && !cts.Token.IsCancellationRequested)
 				{
-					var count = readTask.Result;
+					var count = await readTask;
 					responseBytes.AddRange(buffer.Take(count));
 
-					bytes = buffer.Skip(4).Take(2).ToArray();
+					bytes = new byte[2];
+					Array.Copy(buffer, 4, bytes, 0, 2);
 					if (BitConverter.IsLittleEndian)
 					{
 						Array.Reverse(bytes);
@@ -861,11 +942,11 @@ namespace AMWD.Modbus.Tcp.Client
 					do
 					{
 						buffer = new byte[following];
-						count = await stream.ReadAsync(buffer, 0, buffer.Length);
+						count = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
 						following -= count;
 						responseBytes.AddRange(buffer.Take(count));
 					}
-					while (following > 0);
+					while (following > 0 && !cts.Token.IsCancellationRequested);
 
 					return new Response(responseBytes.ToArray());
 				}
@@ -891,12 +972,11 @@ namespace AMWD.Modbus.Tcp.Client
 
 		private void Dispose(bool disposing)
 		{
-			if (disposing)
+			if (isDisposed)
 			{
-				tcpClient?.Dispose();
-				tcpClient = null;
+				return;
 			}
-
+			Disconnect().Wait();
 			isDisposed = true;
 		}
 

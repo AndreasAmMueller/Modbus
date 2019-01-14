@@ -64,12 +64,17 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="port">The port to listen. (Default: 502)</param>
 		public ModbusServer(int port = 502)
 		{
-			Initialize(port);
+			Initialization = Task.Run(() => Initialize(port));
 		}
 
 		#endregion Constructors
 
 		#region Properties
+
+		/// <summary>
+		/// Gets the result of the asynchronous initialization of this instance.
+		/// </summary>
+		public Task Initialization { get; }
 
 		/// <summary>
 		/// Gets the UTC timestamp of the server start.
@@ -436,7 +441,9 @@ namespace AMWD.Modbus.Tcp.Server
 			}
 
 			if (!isDisposed)
+			{
 				ClientDisconnected?.Invoke(this, new ClientEventArgs((IPEndPoint)client.Client.RemoteEndPoint));
+			}
 
 			lock (tcpClients)
 			{
