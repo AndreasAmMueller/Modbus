@@ -9,8 +9,6 @@
     <Product>Modbus.Common</Product>
     <Description>Common files for AMWD.Modbus.TCP and AMWD.Modbus.Serial packages.</Description>
     <Copyright>Copyright (c) 2018 Andreas Müller</Copyright>
-    <PackageLicenseUrl>https://github.com/AndreasAmMueller/Modbus/blob/master/LICENSE.txt</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/AndreasAmMueller/Modbus</PackageProjectUrl>
     <RepositoryUrl>https://github.com/AndreasAmMueller/Modbus.git</RepositoryUrl>
     <PackageTags>Modbus</PackageTags>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>

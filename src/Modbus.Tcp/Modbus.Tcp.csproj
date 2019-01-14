@@ -9,8 +9,6 @@
     <Product>Modbus.TCP</Product>
     <Description>Small library to connect via Modbus TCP on remote devices.</Description>
     <Copyright>Copyright (c) 2018 Andreas Müller</Copyright>
-    <PackageLicenseUrl>https://github.com/AndreasAmMueller/Modbus/blob/master/LICENSE.txt</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/AndreasAmMueller/Modbus</PackageProjectUrl>
     <RepositoryUrl>https://github.com/AndreasAmMueller/Modbus.git</RepositoryUrl>
     <PackageTags>Modbus, TCP</PackageTags>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
