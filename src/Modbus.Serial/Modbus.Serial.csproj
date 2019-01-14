@@ -11,6 +11,7 @@
     <Copyright>Copyright (c) 2018 Andreas Müller</Copyright>
     <RepositoryUrl>https://github.com/AndreasAmMueller/Modbus.git</RepositoryUrl>
     <PackageTags>Modbus, Serial, RTU</PackageTags>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageId>AMWD.Modbus.Serial</PackageId>
     <AssemblyName>AMWD.Modbus.Serial</AssemblyName>
@@ -58,6 +59,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Modbus.Common\Modbus.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE.txt" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>
