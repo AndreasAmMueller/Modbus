@@ -541,7 +541,7 @@ namespace UnitTests
 										Console.WriteLine($"Server response: {response?.Length ?? -1}");
 										if (response != null)
 										{
-											await stream.WriteAsync(response, ct);
+											await stream.WriteAsync(response, 0, response.Length, ct);
 											Console.WriteLine("Server response written");
 										}
 									}

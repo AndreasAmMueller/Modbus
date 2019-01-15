@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AMWD.Modbus.Common.Util;
+using System;
 
 namespace AMWD.Modbus.Common.Structures
 {
@@ -32,5 +33,15 @@ namespace AMWD.Modbus.Common.Structures
 		public ModbusException(string message, Exception innerException)
 			: base(message, innerException)
 		{ }
+
+		/// <summary>
+		/// Gets or sets the error/exception code.
+		/// </summary>
+		public ErrorCode ErrorCode { get; set; }
+
+		/// <summary>
+		/// Gets the error message.
+		/// </summary>
+		public string ErrorMessage => ErrorCode.GetDescription();
 	}
 }
