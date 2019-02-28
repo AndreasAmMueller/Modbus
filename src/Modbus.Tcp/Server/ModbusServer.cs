@@ -812,7 +812,8 @@ namespace AMWD.Modbus.Tcp.Server
 			{
 				var response = new Response(request);
 
-				if (request.Count < Consts.MinCount || request.Count > Consts.MaxRegisterCountWrite || request.Count * 2 != request.Data.Length)
+				//request.Data contains [byte count] [data]..[data]
+				if (request.Count < Consts.MinCount || request.Count > Consts.MaxRegisterCountWrite || request.Count * 2 != request.Data.Length - 1)
 				{
 					response.ErrorCode = ErrorCode.IllegalDataValue;
 				}
