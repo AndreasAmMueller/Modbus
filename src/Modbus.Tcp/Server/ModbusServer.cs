@@ -829,7 +829,7 @@ namespace AMWD.Modbus.Tcp.Server
 						for (int i = 0; i < request.Count; i++)
 						{
 							var addr = (ushort)(request.Address + i);
-							var val = request.Data.GetUInt16(i * 2);
+							var val = request.Data.GetUInt16(i * 2 + 1);
 
 							var register = new Register { Address = addr, Value = val };
 							SetHoldingRegister(request.DeviceId, register);
