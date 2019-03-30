@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -565,6 +566,100 @@ namespace AMWD.Modbus.Serial.Client
 			}
 
 			return list;
+		}
+
+		/// <summary>
+		/// Reads device information. (Modbus function 43).
+		/// </summary>
+		/// <param name="deviceId">The id to address the device (slave).</param>
+		/// <param name="categoryId">The category to read (basic, regular, extended, individual).</param>
+		/// <param name="objectId">The first object id to read.</param>
+		/// <returns>A map of device information and their content as string.</returns>
+		public async Task<Dictionary<DeviceIDObject, string>> ReadDeviceInformation(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName)
+		{
+			var raw = await ReadDeviceInformationRaw(deviceId, categoryId, objectId);
+			if (raw == null)
+			{
+				return null;
+			}
+
+			var dict = new Dictionary<DeviceIDObject, string>();
+			foreach (var kvp in raw)
+			{
+				dict.Add((DeviceIDObject)kvp.Key, Encoding.ASCII.GetString(kvp.Value));
+			}
+			return dict;
+		}
+
+		/// <summary>
+		/// Reads device information. (Modbus function 43).
+		/// </summary>
+		/// <param name="deviceId">The id to address the device (slave).</param>
+		/// <param name="categoryId">The category to read (basic, regular, extended, individual).</param>
+		/// <param name="objectId">The first object id to read.</param>
+		/// <returns>A map of device information and their content as raw bytes.</returns>>
+		public async Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName)
+		{
+			if (isDisposed)
+			{
+				throw new ObjectDisposedException(GetType().FullName);
+			}
+
+			if (deviceId < Consts.MinDeviceId || Consts.MaxDeviceId < deviceId)
+			{
+				throw new ArgumentOutOfRangeException(nameof(deviceId));
+			}
+
+			try
+			{
+				var request = new Request
+				{
+					DeviceId = deviceId,
+					Function = FunctionCode.EncapsulatedInterface,
+					MEIType = MEIType.ReadDeviceInformation,
+					MEICategory = categoryId,
+					MEIObject = objectId
+				};
+				var response = await SendRequest(request);
+				if (response.IsTimeout)
+				{
+					throw new IOException("Request timed out");
+				}
+				if (response.IsError)
+				{
+					throw new ModbusException(response.ErrorMessage);
+				}
+
+				var dict = new Dictionary<byte, byte[]>();
+				for (int i = 0, idx = 0; i < response.ObjectCount && idx < response.Data.Length; i++)
+				{
+					byte objId = response.Data.GetByte(idx);
+					idx++;
+					byte len = response.Data.GetByte(idx);
+					idx++;
+					byte[] bytes = response.Data.GetBytes(idx, len);
+					idx += len;
+
+					dict.Add(objId, bytes);
+				}
+
+				if (response.MoreRequestsNeeded)
+				{
+					var transDict = await ReadDeviceInformationRaw(deviceId, categoryId, (DeviceIDObject)response.NextObjectId);
+					foreach (var kvp in transDict)
+					{
+						dict.Add(kvp.Key, kvp.Value);
+					}
+				}
+
+				return dict;
+			}
+			catch (IOException)
+			{
+				ConnectingTask = Task.Run((Action)Reconnect);
+			}
+
+			return null;
 		}
 
 		#endregion Read methods

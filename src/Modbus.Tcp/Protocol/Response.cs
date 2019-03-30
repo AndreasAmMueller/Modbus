@@ -86,6 +86,51 @@ namespace AMWD.Modbus.Tcp.Protocol
 
 		public bool IsTimeout { get; private set; }
 
+		#region MODBUS Encapsulated Interface Transport
+
+		/// <summary>
+		/// Gets or sets the Encapsulated Interface type.
+		/// Only needed on <see cref="FunctionCode.EncapsulatedInterface"/>.
+		/// </summary>
+		public MEIType MEIType { get; set; }
+
+		#region Device Information
+
+		/// <summary>
+		/// Gets or sets the Device ID code (category).
+		/// Only needed on <see cref="FunctionCode.EncapsulatedInterface"/> and <see cref="MEIType.ReadDeviceInformation"/>.
+		/// </summary>
+		public DeviceIDCategory MEICategory { get; set; }
+
+		/// <summary>
+		/// Gets or sets the first Object ID to read.
+		/// </summary>
+		public DeviceIDObject MEIObject { get; set; }
+
+		/// <summary>
+		/// Gets or sets the conformity level of the device information.
+		/// </summary>
+		public byte ConformityLevel { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating whether further requests are needed to gather all device information.
+		/// </summary>
+		public bool MoreRequestsNeeded { get; set; }
+
+		/// <summary>
+		/// Gets or sets the object id to start with the next request.
+		/// </summary>
+		public byte NextObjectId { get; set; }
+
+		/// <summary>
+		/// Gets or sets the number of objects in list (appending).
+		/// </summary>
+		public byte ObjectCount { get; set; }
+
+		#endregion Device Information
+
+		#endregion MODBUS Encapsulated Interface Transport
+
 		#endregion Properties
 
 		#region Serialization
@@ -124,6 +169,28 @@ namespace AMWD.Modbus.Tcp.Protocol
 					case FunctionCode.WriteSingleRegister:
 						buffer.AddUInt16(Address);
 						buffer.AddBytes(Data.Buffer);
+						break;
+					case FunctionCode.EncapsulatedInterface:
+						buffer.AddByte((byte)MEIType);
+						switch (MEIType)
+						{
+							case MEIType.CANOpenGeneralReference:
+								if (Data?.Length > 0)
+								{
+									buffer.AddBytes(Data.Buffer);
+								}
+								break;
+							case MEIType.ReadDeviceInformation:
+								buffer.AddByte((byte)MEICategory);
+								buffer.AddByte(ConformityLevel);
+								buffer.AddByte((byte)(MoreRequestsNeeded ? 0xFF : 0x00));
+								buffer.AddByte(NextObjectId);
+								buffer.AddByte(ObjectCount);
+								buffer.AddBytes(Data.Buffer);
+								break;
+							default:
+								throw new NotImplementedException();
+						}
 						break;
 					default:
 						throw new NotImplementedException();
@@ -194,6 +261,25 @@ namespace AMWD.Modbus.Tcp.Protocol
 					case FunctionCode.WriteSingleRegister:
 						Address = buffer.GetUInt16(8);
 						Data = new DataBuffer(buffer.Buffer.Skip(10).ToArray());
+						break;
+					case FunctionCode.EncapsulatedInterface:
+						MEIType = (MEIType)buffer.GetByte(8);
+						switch (MEIType)
+						{
+							case MEIType.CANOpenGeneralReference:
+								Data = new DataBuffer(buffer.Buffer.Skip(9).ToArray());
+								break;
+							case MEIType.ReadDeviceInformation:
+								MEICategory = (DeviceIDCategory)buffer.GetByte(9);
+								ConformityLevel = buffer.GetByte(10);
+								MoreRequestsNeeded = buffer.GetByte(11) > 0;
+								NextObjectId = buffer.GetByte(12);
+								ObjectCount = buffer.GetByte(13);
+								Data = new DataBuffer(buffer.Buffer.Skip(14).ToArray());
+								break;
+							default:
+								throw new NotImplementedException();
+						}
 						break;
 					default:
 						throw new NotImplementedException();

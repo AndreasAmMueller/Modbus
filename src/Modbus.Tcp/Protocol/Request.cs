@@ -89,6 +89,31 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// </summary>
 		internal DataBuffer Data { get; set; }
 
+		#region MODBUS Encapsulated Interface Transport
+
+		/// <summary>
+		/// Gets or sets the Encapsulated Interface type.
+		/// Only needed on <see cref="FunctionCode.EncapsulatedInterface"/>.
+		/// </summary>
+		public MEIType MEIType { get; set; }
+
+		#region Device Information
+
+		/// <summary>
+		/// Gets or sets the Device ID code (category).
+		/// Only needed on <see cref="FunctionCode.EncapsulatedInterface"/> and <see cref="MEIType.ReadDeviceInformation"/>.
+		/// </summary>
+		public DeviceIDCategory MEICategory { get; set; }
+
+		/// <summary>
+		/// Gets or sets the first Object ID to read.
+		/// </summary>
+		public DeviceIDObject MEIObject { get; set; }
+
+		#endregion Device Information
+
+		#endregion MODBUS Encapsulated Interface Transport
+
 		#endregion Properties
 
 		#region Serialization
@@ -99,7 +124,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// <returns></returns>
 		internal byte[] Serialize()
 		{
-			var buffer = new DataBuffer(10);
+			var buffer = new DataBuffer(8);
 
 			buffer.SetUInt16(0, TransactionId);
 			buffer.SetUInt16(2, 0x0000); // Protocol ID
@@ -107,18 +132,18 @@ namespace AMWD.Modbus.Tcp.Protocol
 			buffer.SetByte(6, DeviceId);
 			buffer.SetByte(7, (byte)Function);
 
-			buffer.SetUInt16(8, Address);
-
 			switch (Function)
 			{
 				case FunctionCode.ReadCoils:
 				case FunctionCode.ReadDiscreteInputs:
 				case FunctionCode.ReadHoldingRegisters:
 				case FunctionCode.ReadInputRegisters:
+					buffer.AddUInt16(Address);
 					buffer.AddUInt16(Count);
 					break;
 				case FunctionCode.WriteMultipleCoils:
 				case FunctionCode.WriteMultipleRegisters:
+					buffer.AddUInt16(Address);
 					buffer.AddUInt16(Count);
 					buffer.AddByte((byte)(Data?.Length ?? 0));
 					if (Data?.Length > 0)
@@ -128,9 +153,28 @@ namespace AMWD.Modbus.Tcp.Protocol
 					break;
 				case FunctionCode.WriteSingleCoil:
 				case FunctionCode.WriteSingleRegister:
+					buffer.AddUInt16(Address);
 					if (Data?.Length > 0)
 					{
 						buffer.AddBytes(Data.Buffer);
+					}
+					break;
+				case FunctionCode.EncapsulatedInterface:
+					buffer.AddByte((byte)MEIType);
+					switch (MEIType)
+					{
+						case MEIType.CANOpenGeneralReference:
+							if (Data?.Length > 0)
+							{
+								buffer.AddBytes(Data.Buffer);
+							}
+							break;
+						case MEIType.ReadDeviceInformation:
+							buffer.AddByte((byte)MEICategory);
+							buffer.AddByte((byte)MEIObject);
+							break;
+						default:
+							throw new NotImplementedException();
 					}
 					break;
 				default:
@@ -159,7 +203,6 @@ namespace AMWD.Modbus.Tcp.Protocol
 			}
 			DeviceId = buffer.GetByte(6);
 			Function = (FunctionCode)buffer.GetByte(7);
-			Address = buffer.GetUInt16(8);
 
 			switch (Function)
 			{
@@ -167,16 +210,34 @@ namespace AMWD.Modbus.Tcp.Protocol
 				case FunctionCode.ReadDiscreteInputs:
 				case FunctionCode.ReadHoldingRegisters:
 				case FunctionCode.ReadInputRegisters:
+					Address = buffer.GetUInt16(8);
 					Count = buffer.GetUInt16(10);
 					break;
 				case FunctionCode.WriteMultipleCoils:
 				case FunctionCode.WriteMultipleRegisters:
+					Address = buffer.GetUInt16(8);
 					Count = buffer.GetUInt16(10);
-					Data = new DataBuffer(buffer.GetBytes(12, buffer.Length - 12));
+					Data = new DataBuffer(buffer.Buffer.Skip(12).ToArray());
 					break;
 				case FunctionCode.WriteSingleCoil:
 				case FunctionCode.WriteSingleRegister:
-					Data = new DataBuffer(buffer.GetBytes(10, buffer.Length - 10));
+					Address = buffer.GetUInt16(8);
+					Data = new DataBuffer(buffer.Buffer.Skip(10).ToArray());
+					break;
+				case FunctionCode.EncapsulatedInterface:
+					MEIType = (MEIType)buffer.GetByte(8);
+					switch (MEIType)
+					{
+						case MEIType.CANOpenGeneralReference:
+							Data = new DataBuffer(buffer.Buffer.Skip(9).ToArray());
+							break;
+						case MEIType.ReadDeviceInformation:
+							MEICategory = (DeviceIDCategory)buffer.GetByte(9);
+							MEIObject = (DeviceIDObject)buffer.GetByte(10);
+							break;
+						default:
+							throw new NotImplementedException();
+					}
 					break;
 				default:
 					throw new NotImplementedException();

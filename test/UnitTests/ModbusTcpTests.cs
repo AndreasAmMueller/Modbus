@@ -2,6 +2,7 @@
 using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
 using AMWD.Modbus.Tcp.Client;
+using AMWD.Modbus.Tcp.Server;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -9,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -289,6 +291,102 @@ namespace UnitTests
 			}
 		}
 
+		[TestMethod]
+		public async Task ClientReadDeviceInformationBasicTest()
+		{
+			var expectedRequest = new byte[] { 0, 0, 0, 5, 13, 43, 14, 1, 0 };
+			var expectedResponse = new Dictionary<DeviceIDObject, string>
+			{
+				{ DeviceIDObject.VendorName, "AM.WD" },
+				{ DeviceIDObject.ProductCode, "Mini-Test" },
+				{ DeviceIDObject.MajorMinorRevision, "1.2.3.4" }
+			};
+
+			using (var server = new MiniTestServer())
+			{
+				server.RequestHandler = (request, clientIp) =>
+				{
+					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
+					Console.WriteLine("Server sending response");
+
+					var bytes = new List<byte>();
+					bytes.AddRange(request.Take(2));
+					bytes.AddRange(new byte[] { 0, 0, 0, 0, 13, 43, 14, 1, 1, 0, 0, (byte)expectedResponse.Count });
+					var len = 8;
+					foreach (var kvp in expectedResponse)
+					{
+						var b = Encoding.ASCII.GetBytes(kvp.Value);
+						bytes.Add((byte)kvp.Key);
+						len++;
+						bytes.Add((byte)b.Length);
+						len++;
+						bytes.AddRange(b);
+						len += b.Length;
+					}
+					bytes[5] = (byte)len;
+
+					return bytes.ToArray();
+				};
+				server.Start();
+				using (var client = new ModbusClient("localhost", server.Port))
+				{
+					await client.Connect();
+					Assert.IsTrue(client.IsConnected);
+
+					var deviceInfo = await client.ReadDeviceInformation(13, DeviceIDCategory.Basic);
+					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+					CollectionAssert.AreEqual(expectedResponse, deviceInfo, "Response is incorrect");
+				}
+			}
+		}
+
+		[TestMethod]
+		public async Task ClientReadDeviceInformationIndividualTest()
+		{
+			var expectedRequest = new byte[] { 0, 0, 0, 5, 13, 43, 14, 4, (byte)DeviceIDObject.ModelName };
+			var expectedResponse = new Dictionary<DeviceIDObject, string>
+			{
+				{ DeviceIDObject.ModelName, "TestModel" }
+			};
+
+			using (var server = new MiniTestServer())
+			{
+				server.RequestHandler = (request, clientIp) =>
+				{
+					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
+					Console.WriteLine("Server sending response");
+
+					var bytes = new List<byte>();
+					bytes.AddRange(request.Take(2));
+					bytes.AddRange(new byte[] { 0, 0, 0, 0, 13, 43, 14, 4, 2, 0, 0, (byte)expectedResponse.Count });
+					var len = 8;
+					foreach (var kvp in expectedResponse)
+					{
+						var b = Encoding.ASCII.GetBytes(kvp.Value);
+						bytes.Add((byte)kvp.Key);
+						len++;
+						bytes.Add((byte)b.Length);
+						len++;
+						bytes.AddRange(b);
+						len += b.Length;
+					}
+					bytes[5] = (byte)len;
+
+					return bytes.ToArray();
+				};
+				server.Start();
+				using (var client = new ModbusClient("localhost", server.Port))
+				{
+					await client.Connect();
+					Assert.IsTrue(client.IsConnected);
+
+					var deviceInfo = await client.ReadDeviceInformation(13, DeviceIDCategory.Individual, DeviceIDObject.ModelName);
+					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+					CollectionAssert.AreEqual(expectedResponse, deviceInfo, "Response is incorrect");
+				}
+			}
+		}
+
 		#endregion Read
 
 		#region Write
@@ -438,6 +536,23 @@ namespace UnitTests
 		#endregion Modbus Client
 
 		#region Modbus Server
+
+		[TestMethod]
+		public async Task ServerStartTest()
+		{
+			var port = 0;
+			using (var testServer = new MiniTestServer())
+			{
+				testServer.Start();
+				port = testServer.Port;
+			}
+
+			using (var server = new ModbusServer(port))
+			{
+				await server.Initialization;
+				Assert.IsTrue(server.IsRunning);
+			}
+		}
 
 		#endregion Modbus Server
 

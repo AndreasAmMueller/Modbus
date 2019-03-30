@@ -10,6 +10,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace AMWD.Modbus.Tcp.Server
@@ -486,6 +488,9 @@ namespace AMWD.Modbus.Tcp.Server
 				case FunctionCode.WriteMultipleRegisters:
 					response = HandleWriteMultipleRegisters(request);
 					break;
+				case FunctionCode.EncapsulatedInterface:
+					response = HandleEncapsulatedInterface(request);
+					break;
 				default:
 					response = new Response(request)
 					{
@@ -670,6 +675,121 @@ namespace AMWD.Modbus.Tcp.Server
 			catch
 			{
 				return null;
+			}
+
+			return response;
+		}
+
+		private Response HandleEncapsulatedInterface(Request request)
+		{
+			var response = new Response(request);
+			if (request.MEIType != MEIType.ReadDeviceInformation)
+			{
+				response.ErrorCode = ErrorCode.IllegalFunction;
+				return response;
+			}
+
+			if ((byte)request.MEIObject < 0x00 ||
+				(byte)request.MEIObject > 0xFF ||
+				((byte)request.MEIObject > 0x06 && (byte)request.MEIObject < 0x80))
+			{
+				response.ErrorCode = ErrorCode.IllegalDataAddress;
+				return response;
+			}
+
+			if (request.MEICategory < DeviceIDCategory.Basic || request.MEICategory > DeviceIDCategory.Individual)
+			{
+				response.ErrorCode = ErrorCode.IllegalDataValue;
+				return response;
+			}
+
+			string version = Assembly.GetAssembly(typeof(ModbusServer))
+				.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+				.InformationalVersion;
+
+			response.MEIType = request.MEIType;
+			response.MEICategory = request.MEICategory;
+
+			var dict = new Dictionary<DeviceIDObject, string>();
+			switch (request.MEICategory)
+			{
+				case DeviceIDCategory.Basic:
+					response.ConformityLevel = 0x01;
+					dict.Add(DeviceIDObject.VendorName, "AM.WD");
+					dict.Add(DeviceIDObject.ProductCode, "AM.WD-MBS-TCP");
+					dict.Add(DeviceIDObject.MajorMinorRevision, version);
+					break;
+				case DeviceIDCategory.Regular:
+					response.ConformityLevel = 0x02;
+					dict.Add(DeviceIDObject.VendorName, "AM.WD");
+					dict.Add(DeviceIDObject.ProductCode, "AM.WD-MBS-TCP");
+					dict.Add(DeviceIDObject.MajorMinorRevision, version);
+					dict.Add(DeviceIDObject.VendorUrl, "https://github.com/AndreasAmMueller/Modbus");
+					dict.Add(DeviceIDObject.ProductName, "AM.WD Modbus");
+					dict.Add(DeviceIDObject.ModelName, "TCP Server");
+					dict.Add(DeviceIDObject.UserApplicationName, "Modbus TCP Server");
+					break;
+				case DeviceIDCategory.Extended:
+					response.ConformityLevel = 0x03;
+					dict.Add(DeviceIDObject.VendorName, "AM.WD");
+					dict.Add(DeviceIDObject.ProductCode, "AM.WD-MBS-TCP");
+					dict.Add(DeviceIDObject.MajorMinorRevision, version);
+					dict.Add(DeviceIDObject.VendorUrl, "https://github.com/AndreasAmMueller/Modbus");
+					dict.Add(DeviceIDObject.ProductName, "AM.WD Modbus");
+					dict.Add(DeviceIDObject.ModelName, "TCP Server");
+					dict.Add(DeviceIDObject.UserApplicationName, "Modbus TCP Server");
+					break;
+				case DeviceIDCategory.Individual:
+					switch (request.MEIObject)
+					{
+						case DeviceIDObject.VendorName:
+							response.ConformityLevel = 0x81;
+							dict.Add(DeviceIDObject.VendorName, "AM.WD");
+							break;
+						case DeviceIDObject.ProductCode:
+							response.ConformityLevel = 0x81;
+							dict.Add(DeviceIDObject.ProductCode, "AM.WD-MBS-TCP");
+							break;
+						case DeviceIDObject.MajorMinorRevision:
+							response.ConformityLevel = 0x81;
+							dict.Add(DeviceIDObject.MajorMinorRevision, version);
+							break;
+						case DeviceIDObject.VendorUrl:
+							response.ConformityLevel = 0x82;
+							dict.Add(DeviceIDObject.VendorUrl, "https://github.com/AndreasAmMueller/Modbus");
+							break;
+						case DeviceIDObject.ProductName:
+							response.ConformityLevel = 0x82;
+							dict.Add(DeviceIDObject.ProductName, "AM.WD Modbus");
+							break;
+						case DeviceIDObject.ModelName:
+							response.ConformityLevel = 0x82;
+							dict.Add(DeviceIDObject.ModelName, "TCP Server");
+							break;
+						case DeviceIDObject.UserApplicationName:
+							response.ConformityLevel = 0x82;
+							dict.Add(DeviceIDObject.UserApplicationName, "Modbus TCP Server");
+							break;
+						default:
+							response.ConformityLevel = 0x83;
+							dict.Add(request.MEIObject, "Custom Data for " + request.MEIObject);
+							break;
+					}
+					break;
+			}
+
+			response.MoreRequestsNeeded = false;
+			response.NextObjectId = 0x00;
+			response.ObjectCount = (byte)dict.Count;
+			response.Data = new DataBuffer();
+
+			foreach (var kvp in dict)
+			{
+				var bytes = Encoding.ASCII.GetBytes(kvp.Value);
+
+				response.Data.AddByte((byte)kvp.Key);
+				response.Data.AddByte((byte)bytes.Length);
+				response.Data.AddBytes(bytes);
 			}
 
 			return response;

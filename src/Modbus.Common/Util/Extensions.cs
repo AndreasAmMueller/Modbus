@@ -249,7 +249,13 @@ namespace AMWD.Modbus.Common.Util
 				blob[i * 2 + 1] = registers[i].LoByte;
 			}
 
-			return encoding.GetString(blob).Trim(new[] { ' ', '\t', '\0', '\r', '\n' });
+			var str = encoding.GetString(blob).Trim(new[] { ' ', '\t', '\0', '\r', '\n' });
+			var nullIdx = str.IndexOf('\0');
+			if (nullIdx >= 0)
+			{
+				return str.Substring(0, nullIdx);
+			}
+			return str;
 		}
 
 		#endregion To string

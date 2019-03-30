@@ -69,7 +69,98 @@ namespace AMWD.Modbus.Common
 		/// Writes multiple registers (Fn 16).
 		/// </summary>
 		[Description("Write Multiple Registers")]
-		WriteMultipleRegisters = 0x10
+		WriteMultipleRegisters = 0x10,
+		/// <summary>
+		/// Tunnels service requests and method invocations (Fn 43).
+		/// </summary>
+		/// <remarks>
+		/// This function code needs additional information about its type of request.
+		/// </remarks>
+		[Description("MODBUS Encapsulated Interface (MEI)")]
+		EncapsulatedInterface = 0x2B
+	}
+
+	/// <summary>
+	/// Lists the possible MEI types.
+	/// </summary>
+	/// <remarks>
+	/// MEI = MODBUS Encapsulated Interface (Fn 43).
+	/// </remarks>
+	public enum MEIType: byte
+	{
+		/// <summary>
+		/// The request contains data of CANopen
+		/// </summary>
+		[Description("CANopen General Reference Request and Response PDU")]
+		CANOpenGeneralReference = 0x0D,
+		/// <summary>
+		/// The request contains data to read specific device information.
+		/// </summary>
+		[Description("Read Device Information")]
+		ReadDeviceInformation = 0x0E
+	}
+
+	/// <summary>
+	/// Lists the category of the device information.
+	/// </summary>
+	public enum DeviceIDCategory : byte
+	{
+		/// <summary>
+		/// Read the basic information (mandatory).
+		/// </summary>
+		[Description("Basic Information Block")]
+		Basic = 0x01,
+		/// <summary>
+		/// Read the regular information (optional).
+		/// </summary>
+		[Description("Regular Information Block")]
+		Regular = 0x02,
+		/// <summary>
+		/// Read the extended information (optional, requires multiple requests).
+		/// </summary>
+		[Description("Extended Information Block")]
+		Extended = 0x03,
+		/// <summary>
+		/// Read an individual object.
+		/// </summary>
+		[Description("Individual Object")]
+		Individual = 0x04
+	}
+
+	/// <summary>
+	/// List of known object ids of the device information.
+	/// </summary>
+	public enum DeviceIDObject : byte
+	{
+		/// <summary>
+		/// The vendor name (mandatory).
+		/// </summary>
+		VendorName = 0x00,
+		/// <summary>
+		/// The product code (mandatory).
+		/// </summary>
+		ProductCode = 0x01,
+		/// <summary>
+		/// The major and minor revision (mandatory).
+		/// </summary>
+		MajorMinorRevision = 0x02,
+
+		/// <summary>
+		/// The vendor url (optional).
+		/// </summary>
+		VendorUrl = 0x03,
+		/// <summary>
+		/// The product name (optional).
+		/// </summary>
+		ProductName = 0x04,
+		/// <summary>
+		/// The model name (optional).
+		/// </summary>
+		ModelName = 0x05,
+		/// <summary>
+		/// The application name (optional).
+		/// </summary>
+		UserApplicationName = 0x06
 	}
 
 	/// <summary>

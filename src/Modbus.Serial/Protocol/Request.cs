@@ -68,6 +68,31 @@ namespace AMWD.Modbus.Serial.Protocol
 		/// </summary>
 		internal DataBuffer Data { get; set; }
 
+		#region MODBUS Encapsulated Interface Transport
+
+		/// <summary>
+		/// Gets or sets the Encapsulated Interface type.
+		/// Only needed on <see cref="FunctionCode.EncapsulatedInterface"/>.
+		/// </summary>
+		public MEIType MEIType { get; set; }
+
+		#region Device Information
+
+		/// <summary>
+		/// Gets or sets the Device ID code (category).
+		/// Only needed on <see cref="FunctionCode.EncapsulatedInterface"/> and <see cref="MEIType.ReadDeviceInformation"/>.
+		/// </summary>
+		public DeviceIDCategory MEICategory { get; set; }
+
+		/// <summary>
+		/// Gets or sets the first Object ID to read.
+		/// </summary>
+		public DeviceIDObject MEIObject { get; set; }
+
+		#endregion Device Information
+
+		#endregion MODBUS Encapsulated Interface Transport
+
 		#endregion Properties
 
 		#region Serialization
@@ -78,12 +103,10 @@ namespace AMWD.Modbus.Serial.Protocol
 		/// <returns></returns>
 		internal byte[] Serialize()
 		{
-			var buffer = new DataBuffer(4);
+			var buffer = new DataBuffer(2);
 
 			buffer.SetByte(0, DeviceId);
 			buffer.SetByte(1, (byte)Function);
-
-			buffer.SetUInt16(2, Address);
 
 			switch (Function)
 			{
@@ -91,10 +114,12 @@ namespace AMWD.Modbus.Serial.Protocol
 				case FunctionCode.ReadDiscreteInputs:
 				case FunctionCode.ReadHoldingRegisters:
 				case FunctionCode.ReadInputRegisters:
+					buffer.AddUInt16(Address);
 					buffer.AddUInt16(Count);
 					break;
 				case FunctionCode.WriteMultipleCoils:
 				case FunctionCode.WriteMultipleRegisters:
+					buffer.AddUInt16(Address);
 					buffer.AddUInt16(Count);
 					if (Data?.Length > 0)
 					{
@@ -103,9 +128,28 @@ namespace AMWD.Modbus.Serial.Protocol
 					break;
 				case FunctionCode.WriteSingleCoil:
 				case FunctionCode.WriteSingleRegister:
+					buffer.AddUInt16(Address);
 					if (Data?.Length > 0)
 					{
 						buffer.AddBytes(Data.Buffer);
+					}
+					break;
+				case FunctionCode.EncapsulatedInterface:
+					buffer.AddByte((byte)MEIType);
+					switch (MEIType)
+					{
+						case MEIType.CANOpenGeneralReference:
+							if (Data?.Length > 0)
+							{
+								buffer.AddBytes(Data.Buffer);
+							}
+							break;
+						case MEIType.ReadDeviceInformation:
+							buffer.AddByte((byte)MEICategory);
+							buffer.AddByte((byte)MEIObject);
+							break;
+						default:
+							throw new NotImplementedException();
 					}
 					break;
 				default:
@@ -123,7 +167,6 @@ namespace AMWD.Modbus.Serial.Protocol
 			var buffer = new DataBuffer(bytes);
 			DeviceId = buffer.GetByte(0);
 			Function = (FunctionCode)buffer.GetByte(1);
-			Address = buffer.GetUInt16(2);
 
 			var crcBuff = buffer.GetBytes(buffer.Length - 3, 2);
 			var crcCalc = Checksum.CRC16(bytes, 0, bytes.Length - 2);
@@ -139,16 +182,34 @@ namespace AMWD.Modbus.Serial.Protocol
 				case FunctionCode.ReadDiscreteInputs:
 				case FunctionCode.ReadHoldingRegisters:
 				case FunctionCode.ReadInputRegisters:
+					Address = buffer.GetUInt16(2);
 					Count = buffer.GetUInt16(4);
 					break;
 				case FunctionCode.WriteMultipleCoils:
 				case FunctionCode.WriteMultipleRegisters:
+					Address = buffer.GetUInt16(2);
 					Count = buffer.GetUInt16(4);
 					Data = new DataBuffer(buffer.GetBytes(6, buffer.Length - 8));
 					break;
 				case FunctionCode.WriteSingleCoil:
 				case FunctionCode.WriteSingleRegister:
+					Address = buffer.GetUInt16(2);
 					Data = new DataBuffer(buffer.GetBytes(4, buffer.Length - 6));
+					break;
+				case FunctionCode.EncapsulatedInterface:
+					MEIType = (MEIType)buffer.GetByte(8);
+					switch (MEIType)
+					{
+						case MEIType.CANOpenGeneralReference:
+							Data = new DataBuffer(buffer.Buffer.Skip(9).ToArray());
+							break;
+						case MEIType.ReadDeviceInformation:
+							MEICategory = (DeviceIDCategory)buffer.GetByte(9);
+							MEIObject = (DeviceIDObject)buffer.GetByte(10);
+							break;
+						default:
+							throw new NotImplementedException();
+					}
 					break;
 				default:
 					throw new NotImplementedException();

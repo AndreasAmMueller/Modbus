@@ -42,7 +42,11 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="bytes">New buffer as byte array.</param>
 		public DataBuffer(byte[] bytes)
 		{
-			Buffer = bytes ?? throw new ArgumentNullException(nameof(bytes));
+			if (bytes == null)
+				throw new ArgumentNullException(nameof(bytes));
+
+			Buffer = new byte[bytes.Length];
+			Array.Copy(bytes, Buffer, bytes.Length);
 		}
 
 		/// <summary>

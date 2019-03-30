@@ -93,6 +93,24 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <returns>A list of registers or null on error.</returns>
 		Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count);
 
+		/// <summary>
+		/// Reads device information. (Modbus function 43).
+		/// </summary>
+		/// <param name="deviceId">The id to address the device (slave).</param>
+		/// <param name="categoryId">The category to read (basic, regular, extended, individual).</param>
+		/// <param name="objectId">The first object id to read.</param>
+		/// <returns>A map of device information and their content as string.</returns>
+		Task<Dictionary<DeviceIDObject, string>> ReadDeviceInformation(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName);
+
+		/// <summary>
+		/// Reads device information. (Modbus function 43).
+		/// </summary>
+		/// <param name="deviceId">The id to address the device (slave).</param>
+		/// <param name="categoryId">The category to read (basic, regular, extended, individual).</param>
+		/// <param name="objectId">The first object id to read.</param>
+		/// <returns>A map of device information and their content as raw bytes.</returns>
+		Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName);
+
 		#endregion Read methods
 
 		#region Write methods
