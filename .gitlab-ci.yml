@@ -1,4 +1,4 @@
-image: microsoft/dotnet
+image: microsoft/dotnet:sdk
 
 stages:
   - build

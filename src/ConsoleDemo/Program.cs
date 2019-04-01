@@ -10,6 +10,8 @@ using AMWD.Modbus.Common.Interfaces;
 using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
 using AMWD.Modbus.Common;
+using AMWD.Modbus.Serial;
+using System.IO.Ports;
 
 namespace ConsoleDemo
 {
@@ -56,7 +58,30 @@ namespace ConsoleDemo
 						{
 							Console.Write("Interface: ");
 							var port = Console.ReadLine().Trim();
-							client = new SerialClient(port);
+
+							Console.Write("Baud: ");
+							var baud = Convert.ToInt32(Console.ReadLine().Trim());
+
+							Console.Write("Data-Bits [7|8]: ");
+							var dataBits = Convert.ToInt32(Console.ReadLine().Trim());
+
+							Console.Write("Stop-Bits [0|1|2|3=1.5]: ");
+							var stopBits = Convert.ToInt32(Console.ReadLine().Trim());
+
+							Console.Write("Parity [0] None [1] Odd [2] Even [3] Mark [4] Space: ");
+							var parity = Convert.ToInt32(Console.ReadLine().Trim());
+
+							Console.Write("Handshake [0] None [1] X-On/Off [2] RTS [3] RTS+X-On/Off: ");
+							var handshake = Convert.ToInt32(Console.ReadLine().Trim());
+
+							client = new SerialClient(port)
+							{
+								BaudRate = (BaudRate)baud,
+								DataBits = dataBits,
+								StopBits = (StopBits)stopBits,
+								Parity = (Parity)parity,
+								Handshake = (Handshake)handshake
+							};
 						}
 						break;
 					default:

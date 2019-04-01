@@ -11,8 +11,6 @@
     <Copyright>Copyright (c) 2018 Andreas Müller</Copyright>
     <RepositoryUrl>https://github.com/AndreasAmMueller/Modbus.git</RepositoryUrl>
     <PackageTags>Modbus</PackageTags>
-    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageId>AMWD.Modbus.Common</PackageId>
     <AssemblyName>AMWD.Modbus.Common</AssemblyName>
     <RootNamespace>AMWD.Modbus.Common</RootNamespace>

@@ -17,9 +17,14 @@
 		#region Protocol limitations
 
 		/// <summary>
-		/// The lowest accepted device id.
+		/// The lowest accepted device id on TCP protocol.
 		/// </summary>
-		public const byte MinDeviceId = 0x00;
+		public const byte MinDeviceIdTcp = 0x00;
+
+		/// <summary>
+		/// The lowest accepted device id on RTU protocol.
+		/// </summary>
+		public const byte MinDeviceIdRtu = 0x01;
 
 		/// <summary>
 		/// The highest accepted device id.

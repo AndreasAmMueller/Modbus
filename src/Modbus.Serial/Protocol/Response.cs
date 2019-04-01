@@ -210,7 +210,7 @@ namespace AMWD.Modbus.Serial.Protocol
 
 			var buffer = new DataBuffer(bytes);
 
-			var crcBuff = buffer.GetBytes(buffer.Length - 3, 2);
+			var crcBuff = buffer.GetBytes(buffer.Length - 2, 2);
 			var crcCalc = Checksum.CRC16(bytes, 0, bytes.Length - 2);
 
 			if (crcBuff[0] != crcCalc[0] || crcBuff[1] != crcCalc[1])
@@ -237,7 +237,7 @@ namespace AMWD.Modbus.Serial.Protocol
 					case FunctionCode.ReadHoldingRegisters:
 					case FunctionCode.ReadInputRegisters:
 						var len = buffer.GetByte(2);
-						if (buffer.Length != len + 3)
+						if (buffer.Length != len + 3 + 2)   // following bytes + 3 byte head + 2 byte CRC
 						{
 							throw new ArgumentException("Response incomplete");
 						}
@@ -254,19 +254,19 @@ namespace AMWD.Modbus.Serial.Protocol
 						Data = new DataBuffer(buffer.GetBytes(4, buffer.Length - 6));
 						break;
 					case FunctionCode.EncapsulatedInterface:
-						MEIType = (MEIType)buffer.GetByte(8);
+						MEIType = (MEIType)buffer.GetByte(2);
 						switch (MEIType)
 						{
 							case MEIType.CANOpenGeneralReference:
-								Data = new DataBuffer(buffer.Buffer.Skip(9).ToArray());
+								Data = new DataBuffer(buffer.Buffer.Skip(3).ToArray());
 								break;
 							case MEIType.ReadDeviceInformation:
-								MEICategory = (DeviceIDCategory)buffer.GetByte(9);
-								ConformityLevel = buffer.GetByte(10);
-								MoreRequestsNeeded = buffer.GetByte(11) > 0;
-								NextObjectId = buffer.GetByte(12);
-								ObjectCount = buffer.GetByte(13);
-								Data = new DataBuffer(buffer.Buffer.Skip(14).ToArray());
+								MEICategory = (DeviceIDCategory)buffer.GetByte(3);
+								ConformityLevel = buffer.GetByte(4);
+								MoreRequestsNeeded = buffer.GetByte(5) > 0;
+								NextObjectId = buffer.GetByte(6);
+								ObjectCount = buffer.GetByte(7);
+								Data = new DataBuffer(buffer.Buffer.Skip(8).ToArray());
 								break;
 							default:
 								throw new NotImplementedException();

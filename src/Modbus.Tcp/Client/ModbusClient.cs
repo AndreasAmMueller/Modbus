@@ -225,12 +225,13 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <returns>A list of coils or null on error.</returns>
 		public async Task<List<Coil>> ReadCoils(byte deviceId, ushort startAddress, ushort count)
 		{
+			logger?.LogTrace($"ModbusClient.ReadCoils({deviceId}, {startAddress}, {count})");
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			if (deviceId < Consts.MinDeviceId || Consts.MaxDeviceId < deviceId)
+			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
 			}
@@ -308,12 +309,13 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <returns>A list of discrete inputs or null on error.</returns>
 		public async Task<List<DiscreteInput>> ReadDiscreteInputs(byte deviceId, ushort startAddress, ushort count)
 		{
+			logger?.LogTrace($"ModbusClient.ReadDiscreteInputs({deviceId}, {startAddress}, {count})");
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			if (deviceId < Consts.MinDeviceId || Consts.MaxDeviceId < deviceId)
+			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
 			}
@@ -391,12 +393,13 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <returns>A list of registers or null on error.</returns>
 		public async Task<List<Register>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count)
 		{
+			logger?.LogTrace($"ModbusClient.ReadHoldingRegisters({deviceId}, {startAddress}, {count})");
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			if (deviceId < Consts.MinDeviceId || Consts.MaxDeviceId < deviceId)
+			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
 			}
@@ -470,12 +473,13 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <returns>A list of registers or null on error.</returns>
 		public async Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count)
 		{
+			logger?.LogTrace($"ModbusClient.ReadInputRegisters({deviceId}, {startAddress}, {count})");
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			if (deviceId < Consts.MinDeviceId || Consts.MaxDeviceId < deviceId)
+			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
 			}
@@ -572,12 +576,13 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <returns>A map of device information and their content as raw bytes.</returns>>
 		public async Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName)
 		{
+			logger?.LogTrace($"ModbusClient.ReadDeviceInformation({deviceId}, {categoryId}, {objectId})");
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			if (deviceId < Consts.MinDeviceId || Consts.MaxDeviceId < deviceId)
+			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
 			}
@@ -659,6 +664,7 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <returns>true on success, otherwise false.</returns>
 		public async Task<bool> WriteSingleCoil(byte deviceId, Coil coil)
 		{
+			logger?.LogTrace($"ModbusClient.WriteSingleCoil({deviceId}, {coil})");
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
@@ -668,7 +674,7 @@ namespace AMWD.Modbus.Tcp.Client
 			{
 				throw new ArgumentNullException(nameof(coil));
 			}
-			if (deviceId < Consts.MinDeviceId || Consts.MaxDeviceId < deviceId)
+			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
 			}
@@ -733,6 +739,7 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <returns>true on success, otherwise false.</returns>
 		public async Task<bool> WriteSingleRegister(byte deviceId, Register register)
 		{
+			logger?.LogTrace($"ModbusClient.WriteSingleRegister({deviceId}, {register})");
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
@@ -742,7 +749,7 @@ namespace AMWD.Modbus.Tcp.Client
 			{
 				throw new ArgumentNullException(nameof(register));
 			}
-			if (deviceId < Consts.MinDeviceId || Consts.MaxDeviceId < deviceId)
+			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
 			}
@@ -805,6 +812,7 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <returns>true on success, otherwise false.</returns>
 		public async Task<bool> WriteCoils(byte deviceId, IEnumerable<Coil> coils)
 		{
+			logger?.LogTrace($"ModbusClient.WriteCoils({deviceId}, Length: {coils.Count()})");
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
@@ -814,7 +822,7 @@ namespace AMWD.Modbus.Tcp.Client
 			{
 				throw new ArgumentNullException(nameof(coils));
 			}
-			if (deviceId < Consts.MinDeviceId || Consts.MaxDeviceId < deviceId)
+			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
 			}
@@ -904,6 +912,7 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <returns>true on success, otherwise false.</returns>
 		public async Task<bool> WriteRegisters(byte deviceId, IEnumerable<Register> registers)
 		{
+			logger?.LogTrace($"ModbusClient.WriteRegisters({deviceId}, Length: {registers.Count()})");
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
@@ -913,7 +922,7 @@ namespace AMWD.Modbus.Tcp.Client
 			{
 				throw new ArgumentNullException(nameof(registers));
 			}
-			if (deviceId < Consts.MinDeviceId || Consts.MaxDeviceId < deviceId)
+			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
 			}
