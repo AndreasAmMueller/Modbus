@@ -54,6 +54,8 @@ namespace UnitTests
 					await server.Stop();
 
 					await client.ReadHoldingRegisters(0, 0, 1);
+					// Time for the scheduler to launch a thread to start the reconnect
+					await Task.Delay(1);
 					Assert.IsFalse(client.IsConnected);
 
 					server.Start();
