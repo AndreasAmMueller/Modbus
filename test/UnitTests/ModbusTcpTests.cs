@@ -29,7 +29,7 @@ namespace UnitTests
 			using (var server = new MiniTestServer())
 			{
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -46,20 +46,21 @@ namespace UnitTests
 			using (var server = new MiniTestServer())
 			{
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
+					await EnsureWait();
 					Assert.IsTrue(client.IsConnected);
 
 					await server.Stop();
 
 					await client.ReadHoldingRegisters(0, 0, 1);
-					// Time for the scheduler to launch a thread to start the reconnect
-					await Task.Delay(1);
+					await EnsureWait();
 					Assert.IsFalse(client.IsConnected);
 
 					server.Start();
 					await client.ConnectingTask;
+					await EnsureWait();
 					Assert.IsTrue(client.IsConnected);
 				}
 			}
@@ -73,7 +74,7 @@ namespace UnitTests
 			using (var server = new MiniTestServer())
 			{
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					client.Connected += (sender, args) =>
 					{
@@ -90,16 +91,17 @@ namespace UnitTests
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
 
-					await Task.Delay(10);
+					await EnsureWait();
 					Assert.AreEqual(1, connectEvents);
 					Assert.AreEqual(0, disconnectEvents);
 
 					await server.Stop();
 
 					await client.ReadHoldingRegisters(0, 0, 1);
+					await EnsureWait();
 					Assert.IsFalse(client.IsConnected);
 
-					await Task.Delay(10);
+					await EnsureWait();
 					Assert.AreEqual(1, connectEvents);
 					Assert.AreEqual(1, disconnectEvents);
 
@@ -108,7 +110,7 @@ namespace UnitTests
 					Assert.IsTrue(client.IsConnected);
 				}
 
-				await Task.Delay(10);
+				await EnsureWait();
 				Assert.AreEqual(2, connectEvents);
 				Assert.AreEqual(2, disconnectEvents);
 			}
@@ -133,7 +135,7 @@ namespace UnitTests
 					return new byte[] { request[0], request[1], 0, 0, 0, 3, 2, 129, 11 };
 				};
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -181,7 +183,7 @@ namespace UnitTests
 					return new byte[] { request[0], request[1], 0, 0, 0, 5, 12, 1, 2, 205, 1 };
 				};
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -214,7 +216,7 @@ namespace UnitTests
 					return new byte[] { request[0], request[1], 0, 0, 0, 4, 1, 2, 1, 3 };
 				};
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -247,7 +249,7 @@ namespace UnitTests
 					return new byte[] { request[0], request[1], 0, 0, 0, 7, 5, 3, 4, 0, 3, 0, 7 };
 				};
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -281,7 +283,7 @@ namespace UnitTests
 					return new byte[] { request[0], request[1], 0, 0, 0, 9, 3, 4, 6, 0, 123, 0, 0, 48, 57 };
 				};
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -330,7 +332,7 @@ namespace UnitTests
 					return bytes.ToArray();
 				};
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -377,7 +379,7 @@ namespace UnitTests
 					return bytes.ToArray();
 				};
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -409,7 +411,7 @@ namespace UnitTests
 					return request;
 				};
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -442,7 +444,7 @@ namespace UnitTests
 					return request;
 				};
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -475,7 +477,7 @@ namespace UnitTests
 					return new byte[] { request[0], request[1], 0, 0, 0, 6, 4, 15, 0, 20, 0, 10 };
 				};
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -516,7 +518,7 @@ namespace UnitTests
 					return new byte[] { request[0], request[1], 0, 0, 0, 6, 10, 16, 0, 2, 0, 2 };
 				};
 				server.Start();
-				using (var client = new ModbusClient("localhost", server.Port))
+				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
@@ -584,8 +586,7 @@ namespace UnitTests
 			{
 				cts = new CancellationTokenSource();
 
-				listener = new TcpListener(IPAddress.IPv6Loopback, Port);
-				listener.Server.DualMode = true;
+				listener = new TcpListener(IPAddress.Loopback, Port);
 				listener.Start();
 
 				Port = ((IPEndPoint)listener.LocalEndpoint).Port;
@@ -680,5 +681,11 @@ namespace UnitTests
 		}
 
 		#endregion TestServer
+
+		// Time for the scheduler to launch a thread to start the reconnect
+		private async Task EnsureWait()
+		{
+			await Task.Delay(10);
+		}
 	}
 }

@@ -2,7 +2,7 @@
 
 Implements the Modbus communication protocol, written as a .NET Standard 2.0 library.
 
-[![NuGet](https://img.shields.io/nuget/v/AMWD.Modbus.Tcp.svg?style=flat-square)](https://www.nuget.org/packages/AMWD.Modbus.Tcp)
+[![NuGet](https://img.shields.io/nuget/v/AMWD.Modbus.Tcp.svg?style=flat-square)](https://www.nuget.org/packages/AMWD.Modbus.Tcp) [![pipeline status](https://git.am-wd.de/AM.WD/Modbus/badges/master/pipeline.svg?style=flat-square)](https://git.am-wd.de/AM.WD/Modbus/commits/master)
 
 ## Repositories
 

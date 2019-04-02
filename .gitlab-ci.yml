@@ -8,7 +8,6 @@ release:
   script:
     - dotnet restore
     - dotnet build -c Release
-    - dotnet test
   tags:
     - docker
   artifacts:

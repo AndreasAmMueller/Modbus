@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -76,6 +77,16 @@ namespace AMWD.Modbus.Tcp.Client
 			Host = host;
 			Port = port;
 		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ModbusClient"/> class.
+		/// </summary>
+		/// <param name="address">The remote ip address.</param>
+		/// <param name="port">The remote port.</param>
+		/// <param name="logger"><see cref="ILogger"/> instance to write log entries.</param>
+		public ModbusClient(IPAddress address, int port = 502, ILogger<ModbusClient> logger = null)
+			: this(address.ToString(), port, logger)
+		{ }
 
 		#endregion Constructors
 
