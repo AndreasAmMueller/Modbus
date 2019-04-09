@@ -3,12 +3,14 @@ using AMWD.Modbus.Common.Interfaces;
 using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
 using AMWD.Modbus.Serial.Protocol;
+using AMWD.Modbus.Serial.Util;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,6 +42,9 @@ namespace AMWD.Modbus.Serial.Client
 		private int bufferSize = 4096;
 		private int sendTimeout = 1000;
 		private int receiveTimeout = 1000;
+
+		private bool driverModified;
+		private RS485Flags serialDriverFlags;
 
 		#endregion Fields
 
@@ -253,9 +258,27 @@ namespace AMWD.Modbus.Serial.Client
 		/// </summary>
 		public TimeSpan ReconnectTimeSpan { get; set; } = TimeSpan.MaxValue;
 
+		/// <summary>
+		/// Gets or sets a value indicating whether to indicate the driver to switch to RS485 mode.
+		/// </summary>
+		public bool DriverEnableRS485 { get; set; }
+
 		#endregion Properties
 
 		#region Public methods
+
+		#region Static
+
+		/// <summary>
+		/// Returns a list of available serial ports.
+		/// </summary>
+		/// <returns></returns>
+		public static string[] AvailablePorts()
+		{
+			return SerialPort.GetPortNames();
+		}
+
+		#endregion Static
 
 		#region Control
 
@@ -275,6 +298,25 @@ namespace AMWD.Modbus.Serial.Client
 			{
 				logger?.LogInformation("ModbusClient starting");
 				isStarted = true;
+
+				if (DriverEnableRS485 && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+				{
+					try
+					{
+						var rs485 = GetDriverState();
+						serialDriverFlags = rs485.Flags;
+						rs485.Flags |= RS485Flags.SerRS485Enabled;
+						rs485.Flags &= ~RS485Flags.SerRS485RxDuringTx;
+						SetDriverState(rs485);
+						driverModified = true;
+					}
+					catch (Exception ex)
+					{
+						logger.LogError(ex, "ModbusClient.Connect faild to set RS485 serial driver state.");
+						throw;
+					}
+				}
+
 				ConnectingTask = Task.Run((Action)Reconnect);
 			}
 
@@ -298,8 +340,26 @@ namespace AMWD.Modbus.Serial.Client
 				var connected = IsConnected;
 
 				logger?.LogInformation("ModbusClient stopping");
+
 				serialPort?.Dispose();
 				serialPort = null;
+
+				if (driverModified)
+				{
+					try
+					{
+						var rs485 = GetDriverState();
+						rs485.Flags = serialDriverFlags;
+						SetDriverState(rs485);
+						driverModified = false;
+					}
+					catch (Exception ex)
+					{
+						logger?.LogError(ex, "ModbusClient.Disconnect failed to reset the serial driver state.");
+					}
+				}
+
+				isStarted = false;
 
 				if (connected)
 				{
@@ -1165,6 +1225,38 @@ namespace AMWD.Modbus.Serial.Client
 			return bytes.ToArray();
 		}
 
+		private SerialRS485 GetDriverState()
+		{
+			var rs485 = new SerialRS485();
+			SafeUnixHandle handle = null;
+			try
+			{
+				handle = UnsafeNativeMethods.Open(PortName, UnsafeNativeMethods.O_RDWR | UnsafeNativeMethods.O_NOCTTY);
+				if (UnsafeNativeMethods.IoCtl(handle, UnsafeNativeMethods.TIOCGRS485, ref rs485) == -1)
+					throw new UnixIOException();
+			}
+			finally
+			{
+				handle?.Close();
+			}
+
+			return rs485;
+		}
+
+		private void SetDriverState(SerialRS485 rs485)
+		{
+			SafeUnixHandle handle = null;
+			try
+			{
+				handle = UnsafeNativeMethods.Open(PortName, UnsafeNativeMethods.O_RDWR | UnsafeNativeMethods.O_NOCTTY);
+				if (UnsafeNativeMethods.IoCtl(handle, UnsafeNativeMethods.TIOCSRS485, ref rs485) == -1)
+					throw new UnixIOException();
+			}
+			finally
+			{
+				handle?.Close();
+			}
+		}
 
 		#endregion Private methods
 

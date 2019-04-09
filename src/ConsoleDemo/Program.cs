@@ -62,9 +62,6 @@ namespace ConsoleDemo
 							Console.Write("Baud: ");
 							var baud = Convert.ToInt32(Console.ReadLine().Trim());
 
-							Console.Write("Data-Bits [7|8]: ");
-							var dataBits = Convert.ToInt32(Console.ReadLine().Trim());
-
 							Console.Write("Stop-Bits [0|1|2|3=1.5]: ");
 							var stopBits = Convert.ToInt32(Console.ReadLine().Trim());
 
@@ -74,14 +71,27 @@ namespace ConsoleDemo
 							Console.Write("Handshake [0] None [1] X-On/Off [2] RTS [3] RTS+X-On/Off: ");
 							var handshake = Convert.ToInt32(Console.ReadLine().Trim());
 
+							Console.Write("Timeout: ");
+							var timeout = Convert.ToInt32(Console.ReadLine().Trim());
+
+							Console.Write("Set Driver to RS485 [0] No [1] Yes: ");
+							var setDriver = Convert.ToInt32(Console.ReadLine().Trim());
+
 							client = new SerialClient(port)
 							{
 								BaudRate = (BaudRate)baud,
-								DataBits = dataBits,
+								DataBits = 8,
 								StopBits = (StopBits)stopBits,
 								Parity = (Parity)parity,
-								Handshake = (Handshake)handshake
+								Handshake = (Handshake)handshake,
+								SendTimeout = timeout,
+								ReceiveTimeout = timeout
 							};
+
+							if (setDriver == 1)
+							{
+								((SerialClient)client).DriverEnableRS485 = true;
+							}
 						}
 						break;
 					default:
