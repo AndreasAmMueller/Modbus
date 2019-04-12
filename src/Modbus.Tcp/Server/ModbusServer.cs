@@ -932,7 +932,8 @@ namespace AMWD.Modbus.Tcp.Server
 			{
 				var response = new Response(request);
 
-				if (request.Count < Consts.MinCount || request.Count > Consts.MaxRegisterCountWrite || request.Count * 2 != request.Data.Length)
+				//request.Data contains [byte count] [data]..[data]
+				if (request.Count < Consts.MinCount || request.Count > Consts.MaxRegisterCountWrite || request.Count * 2 != request.Data.Length - 1)
 				{
 					response.ErrorCode = ErrorCode.IllegalDataValue;
 				}
@@ -948,7 +949,7 @@ namespace AMWD.Modbus.Tcp.Server
 						for (int i = 0; i < request.Count; i++)
 						{
 							var addr = (ushort)(request.Address + i);
-							var val = request.Data.GetUInt16(i * 2);
+							var val = request.Data.GetUInt16(i * 2 + 1);
 
 							var register = new Register { Address = addr, Value = val };
 							SetHoldingRegister(request.DeviceId, register);

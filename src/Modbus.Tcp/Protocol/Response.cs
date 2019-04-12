@@ -146,7 +146,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 			var fn = (byte)Function;
 			if (IsError)
 			{
-				fn = (byte)(fn & Consts.ErrorMask);
+				fn = (byte)(fn | Consts.ErrorMask);
 				buffer.AddByte((byte)ErrorCode);
 			}
 			else
