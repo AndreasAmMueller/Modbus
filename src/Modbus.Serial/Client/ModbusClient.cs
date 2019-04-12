@@ -305,8 +305,8 @@ namespace AMWD.Modbus.Serial.Client
 					{
 						var rs485 = GetDriverState();
 						serialDriverFlags = rs485.Flags;
-						rs485.Flags |= RS485Flags.SerRS485Enabled;
-						rs485.Flags &= ~RS485Flags.SerRS485RxDuringTx;
+						rs485.Flags |= RS485Flags.Enabled;
+						rs485.Flags &= ~RS485Flags.RxDuringTx;
 						SetDriverState(rs485);
 						driverModified = true;
 					}

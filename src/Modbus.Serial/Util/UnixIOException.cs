@@ -2,12 +2,12 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
-using System.Text;
 
 namespace AMWD.Modbus.Serial.Util
 {
 	/// <summary>
 	/// Represents a unix specific IO exception.
+	/// Found on https://stackoverflow.com/a/10388107
 	/// </summary>
 	[Serializable]
 	public class UnixIOException : ExternalException
@@ -74,33 +74,28 @@ namespace AMWD.Modbus.Serial.Util
 		/// </summary>
 		public int NativeErrorCode { get; }
 
-		/// <summary>
-		/// Tries to get the object data.
-		/// </summary>
-		/// <param name="info">The serialization information.</param>
-		/// <param name="context">The stream context.</param>
+		/// <inheritdoc/>
 		public override void GetObjectData(SerializationInfo info, StreamingContext context)
 		{
 			if (info == null)
 			{
-				throw new ArgumentNullException("info");
+				throw new ArgumentNullException(nameof(info));
 			}
 
 			info.AddValue("NativeErrorCode", NativeErrorCode);
 			base.GetObjectData(info, context);
 		}
 
-		private static string GetErrorMessage(int error)
+		private static string GetErrorMessage(int errno)
 		{
 			try
 			{
-				var buffer = new StringBuilder(256);
-				var res = UnsafeNativeMethods.StrError(error, buffer, (ulong)buffer.Capacity);
-				return res == -1 ? $"Unknown error (0x{error:x})" : buffer.ToString();
+				var ptr = UnsafeNativeMethods.StrError(errno);
+				return Marshal.PtrToStringAnsi(ptr);
 			}
-			catch (EntryPointNotFoundException)
+			catch
 			{
-				return $"Unknown error (0x{error:x})";
+				return $"Unknown error (0x{errno:x})";
 			}
 		}
 	}
