@@ -303,7 +303,12 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="task">The task to forget.</param>
 		public async static void Forget(this Task task)
 		{
-			await task;
+			try
+			{
+				await task;
+			}
+			catch
+			{ /* Task forgotten, so keep everything quiet. */ }
 		}
 
 		#endregion Task handling
