@@ -105,7 +105,7 @@ namespace ConsoleDemo
 					Console.Write("Device ID: ");
 					var id = Convert.ToByte(Console.ReadLine().Trim());
 
-					Console.Write("Function [1] Read Register, [2] Device Info: ");
+					Console.Write("Function [1] Read Register, [2] Device Info, [9] Write Register : ");
 					var fn = Convert.ToInt32(Console.ReadLine().Trim());
 
 					try
@@ -197,6 +197,40 @@ namespace ConsoleDemo
 											Console.WriteLine($"{kvp.Key}: {kvp.Value}");
 										}
 									}
+								}
+								break;
+							case 9:
+								{
+									Console.Write("Address: ");
+									var address = Convert.ToUInt16(Console.ReadLine().Trim());
+
+									Console.Write("Bytes (HEX): ");
+									var byteStr = Console.ReadLine().Trim();
+									byteStr = byteStr.Replace(" ", "").ToLower();
+
+									var bytes = Enumerable.Range(0, byteStr.Length)
+										.Where(i => i % 2 == 0)
+										.Select(i => Convert.ToByte(byteStr.Substring(i, 2), 16))
+										.ToArray();
+
+									var registers = Enumerable.Range(0, bytes.Length)
+										.Where(i => i % 2 == 0)
+										.Select(i =>
+										{
+											return new Register
+											{
+												Address = address++,
+												HiByte = bytes[i],
+												LoByte = bytes[i + 1]
+											};
+										})
+										.ToList();
+
+									if (!await client.WriteRegisters(id, registers))
+									{
+										throw new Exception($"Writing '{byteStr}' to address {address} failed");
+									}
+
 								}
 								break;
 						}

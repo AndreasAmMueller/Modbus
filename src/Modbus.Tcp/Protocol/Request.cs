@@ -11,19 +11,6 @@ namespace AMWD.Modbus.Tcp.Protocol
 	/// </summary>
 	internal class Request
 	{
-		#region Fields
-
-		private static int transactionNumber = 0;
-		private static ushort NextTransactionId
-		{
-			get
-			{
-				return (ushort)Interlocked.Increment(ref transactionNumber);
-			}
-		}
-
-		#endregion Fields
-
 		#region Constructors
 
 		/// <summary>
@@ -33,9 +20,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// The transaction id is automatically set to a unique number.
 		/// </remarks>
 		internal Request()
-		{
-			TransactionId = NextTransactionId;
-		}
+		{ }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Request"/> class.
@@ -53,7 +38,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// <summary>
 		/// Gets the unique transaction id of the request.
 		/// </summary>
-		public ushort TransactionId { get; private set; }
+		public ushort TransactionId { get; set; }
 
 		/// <summary>
 		/// Gets the id to identify the device.
