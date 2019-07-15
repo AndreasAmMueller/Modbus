@@ -170,33 +170,9 @@ namespace AMWD.Modbus.Tcp.Client
 		/// Disconnects the client.
 		/// </summary>
 		/// <returns>An awaitable task.</returns>
-		public Task Disconnect()
+		public async Task Disconnect()
 		{
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
-			if (!isStarted)
-			{
-				return Task.CompletedTask;
-			}
-
-			bool wasConnected = IsConnected;
-
-			reconnectTcs?.TrySetResult(false);
-			mainCts?.Cancel();
-			reconnectTcs = null;
-
-			tcpClient?.Close();
-			tcpClient?.Dispose();
-			tcpClient = null;
-
-			if (wasConnected)
-			{
-				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
-			}
-			return Task.CompletedTask;
+			await DisconnectInternal(false);
 		}
 
 		#endregion Control
@@ -1051,6 +1027,11 @@ namespace AMWD.Modbus.Tcp.Client
 
 			if (!IsConnected)
 			{
+				if (!isReconnecting)
+				{
+					Task.Run(() => Reconnect(mainCts.Token)).Forget();
+					ConnectingTask = GetWaitTask(mainCts.Token);
+				}
 				throw new InvalidOperationException("Client is not connected");
 			}
 
@@ -1125,7 +1106,7 @@ namespace AMWD.Modbus.Tcp.Client
 							tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
 							tcpClient.Client.DualMode = true;
 							var task = tcpClient.ConnectAsync(Host, Port);
-							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task)
+							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task && tcpClient?.Connected == true)
 							{
 								logger?.LogInformation("ModbusClient.Reconnect connected");
 								Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
@@ -1183,6 +1164,46 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 		}
 
+		private async Task DisconnectInternal(bool disposing)
+		{
+			if (isDisposed && !disposing)
+			{
+				throw new ObjectDisposedException(GetType().FullName);
+			}
+
+			if (!isStarted)
+			{
+				return;
+			}
+			isStarted = false;
+
+			bool wasConnected = IsConnected;
+
+			try
+			{
+				reconnectTcs?.TrySetResult(false);
+				mainCts?.Cancel();
+				reconnectTcs = null;
+			}
+			catch
+			{ }
+
+			try
+			{
+				tcpClient?.Close();
+				tcpClient?.Dispose();
+				tcpClient = null;
+			}
+			catch
+			{ }
+
+			if (wasConnected)
+			{
+				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
+			}
+			await Task.CompletedTask;
+		}
+
 		#endregion Private Methods
 
 		#region IDisposable implementation
@@ -1204,9 +1225,11 @@ namespace AMWD.Modbus.Tcp.Client
 			{
 				return;
 			}
-
-			Disconnect().GetAwaiter().GetResult();
 			isDisposed = true;
+
+			DisconnectInternal(true)
+				.GetAwaiter()
+				.GetResult();
 		}
 
 		#endregion IDisposable implementation

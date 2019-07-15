@@ -49,18 +49,15 @@ namespace UnitTests
 				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
 				{
 					await client.Connect();
-					await EnsureWait();
 					Assert.IsTrue(client.IsConnected);
 
 					await server.Stop();
 
 					await client.ReadHoldingRegisters(0, 0, 1);
-					await EnsureWait();
 					Assert.IsFalse(client.IsConnected);
 
 					server.Start();
 					await client.ConnectingTask;
-					await EnsureWait();
 					Assert.IsTrue(client.IsConnected);
 				}
 			}
@@ -91,17 +88,16 @@ namespace UnitTests
 					await client.Connect();
 					Assert.IsTrue(client.IsConnected);
 
-					await EnsureWait();
+					await EnsureWait(); // get events raised
 					Assert.AreEqual(1, connectEvents);
 					Assert.AreEqual(0, disconnectEvents);
 
 					await server.Stop();
 
 					await client.ReadHoldingRegisters(0, 0, 1);
-					await EnsureWait();
 					Assert.IsFalse(client.IsConnected);
 
-					await EnsureWait();
+					await EnsureWait(); // get events raised
 					Assert.AreEqual(1, connectEvents);
 					Assert.AreEqual(1, disconnectEvents);
 
@@ -110,7 +106,7 @@ namespace UnitTests
 					Assert.IsTrue(client.IsConnected);
 				}
 
-				await EnsureWait();
+				await EnsureWait(); // get events raised
 				Assert.AreEqual(2, connectEvents);
 				Assert.AreEqual(2, disconnectEvents);
 			}
