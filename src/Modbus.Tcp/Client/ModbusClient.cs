@@ -25,7 +25,7 @@ namespace AMWD.Modbus.Tcp.Client
 		#region Fields
 
 		// Optional logger for all actions
-		private readonly ILogger<ModbusClient> logger;
+		private readonly ILogger logger;
 
 		// The tcp client to connect to the server side.
 		private TcpClient tcpClient;
@@ -66,7 +66,7 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <param name="host">The remote host name or ip.</param>
 		/// <param name="port">The remote port.</param>
 		/// <param name="logger"><see cref="ILogger"/> instance to write log entries.</param>
-		public ModbusClient(string host, int port = 502, ILogger<ModbusClient> logger = null)
+		public ModbusClient(string host, int port = 502, ILogger logger = null)
 		{
 			this.logger = logger;
 
@@ -87,10 +87,30 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ModbusClient"/> class.
 		/// </summary>
+		/// <param name="host">The remote host name or ip.</param>
+		/// <param name="port">The remote port.</param>
+		/// <param name="logger"><see cref="ILogger{ModbusClient}"/> instance to write log entries.</param>
+		public ModbusClient(string host, int port, ILogger<ModbusClient> logger)
+			: this(host, port, (ILogger)logger)
+		{ }
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ModbusClient"/> class.
+		/// </summary>
 		/// <param name="address">The remote ip address.</param>
 		/// <param name="port">The remote port.</param>
 		/// <param name="logger"><see cref="ILogger"/> instance to write log entries.</param>
-		public ModbusClient(IPAddress address, int port = 502, ILogger<ModbusClient> logger = null)
+		public ModbusClient(IPAddress address, int port = 502, ILogger logger = null)
+			: this(address.ToString(), port, logger)
+		{ }
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ModbusClient"/> class.
+		/// </summary>
+		/// <param name="address">The remote ip address.</param>
+		/// <param name="port">The remote port.</param>
+		/// <param name="logger"><see cref="ILogger{ModbusClient}"/> instance to write log entries.</param>
+		public ModbusClient(IPAddress address, int port, ILogger<ModbusClient> logger)
 			: this(address.ToString(), port, logger)
 		{ }
 
@@ -145,6 +165,7 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <returns>An awaitable task.</returns>
 		public Task Connect()
 		{
+			logger?.LogTrace("ModbusClient.Connect");
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
@@ -156,6 +177,8 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 
 			isStarted = true;
+			logger?.LogInformation("ModbusClient.Connect: ModbusClient starting");
+
 			wasConnected = false;
 			mainCts = new CancellationTokenSource();
 
@@ -163,6 +186,7 @@ namespace AMWD.Modbus.Tcp.Client
 			Task.Run(() => Reconnect(mainCts.Token));
 
 			ConnectingTask = GetWaitTask(mainCts.Token);
+			logger?.LogInformation("ModbusClient.Connect: ModbusClient started");
 			return ConnectingTask;
 		}
 
@@ -247,13 +271,13 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException ex)
 			{
-				logger?.LogWarning(ex, "Reading coils. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.ReadCoils failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 			catch (IOException ex)
 			{
-				logger?.LogWarning(ex, "Reading coils. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.ReadCoils failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
@@ -329,13 +353,13 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException ex)
 			{
-				logger?.LogWarning(ex, "Reading discrete inputs. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.ReadDiscreteInputs failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 			catch (IOException ex)
 			{
-				logger?.LogWarning(ex, "Reading discrete inputs. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.ReadDiscreteInputs failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
@@ -407,13 +431,13 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException ex)
 			{
-				logger?.LogWarning(ex, "Reading holding registers. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.ReadHoldingRegisters failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 			catch (IOException ex)
 			{
-				logger?.LogWarning(ex, "Reading holding registers. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.ReadHoldingRegisters failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
@@ -483,15 +507,15 @@ namespace AMWD.Modbus.Tcp.Client
 					});
 				}
 			}
-			catch (SocketException sex)
+			catch (SocketException ex)
 			{
-				logger?.LogWarning(sex, "Reading input registers. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.ReadInputRegisters failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
-			catch (IOException ioex)
+			catch (IOException ex)
 			{
-				logger?.LogWarning(ioex, "Reading input registers. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.ReadInputRegisters failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
@@ -591,13 +615,13 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException ex)
 			{
-				logger?.LogWarning(ex, "Reading device information. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.ReadDeviceInformation failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 			catch (IOException ex)
 			{
-				logger?.LogWarning(ex, "Reading device information. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.ReadDeviceInformation failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
@@ -668,13 +692,13 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException ex)
 			{
-				logger?.LogWarning(ex, "Writing single coil. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.WriteSingleCoil failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 			catch (IOException ex)
 			{
-				logger?.LogWarning(ex, "Writing single coil. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.WriteSingleCoil failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
@@ -743,13 +767,13 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException ex)
 			{
-				logger?.LogWarning(ex, "Writing single register. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.WriteSingleRegister failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 			catch (IOException ex)
 			{
-				logger?.LogWarning(ex, "Writing single register. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.WriteSingleRegister failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
@@ -839,15 +863,15 @@ namespace AMWD.Modbus.Tcp.Client
 					request.Address == response.Address &&
 					request.Count == response.Count;
 			}
-			catch (SocketException sex)
+			catch (SocketException ex)
 			{
-				logger?.LogWarning(sex, "Writing multiple coils. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.WriteCoils failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
-			catch (IOException ioex)
+			catch (IOException ex)
 			{
-				logger?.LogWarning(ioex, "Writing multiple coils. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.WriteCoils failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
@@ -935,13 +959,13 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (SocketException ex)
 			{
-				logger?.LogWarning(ex, "Writing multiple registers. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.WriteRegisters failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 			catch (IOException ex)
 			{
-				logger?.LogWarning(ex, "Writing multiple registers. Reconnecting.");
+				logger?.LogWarning(ex, "ModbusClient.WriteRegisters failed. Reconnecting.");
 				Task.Run(() => Reconnect(mainCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
@@ -957,6 +981,8 @@ namespace AMWD.Modbus.Tcp.Client
 
 		private async void ReceiveLoop(CancellationToken ct)
 		{
+			logger?.LogInformation("ModbusClient.ReceiveLoop started");
+			var reported = false;
 			while (!ct.IsCancellationRequested)
 			{
 				try
@@ -964,9 +990,14 @@ namespace AMWD.Modbus.Tcp.Client
 					var stream = tcpClient?.GetStream();
 					if (stream == null)
 					{
+						if (!reported)
+							logger?.LogTrace("ModbusClient.ReceiveLoop got no stream, waiting...");
+
+						reported = true;
 						await Task.Delay(100);
 						continue;
 					}
+					reported = false;
 
 					var bytes = new List<byte>();
 
@@ -1005,7 +1036,7 @@ namespace AMWD.Modbus.Tcp.Client
 				}
 				catch (Exception ex)
 				{
-					logger?.LogError(ex, "Receiving data");
+					logger?.LogError(ex, "ModbusClient.ReceiveLoop");
 				}
 			}
 
@@ -1014,6 +1045,7 @@ namespace AMWD.Modbus.Tcp.Client
 				awaitedResponse.TrySetCanceled();
 			}
 			awaitedResponses.Clear();
+			logger?.LogInformation("ModbusClient.ReceiveLoop stopped");
 		}
 
 		private async Task<Response> SendRequest(Request request, CancellationToken ct)
@@ -1022,8 +1054,6 @@ namespace AMWD.Modbus.Tcp.Client
 			{
 				throw new ObjectDisposedException(GetType().FullName);
 			}
-
-			logger?.LogTrace("ModbusClient.SendRequest");
 
 			if (!IsConnected)
 			{
@@ -1055,17 +1085,17 @@ namespace AMWD.Modbus.Tcp.Client
 					var task = stream.WriteAsync(bytes, 0, bytes.Length, ct);
 					if (await Task.WhenAny(task, Task.Delay(SendTimeout, ct)) == task && !ct.IsCancellationRequested)
 					{
-						logger?.LogTrace("Request sent");
+						logger?.LogTrace("ModbusClient.SendRequest - Request sent");
 						if (await Task.WhenAny(tcs.Task, Task.Delay(ReceiveTimeout, ct)) == tcs.Task && !ct.IsCancellationRequested)
 						{
-							logger?.LogTrace($"Response received");
+							logger?.LogTrace("ModbusClient.SendRequest - Response received");
 							return await tcs.Task;
 						}
 					}
 				}
 				catch (Exception ex)
 				{
-					logger?.LogError(ex, $"Sending Request #{request.TransactionId}");
+					logger?.LogError(ex, $"ModbusClient.SendRequest - Transaction {request.TransactionId}");
 				}
 				finally
 				{
@@ -1083,11 +1113,14 @@ namespace AMWD.Modbus.Tcp.Client
 				return;
 			}
 
+			logger?.LogInformation("ModbusClient.Reconnect started");
 			isReconnecting = true;
 			reconnectTcs = new TaskCompletionSource<bool>();
 
 			if (wasConnected)
+			{
 				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
+			}
 
 			ConnectingTask = GetWaitTask(ct);
 			int timeout = 2;
@@ -1106,7 +1139,7 @@ namespace AMWD.Modbus.Tcp.Client
 							tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
 							tcpClient.Client.DualMode = true;
 							var task = tcpClient.ConnectAsync(Host, Port);
-							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task && tcpClient?.Connected == true)
+							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task && tcpClient.Connected)
 							{
 								logger?.LogInformation("ModbusClient.Reconnect connected");
 								Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
@@ -1117,16 +1150,19 @@ namespace AMWD.Modbus.Tcp.Client
 							}
 							else if (ct.IsCancellationRequested)
 							{
-								logger?.LogWarning("ModbusClient.Reconnect was cancelled");
+								logger?.LogInformation("ModbusClient.Reconnect was cancelled");
 								return;
 							}
 							else
 							{
-								logger?.LogWarning($"ModbusClient.Reconnect failed to connect withing {timeout} seconds");
 								timeout += 2;
 								if (timeout > maxTimeout)
 								{
 									timeout = maxTimeout;
+								}
+								else
+								{
+									logger?.LogWarning($"ModbusClient.Reconnect failed to connect within {timeout-2} seconds");
 								}
 
 								throw new SocketException((int)SocketError.TimedOut);
@@ -1176,6 +1212,7 @@ namespace AMWD.Modbus.Tcp.Client
 				return;
 			}
 			isStarted = false;
+			logger?.LogInformation("ModbusClient.Disconnect started");
 
 			bool wasConnected = IsConnected;
 
@@ -1185,8 +1222,10 @@ namespace AMWD.Modbus.Tcp.Client
 				mainCts?.Cancel();
 				reconnectTcs = null;
 			}
-			catch
-			{ }
+			catch (Exception ex)
+			{
+				logger?.LogError(ex, "ModbusClient.Disconnect stopping reconnect");
+			}
 
 			try
 			{
@@ -1194,14 +1233,17 @@ namespace AMWD.Modbus.Tcp.Client
 				tcpClient?.Dispose();
 				tcpClient = null;
 			}
-			catch
-			{ }
+			catch (Exception ex)
+			{
+				logger?.LogError(ex, "ModbusClient.Disconnect closing connection");
+			}
 
 			if (wasConnected)
 			{
 				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
 			}
 			await Task.CompletedTask;
+			logger?.LogInformation("ModbusClient.Disconnect done");
 		}
 
 		#endregion Private Methods

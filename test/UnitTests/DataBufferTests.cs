@@ -35,5 +35,15 @@ namespace UnitTests
 			Assert.AreNotEqual(db3.Buffer, db4.Buffer);
 			CollectionAssert.AreEqual(db3.Buffer, db4.Buffer);
 		}
+
+		#region Unsigned
+
+		[TestMethod]
+		public void ByteTests()
+		{
+
+		}
+
+		#endregion
 	}
 }
