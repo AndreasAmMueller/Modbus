@@ -24,27 +24,32 @@ namespace AMWD.Modbus.Serial.Client
 	{
 		#region Fields
 
+		// Optional logger for all actions
 		private readonly ILogger<ModbusClient> logger;
 
-		private volatile bool isStarted;
-
-		private readonly object reconnectLock = new object();
-		private readonly object sendLock = new object();
+		// The serial port to connect to the remote.
 		private SerialPort serialPort;
-		private bool reconnectFailed = false;
-		private bool wasConnected = false;
-
+		// And the settings.
 		private BaudRate baudRate = BaudRate.Baud38400;
 		private int dataBits = 8;
 		private Parity parity = Parity.None;
 		private StopBits stopBits = StopBits.None;
 		private Handshake handshake = Handshake.None;
-		private int bufferSize = 4096;
 		private int sendTimeout = 1000;
 		private int receiveTimeout = 1000;
+		private int bufferSize = 4096;
 
-		private bool driverModified;
+		// driver switch
 		private RS485Flags serialDriverFlags;
+		private bool driverModified;
+
+		// Connection handling
+		private CancellationTokenSource mainCts;
+		private bool isStarted = false;
+		private bool wasConnected = false;
+		private bool isReconnecting = false;
+		private TaskCompletionSource<bool> reconnectTcs;
+		private readonly SemaphoreSlim sendMutex = new SemaphoreSlim(1, 1);
 
 		#endregion Fields
 
@@ -75,20 +80,14 @@ namespace AMWD.Modbus.Serial.Client
 
 			if (string.IsNullOrWhiteSpace(portName))
 			{
-				throw new ArgumentNullException(nameof(portName));
+				throw new ArgumentNullException(nameof(portName), "Portname has to be set");
 			}
-
 			PortName = portName;
 		}
 
 		#endregion Constructors
 
 		#region Properties
-
-		/// <summary>
-		/// Gets the result of the asynchronous initialization of this instance.
-		/// </summary>
-		public Task ConnectingTask { get; private set; }
 
 		/// <summary>
 		/// Gets the serial port name.
@@ -191,24 +190,19 @@ namespace AMWD.Modbus.Serial.Client
 		}
 
 		/// <summary>
-		/// Gets or sets buffer size in bytes.
+		/// Gets the result of the asynchronous initialization of this instance.
 		/// </summary>
-		public int BufferSize
-		{
-			get
-			{
-				return bufferSize;
-			}
-			set
-			{
-				bufferSize = value;
-				if (serialPort != null)
-				{
-					serialPort.ReadBufferSize = value;
-					serialPort.WriteBufferSize = value;
-				}
-			}
-		}
+		public Task ConnectingTask { get; private set; }
+
+		/// <summary>
+		/// Gets a value indicating whether the connection is established.
+		/// </summary>
+		public bool IsConnected => serialPort?.IsOpen ?? false;
+
+		/// <summary>
+		/// Gets or sets the max reconnect timespan until the reconnect is aborted.
+		/// </summary>
+		public TimeSpan ReconnectTimeSpan { get; set; } = TimeSpan.MaxValue;
 
 		/// <summary>
 		/// Gets or sets the send timeout in milliseconds. Default 1000 (recommended).
@@ -249,14 +243,24 @@ namespace AMWD.Modbus.Serial.Client
 		}
 
 		/// <summary>
-		/// Gets a value indicating whether the connection is established.
+		/// Gets or sets buffer size in bytes.
 		/// </summary>
-		public bool IsConnected => serialPort?.IsOpen ?? false;
-
-		/// <summary>
-		/// Gets or sets the max reconnect timespan until the reconnect is aborted.
-		/// </summary>
-		public TimeSpan ReconnectTimeSpan { get; set; } = TimeSpan.MaxValue;
+		public int BufferSize
+		{
+			get
+			{
+				return bufferSize;
+			}
+			set
+			{
+				bufferSize = value;
+				if (serialPort != null)
+				{
+					serialPort.ReadBufferSize = value;
+					serialPort.WriteBufferSize = value;
+				}
+			}
+		}
 
 		/// <summary>
 		/// Gets or sets a value indicating whether to indicate the driver to switch to RS485 mode.
@@ -265,7 +269,7 @@ namespace AMWD.Modbus.Serial.Client
 
 		#endregion Properties
 
-		#region Public methods
+		#region Public Methods
 
 		#region Static
 
@@ -294,31 +298,37 @@ namespace AMWD.Modbus.Serial.Client
 				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			if (!isStarted)
+			if (isStarted)
 			{
-				logger?.LogInformation("ModbusClient starting");
-				isStarted = true;
-
-				if (DriverEnableRS485 && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-				{
-					try
-					{
-						var rs485 = GetDriverState();
-						serialDriverFlags = rs485.Flags;
-						rs485.Flags |= RS485Flags.Enabled;
-						rs485.Flags &= ~RS485Flags.RxDuringTx;
-						SetDriverState(rs485);
-						driverModified = true;
-					}
-					catch (Exception ex)
-					{
-						logger.LogError(ex, "ModbusClient.Connect faild to set RS485 serial driver state.");
-						throw;
-					}
-				}
-
-				ConnectingTask = Task.Run((Action)Reconnect);
+				return ConnectingTask;
 			}
+
+			isStarted = true;
+			logger?.LogInformation("ModbusClient starting");
+
+			if (DriverEnableRS485 && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			{
+				try
+				{
+					var rs485 = GetDriverState();
+					serialDriverFlags = rs485.Flags;
+					rs485.Flags |= RS485Flags.Enabled;
+					rs485.Flags &= ~RS485Flags.RxDuringTx;
+					SetDriverState(rs485);
+					driverModified = true;
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex, "ModbusClient.Connect faild to set RS485 serial driver state.");
+					throw;
+				}
+			}
+
+			wasConnected = false;
+			mainCts = new CancellationTokenSource();
+
+			Task.Run(() => Reconnect(mainCts.Token));
+			ConnectingTask = GetWaitTask(mainCts.Token);
 
 			return ConnectingTask;
 		}
@@ -329,44 +339,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <returns>An awaitable task.</returns>
 		public Task Disconnect()
 		{
-			logger?.LogTrace("ModbusClient.Disconnect");
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
-			if (isStarted)
-			{
-				var connected = IsConnected;
-
-				logger?.LogInformation("ModbusClient stopping");
-
-				serialPort?.Dispose();
-				serialPort = null;
-
-				if (driverModified)
-				{
-					try
-					{
-						var rs485 = GetDriverState();
-						rs485.Flags = serialDriverFlags;
-						SetDriverState(rs485);
-						driverModified = false;
-					}
-					catch (Exception ex)
-					{
-						logger?.LogError(ex, "ModbusClient.Disconnect failed to reset the serial driver state.");
-					}
-				}
-
-				isStarted = false;
-
-				if (connected)
-				{
-					logger?.LogTrace("ModbusClient.Disconnect fire disconnected event.");
-					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
-				}
-			}
+			DisconnectInternal(false);
 			return Task.CompletedTask;
 		}
 
@@ -384,11 +357,6 @@ namespace AMWD.Modbus.Serial.Client
 		public async Task<List<Coil>> ReadCoils(byte deviceId, ushort startAddress, ushort count)
 		{
 			logger?.LogTrace($"ModbusClient.ReadCoils({deviceId}, {startAddress}, {count})");
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
@@ -412,7 +380,7 @@ namespace AMWD.Modbus.Serial.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request);
+				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
 				{
 					throw new IOException("Request timed out");
@@ -440,7 +408,8 @@ namespace AMWD.Modbus.Serial.Client
 			catch (IOException ex)
 			{
 				logger?.LogWarning(ex, "Reading coils. Reconnecting.");
-				ConnectingTask = Task.Run((Action)Reconnect);
+				Task.Run(() => Reconnect(mainCts.Token)).Forget();
+				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 
 			return list;
@@ -456,11 +425,6 @@ namespace AMWD.Modbus.Serial.Client
 		public async Task<List<DiscreteInput>> ReadDiscreteInputs(byte deviceId, ushort startAddress, ushort count)
 		{
 			logger?.LogTrace($"ModbusClient.ReadDiscreteInputs({deviceId}, {startAddress}, {count})");
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
@@ -484,7 +448,7 @@ namespace AMWD.Modbus.Serial.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request);
+				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
 				{
 					throw new IOException("Request timed out");
@@ -512,7 +476,8 @@ namespace AMWD.Modbus.Serial.Client
 			catch (IOException ex)
 			{
 				logger?.LogWarning(ex, "Reading discrete inputs. Reconnecting.");
-				ConnectingTask = Task.Run((Action)Reconnect);
+				Task.Run(() => Reconnect(mainCts.Token)).Forget();
+				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 
 			return list;
@@ -528,11 +493,6 @@ namespace AMWD.Modbus.Serial.Client
 		public async Task<List<Register>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count)
 		{
 			logger?.LogTrace($"ModbusClient.ReadHoldingRegisters({deviceId}, {startAddress}, {count})");
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
@@ -556,7 +516,7 @@ namespace AMWD.Modbus.Serial.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request);
+				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
 				{
 					throw new IOException("Request timed out");
@@ -580,7 +540,8 @@ namespace AMWD.Modbus.Serial.Client
 			catch (IOException ex)
 			{
 				logger?.LogWarning(ex, "Reading holding registers. Reconnecting.");
-				ConnectingTask = Task.Run((Action)Reconnect);
+				Task.Run(() => Reconnect(mainCts.Token)).Forget();
+				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 
 			return list;
@@ -596,11 +557,6 @@ namespace AMWD.Modbus.Serial.Client
 		public async Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count)
 		{
 			logger?.LogTrace($"ModbusClient.ReadInputRegisters({deviceId}, {startAddress}, {count})");
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
@@ -624,7 +580,7 @@ namespace AMWD.Modbus.Serial.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request);
+				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
 				{
 					throw new IOException("Request timed out");
@@ -648,7 +604,8 @@ namespace AMWD.Modbus.Serial.Client
 			catch (IOException ex)
 			{
 				logger?.LogWarning(ex, "Reading input registers. Reconnecting.");
-				ConnectingTask = Task.Run((Action)Reconnect);
+				Task.Run(() => Reconnect(mainCts.Token)).Forget();
+				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 
 			return list;
@@ -687,11 +644,6 @@ namespace AMWD.Modbus.Serial.Client
 		public async Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName)
 		{
 			logger?.LogTrace($"ModbusClient.ReadDeviceInformation({deviceId}, {categoryId}, {objectId})");
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
 			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
@@ -707,7 +659,7 @@ namespace AMWD.Modbus.Serial.Client
 					MEICategory = categoryId,
 					MEIObject = objectId
 				};
-				var response = await SendRequest(request);
+				var response = await SendRequest(request, mainCts.Token);
 
 				if (response.IsTimeout)
 				{
@@ -745,7 +697,8 @@ namespace AMWD.Modbus.Serial.Client
 			catch (IOException ex)
 			{
 				logger?.LogWarning(ex, "Reading device information. Reconnecting.");
-				ConnectingTask = Task.Run((Action)Reconnect);
+				Task.Run(() => Reconnect(mainCts.Token)).Forget();
+				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 
 			return null;
@@ -764,11 +717,6 @@ namespace AMWD.Modbus.Serial.Client
 		public async Task<bool> WriteSingleCoil(byte deviceId, Coil coil)
 		{
 			logger?.LogTrace($"ModbusClient.WriteSingleRegister({deviceId}, {coil})");
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
 			if (coil == null)
 			{
 				throw new ArgumentNullException(nameof(coil));
@@ -793,7 +741,7 @@ namespace AMWD.Modbus.Serial.Client
 				};
 				var value = (ushort)(coil.Value ? 0xFF00 : 0x0000);
 				request.Data.SetUInt16(0, value);
-				var response = await SendRequest(request);
+				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
 				{
 					throw new ModbusException("Response timed out. Device id invalid?");
@@ -811,7 +759,8 @@ namespace AMWD.Modbus.Serial.Client
 			catch (IOException ex)
 			{
 				logger?.LogWarning(ex, "Writing single coil. Reconnecting.");
-				ConnectingTask = Task.Run((Action)Reconnect);
+				Task.Run(() => Reconnect(mainCts.Token)).Forget();
+				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 
 			return false;
@@ -826,11 +775,6 @@ namespace AMWD.Modbus.Serial.Client
 		public async Task<bool> WriteSingleRegister(byte deviceId, Register register)
 		{
 			logger?.LogTrace($"ModbusClient.WriteSingleRegister({deviceId}, {register})");
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
 			if (register == null)
 			{
 				throw new ArgumentNullException(nameof(register));
@@ -853,7 +797,7 @@ namespace AMWD.Modbus.Serial.Client
 					Address = register.Address,
 					Data = new DataBuffer(new[] { register.HiByte, register.LoByte })
 				};
-				var response = await SendRequest(request);
+				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
 				{
 					throw new ModbusException("Response timed out. Device id invalid?");
@@ -871,7 +815,8 @@ namespace AMWD.Modbus.Serial.Client
 			catch (IOException ex)
 			{
 				logger?.LogWarning(ex, "Writing single register. Reconnecting.");
-				ConnectingTask = Task.Run((Action)Reconnect);
+				Task.Run(() => Reconnect(mainCts.Token)).Forget();
+				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 
 			return false;
@@ -886,11 +831,6 @@ namespace AMWD.Modbus.Serial.Client
 		public async Task<bool> WriteCoils(byte deviceId, IEnumerable<Coil> coils)
 		{
 			logger?.LogTrace($"ModbusClient.WriteCoils({deviceId}, Length: {coils.Count()})");
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
 			if (coils == null || !coils.Any())
 			{
 				throw new ArgumentNullException(nameof(coils));
@@ -942,7 +882,7 @@ namespace AMWD.Modbus.Serial.Client
 					Count = (ushort)orderedList.Count,
 					Data = new DataBuffer(coilBytes)
 				};
-				var response = await SendRequest(request);
+				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
 				{
 					throw new ModbusException("Response timed out. Device id invalid?");
@@ -958,7 +898,8 @@ namespace AMWD.Modbus.Serial.Client
 			catch (IOException ex)
 			{
 				logger?.LogWarning(ex, "Writing coils. Reconnecting.");
-				ConnectingTask = Task.Run((Action)Reconnect);
+				Task.Run(() => Reconnect(mainCts.Token)).Forget();
+				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 
 			return false;
@@ -973,11 +914,6 @@ namespace AMWD.Modbus.Serial.Client
 		public async Task<bool> WriteRegisters(byte deviceId, IEnumerable<Register> registers)
 		{
 			logger?.LogTrace($"ModbusClient.WriteRegisters({deviceId}, Length: {registers.Count()})");
-			if (isDisposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
-
 			if (registers == null || !registers.Any())
 			{
 				throw new ArgumentNullException(nameof(registers));
@@ -1021,7 +957,7 @@ namespace AMWD.Modbus.Serial.Client
 				{
 					request.Data.SetUInt16(i * 2 + 1, orderedList[i].Value);
 				}
-				var response = await SendRequest(request);
+				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
 				{
 					throw new ModbusException("Response timed out. Device id invalid?");
@@ -1037,7 +973,8 @@ namespace AMWD.Modbus.Serial.Client
 			catch (IOException ex)
 			{
 				logger?.LogWarning(ex, "Writing registers. Reconnecting.");
-				ConnectingTask = Task.Run((Action)Reconnect);
+				Task.Run(() => Reconnect(mainCts.Token)).Forget();
+				ConnectingTask = GetWaitTask(mainCts.Token);
 			}
 
 			return false;
@@ -1045,159 +982,303 @@ namespace AMWD.Modbus.Serial.Client
 
 		#endregion Write methods
 
-		#endregion Public methods
+		#endregion Public Methods
 
-		#region Private methods
+		#region Private Methods
 
-		private void Reconnect()
+		private async Task<Response> SendRequest(Request request, CancellationToken ct)
 		{
 			if (isDisposed)
 			{
 				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			lock (reconnectLock)
+			logger?.LogTrace("ModbusClient.SendRequest");
+
+			if (!IsConnected)
 			{
-				if (reconnectFailed)
+				if (!isReconnecting)
 				{
-					throw new InvalidOperationException("Reconnecting has failed");
+					Task.Run(() => Reconnect(mainCts.Token)).Forget();
+					ConnectingTask = GetWaitTask(mainCts.Token);
 				}
-				if (serialPort?.IsOpen == true)
-				{
-					return;
-				}
+				throw new InvalidOperationException("Client is not connected");
+			}
 
-				if (wasConnected)
-				{
-					logger?.LogDebug("ModbusClient.Reconnect fire disconnected event.");
-					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty));
-				}
+			try
+			{
+				await sendMutex.WaitAsync(ct);
 
-				var startTime = DateTime.UtcNow;
-				while (true)
-				{
-					try
-					{
-						serialPort?.Dispose();
-						serialPort = null;
+				logger?.LogTrace(request.ToString());
 
-						serialPort = new SerialPort
+				var bytes = request.Serialize();
+				serialPort.Write(bytes, 0, bytes.Length);
+
+				var responseBytes = new List<byte>();
+
+				// Device/Slave ID
+				responseBytes.Add(ReadByte());
+
+				// Function number
+				var fn = ReadByte();
+				responseBytes.Add(fn);
+
+				byte expectedBytes = 0;
+				var function = (FunctionCode)fn;
+				switch (function)
+				{
+					case FunctionCode.ReadCoils:
+					case FunctionCode.ReadDiscreteInputs:
+					case FunctionCode.ReadHoldingRegisters:
+					case FunctionCode.ReadInputRegisters:
+						expectedBytes = ReadByte();
+						responseBytes.Add(expectedBytes);
+						break;
+					case FunctionCode.WriteSingleCoil:
+					case FunctionCode.WriteSingleRegister:
+					case FunctionCode.WriteMultipleCoils:
+					case FunctionCode.WriteMultipleRegisters:
+						expectedBytes = 4;
+						break;
+					case FunctionCode.EncapsulatedInterface:
+						responseBytes.AddRange(ReadBytes(6));
+						var count = responseBytes.Last();
+						for (var i = 0; i < count; i++)
 						{
-							PortName = PortName,
-							BaudRate = (int)BaudRate,
-							DataBits = DataBits,
-							Parity = Parity,
-							StopBits = StopBits,
-							Handshake = Handshake,
-							ReadBufferSize = BufferSize,
-							WriteBufferSize = BufferSize,
-							ReadTimeout = ReceiveTimeout,
-							WriteTimeout = SendTimeout
-						};
-
-						serialPort.Open();
-						logger?.LogInformation("ModbusClient.Reconnect connected.");
-					}
-					catch (IOException) when (ReconnectTimeSpan == TimeSpan.MaxValue || DateTime.UtcNow <= startTime + ReconnectTimeSpan)
-					{
-						Thread.Sleep(1000);
-						continue;
-					}
-					catch (Exception ex)
-					{
-						logger?.LogError(ex, "ModbusClient.Reconnect failed.");
-						reconnectFailed = true;
-						if (isDisposed)
+							// id
+							responseBytes.Add(ReadByte());
+							// length
+							expectedBytes = ReadByte();
+							responseBytes.Add(expectedBytes);
+							// value
+							responseBytes.AddRange(ReadBytes(expectedBytes));
+						}
+						expectedBytes = 0;
+						break;
+					default:
+						if ((fn & Consts.ErrorMask) == 0)
 						{
-							return;
+							throw new NotImplementedException();
 						}
 
-						if (wasConnected)
+						expectedBytes = 1;
+						break;
+				}
+
+				expectedBytes += 2; // CRC Check
+
+				responseBytes.AddRange(ReadBytes(expectedBytes));
+
+				logger?.LogTrace($"Response received");
+
+				await Task.CompletedTask;
+				return new Response(responseBytes.ToArray());
+			}
+			catch (Exception ex)
+			{
+				logger?.LogError(ex, "Sending Request");
+			}
+			finally
+			{
+				sendMutex.Release();
+			}
+
+			return new Response(new byte[] { 0, 0, 0, 0, 0, 0 });
+		}
+
+		private async void Reconnect(CancellationToken ct)
+		{
+			if (isReconnecting || ct.IsCancellationRequested)
+			{
+				return;
+			}
+
+			isReconnecting = true;
+			reconnectTcs = new TaskCompletionSource<bool>();
+
+			if (wasConnected)
+			{
+				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
+			}
+
+			ConnectingTask = GetWaitTask(ct);
+			int timeout = 2;
+			int maxTimeout = 30;
+			var startTime = DateTime.UtcNow;
+
+			using (ct.Register(() => reconnectTcs.TrySetCanceled()))
+			{
+				try
+				{
+					while (!ct.IsCancellationRequested)
+					{
+						try
 						{
-							throw new IOException("Server connection lost, reconnect failed.", ex);
+							serialPort?.Dispose();
+							serialPort = new SerialPort
+							{
+								PortName = PortName,
+								BaudRate = (int)BaudRate,
+								DataBits = DataBits,
+								Parity = Parity,
+								StopBits = StopBits,
+								Handshake = Handshake,
+								ReadTimeout = ReceiveTimeout,
+								WriteTimeout = SendTimeout,
+								ReadBufferSize = bufferSize,
+								WriteBufferSize = bufferSize
+							};
+
+							var task = Task.Run(() => serialPort.Open());
+							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task && serialPort.IsOpen)
+							{
+								logger?.LogInformation("ModbusClient.Reconnect connected");
+								Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
+								reconnectTcs.TrySetResult(true);
+								reconnectTcs = null;
+								wasConnected = true;
+								return;
+							}
+							else if (ct.IsCancellationRequested)
+							{
+								logger?.LogWarning("ModbusClient.Reconnect was cancelled");
+								return;
+							}
+							else
+							{
+								logger?.LogWarning($"ModbusClient.Reconnect failed to connect withing {timeout} seconds");
+								timeout += 2;
+								if (timeout > maxTimeout)
+								{
+									timeout = maxTimeout;
+								}
+
+								throw new IOException();
+							}
 						}
-						else
+						catch (IOException) when (ReconnectTimeSpan == TimeSpan.MaxValue || DateTime.UtcNow <= startTime + ReconnectTimeSpan)
 						{
-							throw new IOException("Could not connect to the server.", ex);
+							await Task.Delay(1000, ct);
+							continue;
+						}
+						catch (Exception ex)
+						{
+							logger?.LogError(ex, "ModbusClient.Reconnect failed");
+							reconnectTcs.TrySetException(ex);
 						}
 					}
-
-					wasConnected = true;
-					logger?.LogDebug("ModbusClient.Reconnect fire connected event.");
-					Task.Run(() => Connected?.Invoke(this, EventArgs.Empty));
-					break;
+				}
+				finally
+				{
+					isReconnecting = false;
 				}
 			}
 		}
 
-		private async Task<Response> SendRequest(Request request)
+		private async Task GetWaitTask(CancellationToken ct)
 		{
-			if (!IsConnected)
+			var rTcs = reconnectTcs;
+			if (rTcs != null)
 			{
-				throw new InvalidOperationException("No connection");
+				await rTcs.Task;
+			}
+			else
+			{
+				await Task.Run(() => SpinWait.SpinUntil(() => IsConnected || ct.IsCancellationRequested));
+			}
+		}
+
+		private SerialRS485 GetDriverState()
+		{
+			var rs485 = new SerialRS485();
+			SafeUnixHandle handle = null;
+			try
+			{
+				handle = UnsafeNativeMethods.Open(PortName, UnsafeNativeMethods.O_RDWR | UnsafeNativeMethods.O_NOCTTY);
+				if (UnsafeNativeMethods.IoCtl(handle, UnsafeNativeMethods.TIOCGRS485, ref rs485) == -1)
+				{
+					throw new UnixIOException();
+				}
+			}
+			finally
+			{
+				handle?.Close();
 			}
 
-			var sendBytes = request.Serialize();
-			serialPort.Write(sendBytes, 0, sendBytes.Length);
-			logger?.LogTrace($"{sendBytes.Length} bytes sent");
+			return rs485;
+		}
 
-			var responseBytes = new List<byte>();
-
-			// Device/Slave ID
-			responseBytes.Add(ReadByte());
-
-			// Function number
-			var fn = ReadByte();
-			responseBytes.Add(fn);
-
-			byte expectedBytes = 0;
-			var function = (FunctionCode)fn;
-			switch (function)
+		private void SetDriverState(SerialRS485 rs485)
+		{
+			SafeUnixHandle handle = null;
+			try
 			{
-				case FunctionCode.ReadCoils:
-				case FunctionCode.ReadDiscreteInputs:
-				case FunctionCode.ReadHoldingRegisters:
-				case FunctionCode.ReadInputRegisters:
-					expectedBytes = ReadByte();
-					responseBytes.Add(expectedBytes);
-					break;
-				case FunctionCode.WriteSingleCoil:
-				case FunctionCode.WriteSingleRegister:
-				case FunctionCode.WriteMultipleCoils:
-				case FunctionCode.WriteMultipleRegisters:
-					expectedBytes = 4;
-					break;
-				case FunctionCode.EncapsulatedInterface:
-					responseBytes.AddRange(ReadBytes(6));
-					var count = responseBytes.Last();
-					for (var i = 0; i < count; i++)
-					{
-						// id
-						responseBytes.Add(ReadByte());
-						// length
-						expectedBytes = ReadByte();
-						responseBytes.Add(expectedBytes);
-						// value
-						responseBytes.AddRange(ReadBytes(expectedBytes));
-					}
-					expectedBytes = 0;
-					break;
-				default:
-					if ((fn & Consts.ErrorMask) == 0)
-						throw new NotImplementedException();
+				handle = UnsafeNativeMethods.Open(PortName, UnsafeNativeMethods.O_RDWR | UnsafeNativeMethods.O_NOCTTY);
+				if (UnsafeNativeMethods.IoCtl(handle, UnsafeNativeMethods.TIOCSRS485, ref rs485) == -1)
+				{
+					throw new UnixIOException();
+				}
+			}
+			finally
+			{
+				handle?.Close();
+			}
+		}
 
-					expectedBytes = 1;
-					break;
+		private void DisconnectInternal(bool disposing)
+		{
+			logger?.LogTrace("ModbusClient.Disconnect");
+			if (isDisposed && !disposing)
+			{
+				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			expectedBytes += 2; // CRC Check
+			if (!isStarted)
+			{
+				return;
+			}
+			isStarted = false;
 
-			responseBytes.AddRange(ReadBytes(expectedBytes));
+			bool wasConnected = IsConnected;
 
-			logger?.LogTrace($"Response received");
+			try
+			{
+				reconnectTcs?.TrySetResult(false);
+				mainCts?.Cancel();
+				reconnectTcs = null;
+			}
+			catch
+			{ }
 
-			await Task.CompletedTask;
-			return new Response(responseBytes.ToArray());
+			try
+			{
+				serialPort?.Close();
+				serialPort?.Dispose();
+				serialPort = null;
+			}
+			catch
+			{ }
+
+			if (wasConnected)
+			{
+				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
+			}
+
+			if (driverModified)
+			{
+				try
+				{
+					var rs485 = GetDriverState();
+					rs485.Flags = serialDriverFlags;
+					SetDriverState(rs485);
+					driverModified = false;
+				}
+				catch (Exception ex)
+				{
+					logger?.LogError(ex, "ModbusClient.Disconnect failed to reset the serial driver state.");
+					throw;
+				}
+			}
 		}
 
 		private byte ReadByte()
@@ -1225,40 +1306,7 @@ namespace AMWD.Modbus.Serial.Client
 			return bytes.ToArray();
 		}
 
-		private SerialRS485 GetDriverState()
-		{
-			var rs485 = new SerialRS485();
-			SafeUnixHandle handle = null;
-			try
-			{
-				handle = UnsafeNativeMethods.Open(PortName, UnsafeNativeMethods.O_RDWR | UnsafeNativeMethods.O_NOCTTY);
-				if (UnsafeNativeMethods.IoCtl(handle, UnsafeNativeMethods.TIOCGRS485, ref rs485) == -1)
-					throw new UnixIOException();
-			}
-			finally
-			{
-				handle?.Close();
-			}
-
-			return rs485;
-		}
-
-		private void SetDriverState(SerialRS485 rs485)
-		{
-			SafeUnixHandle handle = null;
-			try
-			{
-				handle = UnsafeNativeMethods.Open(PortName, UnsafeNativeMethods.O_RDWR | UnsafeNativeMethods.O_NOCTTY);
-				if (UnsafeNativeMethods.IoCtl(handle, UnsafeNativeMethods.TIOCSRS485, ref rs485) == -1)
-					throw new UnixIOException();
-			}
-			finally
-			{
-				handle?.Close();
-			}
-		}
-
-		#endregion Private methods
+		#endregion Private Methods
 
 		#region IDisposable implementation
 
@@ -1279,8 +1327,8 @@ namespace AMWD.Modbus.Serial.Client
 			{
 				return;
 			}
-			Disconnect().Wait();
 			isDisposed = true;
+			DisconnectInternal(true);
 		}
 
 		#endregion IDisposable implementation
