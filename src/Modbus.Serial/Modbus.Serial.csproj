@@ -13,6 +13,7 @@
     <PackageId>AMWD.Modbus.Serial</PackageId>
     <AssemblyName>AMWD.Modbus.Serial</AssemblyName>
     <RootNamespace>AMWD.Modbus.Serial</RootNamespace>
+	<LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
     <NrtRevisionFormat>{semvertag}</NrtRevisionFormat>

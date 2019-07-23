@@ -65,7 +65,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// </summary>
 		public byte[] Bytes
 		{
-			get { return Data.Buffer; }
+			get { return Data?.Buffer ?? new byte[0]; }
 			set { Data = new DataBuffer(value); }
 		}
 

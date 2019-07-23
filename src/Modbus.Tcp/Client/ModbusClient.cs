@@ -36,6 +36,7 @@ namespace AMWD.Modbus.Tcp.Client
 		private bool wasConnected = false;
 		private bool isReconnecting = false;
 		private TaskCompletionSource<bool> reconnectTcs;
+		private Task receiveTask;
 
 		// Transaction handling
 		private ushort transactionId = 0;
@@ -182,7 +183,7 @@ namespace AMWD.Modbus.Tcp.Client
 			wasConnected = false;
 			mainCts = new CancellationTokenSource();
 
-			Task.Run(() => ReceiveLoop(mainCts.Token));
+			receiveTask = Task.Run(() => ReceiveLoop(mainCts.Token));
 			Task.Run(() => Reconnect(mainCts.Token));
 
 			ConnectingTask = GetWaitTask(mainCts.Token);
@@ -979,7 +980,7 @@ namespace AMWD.Modbus.Tcp.Client
 
 		#region Private Methods
 
-		private async void ReceiveLoop(CancellationToken ct)
+		private async Task ReceiveLoop(CancellationToken ct)
 		{
 			logger?.LogInformation("ModbusClient.ReceiveLoop started");
 			var reported = false;
@@ -991,13 +992,23 @@ namespace AMWD.Modbus.Tcp.Client
 					if (stream == null)
 					{
 						if (!reported)
+						{
 							logger?.LogTrace("ModbusClient.ReceiveLoop got no stream, waiting...");
+						}
 
 						reported = true;
 						await Task.Delay(100);
 						continue;
 					}
-					reported = false;
+					if (reported)
+					{
+						logger?.LogTrace("ModbusClient.ReceiveLoop stream available");
+						reported = false;
+					}
+
+					SpinWait.SpinUntil(() => stream.DataAvailable || ct.IsCancellationRequested);
+					if (ct.IsCancellationRequested)
+						continue;
 
 					var bytes = new List<byte>();
 
@@ -1010,13 +1021,14 @@ namespace AMWD.Modbus.Tcp.Client
 						expectedCount -= count;
 					}
 					while (expectedCount > 0 && !ct.IsCancellationRequested);
+					if (ct.IsCancellationRequested)
+						continue;
 
 					var lenBytes = bytes.Skip(4).Take(2).ToArray();
 					if (BitConverter.IsLittleEndian)
 					{
 						Array.Reverse(lenBytes);
 					}
-
 					expectedCount = BitConverter.ToUInt16(lenBytes, 0);
 
 					do
@@ -1027,12 +1039,18 @@ namespace AMWD.Modbus.Tcp.Client
 						expectedCount -= count;
 					}
 					while (expectedCount > 0 && !ct.IsCancellationRequested);
+					if (ct.IsCancellationRequested)
+						continue;
 
 					var response = new Response(bytes.ToArray());
 					if (awaitedResponses.TryRemove(response.TransactionId, out var tcs))
 					{
 						tcs.TrySetResult(response);
 					}
+				}
+				catch (ObjectDisposedException) when (ct.IsCancellationRequested)
+				{
+					// stream already gone
 				}
 				catch (Exception ex)
 				{
@@ -1242,7 +1260,7 @@ namespace AMWD.Modbus.Tcp.Client
 			{
 				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
 			}
-			await Task.CompletedTask;
+			await Task.WhenAll(ConnectingTask, receiveTask);
 			logger?.LogInformation("ModbusClient.Disconnect done");
 		}
 
@@ -1272,6 +1290,11 @@ namespace AMWD.Modbus.Tcp.Client
 			DisconnectInternal(true)
 				.GetAwaiter()
 				.GetResult();
+
+			if (logger is IDisposable dl)
+			{
+				dl?.Dispose();
+			}
 		}
 
 		#endregion IDisposable implementation
