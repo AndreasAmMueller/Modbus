@@ -38,8 +38,8 @@ namespace AMWD.Modbus.Tcp.Client
 		private Task receiveTask;
 
 		// Transaction handling
+		private readonly object syncLock = new object();
 		private ushort transactionId = 0;
-		private readonly SemaphoreSlim sendMutex = new SemaphoreSlim(1, 1);
 		private readonly ConcurrentDictionary<ushort, TaskCompletionSource<Response>> awaitedResponses = new ConcurrentDictionary<ushort, TaskCompletionSource<Response>>();
 
 		#endregion Fields
@@ -979,7 +979,7 @@ namespace AMWD.Modbus.Tcp.Client
 
 		#region Private Methods
 
-		private async void ReceiveLoop(CancellationToken ct)
+		private async Task ReceiveLoop(CancellationToken ct)
 		{
 			logger?.LogInformation("ModbusClient.ReceiveLoop started");
 			var reported = false;
@@ -1008,7 +1008,7 @@ namespace AMWD.Modbus.Tcp.Client
 					SpinWait.SpinUntil(() => stream.DataAvailable || ct.IsCancellationRequested);
 					if (ct.IsCancellationRequested)
 					{
-						continue;
+						break;
 					}
 
 					var bytes = new List<byte>();
@@ -1024,7 +1024,7 @@ namespace AMWD.Modbus.Tcp.Client
 					while (expectedCount > 0 && !ct.IsCancellationRequested);
 					if (ct.IsCancellationRequested)
 					{
-						continue;
+						break;
 					}
 
 					var lenBytes = bytes.Skip(4).Take(2).ToArray();
@@ -1044,13 +1044,13 @@ namespace AMWD.Modbus.Tcp.Client
 					while (expectedCount > 0 && !ct.IsCancellationRequested);
 					if (ct.IsCancellationRequested)
 					{
-						continue;
+						break;
 					}
 
 					var response = new Response(bytes.ToArray());
 					if (awaitedResponses.TryRemove(response.TransactionId, out var tcs))
 					{
-						tcs.TrySetResult(response);
+						tcs.TrySetResultAsync(response);
 					}
 				}
 				catch (ObjectDisposedException) when (ct.IsCancellationRequested)
@@ -1059,7 +1059,7 @@ namespace AMWD.Modbus.Tcp.Client
 				}
 				catch (InvalidOperationException) when (isReconnecting)
 				{
-					// server broken
+					// connection broken
 				}
 				catch (Exception ex)
 				{
@@ -1099,12 +1099,13 @@ namespace AMWD.Modbus.Tcp.Client
 			{
 				try
 				{
-					await sendMutex.WaitAsync(ct);
+					lock (syncLock)
+					{
+						request.TransactionId = transactionId;
+						transactionId++;
 
-					request.TransactionId = transactionId;
-					transactionId++;
-
-					awaitedResponses[request.TransactionId] = tcs;
+						awaitedResponses[request.TransactionId] = tcs;
+					}
 
 					logger?.LogTrace(request.ToString());
 
@@ -1116,17 +1117,14 @@ namespace AMWD.Modbus.Tcp.Client
 						if (await Task.WhenAny(tcs.Task, Task.Delay(ReceiveTimeout, ct)) == tcs.Task && !ct.IsCancellationRequested)
 						{
 							logger?.LogTrace("ModbusClient.SendRequest - Response received");
-							return await tcs.Task;
+							var response = await tcs.Task;
+							return response;
 						}
 					}
 				}
 				catch (Exception ex)
 				{
 					logger?.LogError(ex, $"ModbusClient.SendRequest - Transaction {request.TransactionId}");
-				}
-				finally
-				{
-					sendMutex.Release();
 				}
 
 				return new Response(new byte[] { 0, 0, 0, 0, 0, 0 });
@@ -1282,11 +1280,6 @@ namespace AMWD.Modbus.Tcp.Client
 			DisconnectInternal(true)
 				.GetAwaiter()
 				.GetResult();
-
-			if (logger is IDisposable dl)
-			{
-				dl?.Dispose();
-			}
 		}
 
 		#endregion IDisposable implementation

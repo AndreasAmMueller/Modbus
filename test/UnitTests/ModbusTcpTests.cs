@@ -683,7 +683,7 @@ namespace UnitTests
 		// Time for the scheduler to launch a thread to start the reconnect
 		private async Task EnsureWait()
 		{
-			await Task.Delay(10);
+			await Task.Delay(1);
 		}
 	}
 }
