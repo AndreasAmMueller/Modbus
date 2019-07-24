@@ -13,7 +13,6 @@
     <PackageId>AMWD.Modbus.Tcp</PackageId>
     <AssemblyName>AMWD.Modbus.Tcp</AssemblyName>
     <RootNamespace>AMWD.Modbus.Tcp</RootNamespace>
-	<LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
     <NrtRevisionFormat>{semvertag}</NrtRevisionFormat>

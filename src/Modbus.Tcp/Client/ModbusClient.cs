@@ -35,7 +35,6 @@ namespace AMWD.Modbus.Tcp.Client
 		private bool isStarted = false;
 		private bool wasConnected = false;
 		private bool isReconnecting = false;
-		private TaskCompletionSource<bool> reconnectTcs;
 		private Task receiveTask;
 
 		// Transaction handling
@@ -137,7 +136,7 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <summary>
 		/// Gets a value indicating whether the connection is established.
 		/// </summary>
-		public bool IsConnected => tcpClient?.Connected ?? false;
+		public bool IsConnected => !isReconnecting && (tcpClient?.Connected ?? false);
 
 		/// <summary>
 		/// Gets or sets the max. reconnect timespan until the reconnect is aborted.
@@ -980,7 +979,7 @@ namespace AMWD.Modbus.Tcp.Client
 
 		#region Private Methods
 
-		private async Task ReceiveLoop(CancellationToken ct)
+		private async void ReceiveLoop(CancellationToken ct)
 		{
 			logger?.LogInformation("ModbusClient.ReceiveLoop started");
 			var reported = false;
@@ -1008,7 +1007,9 @@ namespace AMWD.Modbus.Tcp.Client
 
 					SpinWait.SpinUntil(() => stream.DataAvailable || ct.IsCancellationRequested);
 					if (ct.IsCancellationRequested)
+					{
 						continue;
+					}
 
 					var bytes = new List<byte>();
 
@@ -1022,7 +1023,9 @@ namespace AMWD.Modbus.Tcp.Client
 					}
 					while (expectedCount > 0 && !ct.IsCancellationRequested);
 					if (ct.IsCancellationRequested)
+					{
 						continue;
+					}
 
 					var lenBytes = bytes.Skip(4).Take(2).ToArray();
 					if (BitConverter.IsLittleEndian)
@@ -1040,7 +1043,9 @@ namespace AMWD.Modbus.Tcp.Client
 					}
 					while (expectedCount > 0 && !ct.IsCancellationRequested);
 					if (ct.IsCancellationRequested)
+					{
 						continue;
+					}
 
 					var response = new Response(bytes.ToArray());
 					if (awaitedResponses.TryRemove(response.TransactionId, out var tcs))
@@ -1051,6 +1056,10 @@ namespace AMWD.Modbus.Tcp.Client
 				catch (ObjectDisposedException) when (ct.IsCancellationRequested)
 				{
 					// stream already gone
+				}
+				catch (InvalidOperationException) when (isReconnecting)
+				{
+					// server broken
 				}
 				catch (Exception ex)
 				{
@@ -1124,7 +1133,7 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 		}
 
-		private async void Reconnect(CancellationToken ct)
+		private async Task Reconnect(CancellationToken ct)
 		{
 			if (isReconnecting || ct.IsCancellationRequested)
 			{
@@ -1133,7 +1142,6 @@ namespace AMWD.Modbus.Tcp.Client
 
 			logger?.LogInformation("ModbusClient.Reconnect started");
 			isReconnecting = true;
-			reconnectTcs = new TaskCompletionSource<bool>();
 
 			if (wasConnected)
 			{
@@ -1145,77 +1153,63 @@ namespace AMWD.Modbus.Tcp.Client
 			int maxTimeout = 30;
 			var startTime = DateTime.UtcNow;
 
-			using (ct.Register(() => reconnectTcs.TrySetCanceled()))
+			try
 			{
-				try
+				while (!ct.IsCancellationRequested)
 				{
-					while (!ct.IsCancellationRequested)
+					try
 					{
-						try
+						tcpClient?.Dispose();
+						tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
+						tcpClient.Client.DualMode = true;
+						var task = tcpClient.ConnectAsync(Host, Port);
+						if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task && tcpClient.Connected)
 						{
-							tcpClient?.Dispose();
-							tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
-							tcpClient.Client.DualMode = true;
-							var task = tcpClient.ConnectAsync(Host, Port);
-							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task && tcpClient.Connected)
+							logger?.LogInformation("ModbusClient.Reconnect connected");
+							Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
+							wasConnected = true;
+							return;
+						}
+						else if (ct.IsCancellationRequested)
+						{
+							logger?.LogInformation("ModbusClient.Reconnect was cancelled");
+							return;
+						}
+						else
+						{
+							timeout += 2;
+							if (timeout > maxTimeout)
 							{
-								logger?.LogInformation("ModbusClient.Reconnect connected");
-								Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
-								reconnectTcs.TrySetResult(true);
-								reconnectTcs = null;
-								wasConnected = true;
-								return;
-							}
-							else if (ct.IsCancellationRequested)
-							{
-								logger?.LogInformation("ModbusClient.Reconnect was cancelled");
-								return;
+								timeout = maxTimeout;
 							}
 							else
 							{
-								timeout += 2;
-								if (timeout > maxTimeout)
-								{
-									timeout = maxTimeout;
-								}
-								else
-								{
-									logger?.LogWarning($"ModbusClient.Reconnect failed to connect within {timeout-2} seconds");
-								}
-
-								throw new SocketException((int)SocketError.TimedOut);
+								logger?.LogWarning($"ModbusClient.Reconnect failed to connect within {timeout - 2} seconds");
 							}
-						}
-						catch (SocketException) when (ReconnectTimeSpan == TimeSpan.MaxValue || DateTime.UtcNow <= startTime + ReconnectTimeSpan)
-						{
-							await Task.Delay(1000, ct);
-							continue;
-						}
-						catch (Exception ex)
-						{
-							logger?.LogError(ex, "ModbusClient.Reconnect failed");
-							reconnectTcs.TrySetException(ex);
+
+							throw new SocketException((int)SocketError.TimedOut);
 						}
 					}
+					catch (SocketException) when (ReconnectTimeSpan == TimeSpan.MaxValue || DateTime.UtcNow <= startTime + ReconnectTimeSpan)
+					{
+						await Task.Delay(1000, ct);
+						continue;
+					}
+					catch (Exception ex)
+					{
+						logger?.LogError(ex, "ModbusClient.Reconnect failed");
+					}
 				}
-				finally
-				{
-					isReconnecting = false;
-				}
+			}
+			finally
+			{
+				isReconnecting = false;
 			}
 		}
 
 		private async Task GetWaitTask(CancellationToken ct)
 		{
-			var rTcs = reconnectTcs;
-			if (rTcs != null)
-			{
-				await rTcs.Task;
-			}
-			else
-			{
-				await Task.Run(() => SpinWait.SpinUntil(() => IsConnected || ct.IsCancellationRequested));
-			}
+			await Task.Run(() => SpinWait.SpinUntil(() => IsConnected || ct.IsCancellationRequested));
 		}
 
 		private async Task DisconnectInternal(bool disposing)
@@ -1236,9 +1230,7 @@ namespace AMWD.Modbus.Tcp.Client
 
 			try
 			{
-				reconnectTcs?.TrySetResult(false);
 				mainCts?.Cancel();
-				reconnectTcs = null;
 			}
 			catch (Exception ex)
 			{
