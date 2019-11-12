@@ -3,6 +3,7 @@ using AMWD.Modbus.Common.Interfaces;
 using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
 using AMWD.Modbus.Tcp.Protocol;
+using AMWD.Modbus.Tcp.Util;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

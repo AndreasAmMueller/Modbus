@@ -1014,10 +1014,11 @@ namespace AMWD.Modbus.Serial.Client
 				var bytes = request.Serialize();
 				serialPort.Write(bytes, 0, bytes.Length);
 
-				var responseBytes = new List<byte>();
-
-				// Device/Slave ID
-				responseBytes.Add(ReadByte());
+				var responseBytes = new List<byte>
+				{
+					// Device/Slave ID
+					ReadByte()
+				};
 
 				// Function number
 				var fn = ReadByte();

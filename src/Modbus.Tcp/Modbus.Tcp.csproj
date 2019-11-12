@@ -13,16 +13,7 @@
     <PackageId>AMWD.Modbus.Tcp</PackageId>
     <AssemblyName>AMWD.Modbus.Tcp</AssemblyName>
     <RootNamespace>AMWD.Modbus.Tcp</RootNamespace>
-  </PropertyGroup>
-  <PropertyGroup>
-    <NrtRevisionFormat>{semvertag}</NrtRevisionFormat>
-    <NrtResolveSimpleAttributes>true</NrtResolveSimpleAttributes>
-    <NrtResolveInformationalAttribute>true</NrtResolveInformationalAttribute>
-    <NrtResolveCopyright>true</NrtResolveCopyright>
-    <NrtTagMatch>v[0-9]*</NrtTagMatch>
-    <NrtRemoveTagV>true</NrtRemoveTagV>
-    <NrtRequiredVcs>git</NrtRequiredVcs>
-    <NrtShowRevision>true</NrtShowRevision>
+    <NrtRevisionFormat>{semvertag:master}</NrtRevisionFormat>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>

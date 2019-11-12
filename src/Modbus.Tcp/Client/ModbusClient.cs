@@ -3,6 +3,7 @@ using AMWD.Modbus.Common.Interfaces;
 using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
 using AMWD.Modbus.Tcp.Protocol;
+using AMWD.Modbus.Tcp.Util;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -32,6 +33,7 @@ namespace AMWD.Modbus.Tcp.Client
 
 		// Connection handling
 		private CancellationTokenSource mainCts;
+		private CancellationTokenSource receivingCts;
 		private bool isStarted = false;
 		private bool wasConnected = false;
 		private bool isReconnecting = false;
@@ -182,7 +184,6 @@ namespace AMWD.Modbus.Tcp.Client
 			wasConnected = false;
 			mainCts = new CancellationTokenSource();
 
-			receiveTask = Task.Run(() => ReceiveLoop(mainCts.Token));
 			Task.Run(() => Reconnect(mainCts.Token));
 
 			ConnectingTask = GetWaitTask(mainCts.Token);
@@ -983,6 +984,7 @@ namespace AMWD.Modbus.Tcp.Client
 		{
 			logger?.LogInformation("ModbusClient.ReceiveLoop started");
 			var reported = false;
+
 			while (!ct.IsCancellationRequested)
 			{
 				try
@@ -1005,7 +1007,7 @@ namespace AMWD.Modbus.Tcp.Client
 						reported = false;
 					}
 
-					SpinWait.SpinUntil(() => stream.DataAvailable || ct.IsCancellationRequested);
+					SpinWait.SpinUntil(() => ct.IsCancellationRequested || stream.DataAvailable);
 					if (ct.IsCancellationRequested)
 					{
 						break;
@@ -1060,6 +1062,10 @@ namespace AMWD.Modbus.Tcp.Client
 				catch (InvalidOperationException) when (isReconnecting)
 				{
 					// connection broken
+				}
+				catch (OperationCanceledException) when (ct.IsCancellationRequested)
+				{
+					// dis- or reconnect
 				}
 				catch (Exception ex)
 				{
@@ -1143,6 +1149,8 @@ namespace AMWD.Modbus.Tcp.Client
 
 			if (wasConnected)
 			{
+				receivingCts?.Cancel();
+				receiveTask = null;
 				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
 			}
 
@@ -1166,6 +1174,9 @@ namespace AMWD.Modbus.Tcp.Client
 							logger?.LogInformation("ModbusClient.Reconnect connected");
 							Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
 							wasConnected = true;
+
+							receivingCts = new CancellationTokenSource();
+							receiveTask = Task.Run(() => ReceiveLoop(receivingCts.Token));
 							return;
 						}
 						else if (ct.IsCancellationRequested)
@@ -1229,6 +1240,7 @@ namespace AMWD.Modbus.Tcp.Client
 			try
 			{
 				mainCts?.Cancel();
+				receivingCts?.Cancel();
 			}
 			catch (Exception ex)
 			{

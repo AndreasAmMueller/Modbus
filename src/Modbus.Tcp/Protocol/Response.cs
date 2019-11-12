@@ -1,5 +1,6 @@
 ﻿using AMWD.Modbus.Common;
 using AMWD.Modbus.Common.Util;
+using AMWD.Modbus.Tcp.Util;
 using System;
 using System.Linq;
 using System.Text;

@@ -1,17 +1,16 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TcpClient = AMWD.Modbus.Tcp.Client.ModbusClient;
-using SerialClient = AMWD.Modbus.Serial.Client.ModbusClient;
+﻿using AMWD.Modbus.Common;
 using AMWD.Modbus.Common.Interfaces;
 using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
-using AMWD.Modbus.Common;
 using AMWD.Modbus.Serial;
+using System;
+using System.Collections.Generic;
 using System.IO.Ports;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using SerialClient = AMWD.Modbus.Serial.Client.ModbusClient;
+using TcpClient = AMWD.Modbus.Tcp.Client.ModbusClient;
 
 namespace ConsoleDemo
 {
@@ -230,11 +229,9 @@ namespace ConsoleDemo
 									{
 										throw new Exception($"Writing '{byteStr}' to address {address} failed");
 									}
-
 								}
 								break;
 						}
-
 					}
 					catch (Exception ex)
 					{

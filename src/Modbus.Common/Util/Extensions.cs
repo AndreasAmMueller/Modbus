@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace AMWD.Modbus.Common.Util
 {
@@ -270,7 +269,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <typeparam name="T">The attribute type.</typeparam>
 		/// <param name="enumValue">The enum value.</param>
 		/// <returns>The first attribute of the type present or null.</returns>
-		public static T GetAttribute<T>(this Enum enumValue)
+		internal static T GetAttribute<T>(this Enum enumValue)
 			where T : Attribute
 		{
 			if (enumValue != null)
@@ -282,35 +281,16 @@ namespace AMWD.Modbus.Common.Util
 			return default(T);
 		}
 
-
 		/// <summary>
 		/// Tries to read the description of an enum value.
 		/// </summary>
 		/// <param name="enumValue">The enum value.</param>
 		/// <returns>The description or the <see cref="Enum.ToString()"/></returns>
-		public static string GetDescription(this Enum enumValue)
+		internal static string GetDescription(this Enum enumValue)
 		{
 			return enumValue.GetAttribute<DescriptionAttribute>()?.Description ?? enumValue.ToString();
 		}
 
-		#endregion
-
-		#region Task handling
-
-		/// <summary>
-		/// Forgets about the result of the task. (Prevent compiler warning).
-		/// </summary>
-		/// <param name="task">The task to forget.</param>
-		public async static void Forget(this Task task)
-		{
-			try
-			{
-				await task;
-			}
-			catch
-			{ /* Task forgotten, so keep everything quiet. */ }
-		}
-
-		#endregion Task handling
+		#endregion Enums
 	}
 }

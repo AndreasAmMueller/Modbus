@@ -13,16 +13,7 @@
     <PackageId>AMWD.Modbus.Serial</PackageId>
     <AssemblyName>AMWD.Modbus.Serial</AssemblyName>
     <RootNamespace>AMWD.Modbus.Serial</RootNamespace>
-  </PropertyGroup>
-  <PropertyGroup>
-    <NrtRevisionFormat>{semvertag}</NrtRevisionFormat>
-    <NrtResolveSimpleAttributes>true</NrtResolveSimpleAttributes>
-    <NrtResolveInformationalAttribute>true</NrtResolveInformationalAttribute>
-    <NrtResolveCopyright>true</NrtResolveCopyright>
-    <NrtTagMatch>v[0-9]*</NrtTagMatch>
-    <NrtRemoveTagV>true</NrtRemoveTagV>
-    <NrtRequiredVcs>git</NrtRequiredVcs>
-    <NrtShowRevision>true</NrtShowRevision>
+    <NrtRevisionFormat>{semvertag:master}</NrtRevisionFormat>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -51,7 +42,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
-    <PackageReference Include="System.IO.Ports" Version="4.6.0-preview3.19128.7" />
+    <PackageReference Include="System.IO.Ports" Version="4.6.0" />
     <PackageReference Include="Unclassified.NetRevisionTask" Version="0.3.0" PrivateAssets="all" />
   </ItemGroup>
 
