@@ -195,9 +195,9 @@ namespace AMWD.Modbus.Tcp.Client
 		/// Disconnects the client.
 		/// </summary>
 		/// <returns>An awaitable task.</returns>
-		public async Task Disconnect()
+		public Task Disconnect()
 		{
-			await DisconnectInternal(false);
+			return Task.Run(() => DisconnectInternal(false));
 		}
 
 		#endregion Control
@@ -1221,7 +1221,7 @@ namespace AMWD.Modbus.Tcp.Client
 			await Task.Run(() => SpinWait.SpinUntil(() => IsConnected || ct.IsCancellationRequested));
 		}
 
-		private async Task DisconnectInternal(bool disposing)
+		private void DisconnectInternal(bool disposing)
 		{
 			if (isDisposed && !disposing)
 			{
@@ -1262,7 +1262,9 @@ namespace AMWD.Modbus.Tcp.Client
 			{
 				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
 			}
-			await Task.WhenAll(ConnectingTask, receiveTask);
+
+			ConnectingTask?.GetAwaiter().GetResult();
+			receiveTask?.GetAwaiter().GetResult();
 			logger?.LogInformation("ModbusClient.Disconnect done");
 		}
 
@@ -1289,9 +1291,7 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			isDisposed = true;
 
-			DisconnectInternal(true)
-				.GetAwaiter()
-				.GetResult();
+			DisconnectInternal(true);
 		}
 
 		#endregion IDisposable implementation
