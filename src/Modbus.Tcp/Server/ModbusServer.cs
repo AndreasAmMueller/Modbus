@@ -4,6 +4,7 @@ using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
 using AMWD.Modbus.Tcp.Protocol;
 using AMWD.Modbus.Tcp.Util;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -23,6 +24,8 @@ namespace AMWD.Modbus.Tcp.Server
 	public class ModbusServer : IModbusServer
 	{
 		#region Fields
+
+		private readonly ILogger logger;
 
 		private TcpListener tcpListener;
 		private List<TcpClient> tcpClients = new List<TcpClient>();
@@ -65,8 +68,10 @@ namespace AMWD.Modbus.Tcp.Server
 		/// Initializes a new instance of the <see cref="ModbusServer"/> class.
 		/// </summary>
 		/// <param name="port">The port to listen. (Default: 502)</param>
-		public ModbusServer(int port = 502)
+		/// <param name="logger"><see cref="ILogger"/> instance to write log entries.</param>
+		public ModbusServer(int port = 502, ILogger logger = null)
 		{
+			this.logger = logger;
 			Initialization = Task.Run(() => Initialize(port));
 		}
 
@@ -352,7 +357,7 @@ namespace AMWD.Modbus.Tcp.Server
 			StartTime = DateTime.UtcNow;
 			IsRunning = true;
 
-			Console.WriteLine("Modbus server started to listen on " + port + "/tcp");
+			logger?.LogInformation($"Modbus server started to listen on {port}/tcp.");
 
 			Task.Run((Action)WaitForClient);
 		}
@@ -391,7 +396,9 @@ namespace AMWD.Modbus.Tcp.Server
 
 		private async void HandleClient(TcpClient client)
 		{
-			ClientConnected?.Invoke(this, new ClientEventArgs((IPEndPoint)client.Client.RemoteEndPoint));
+			var ipEp = (IPEndPoint)client.Client.RemoteEndPoint;
+			ClientConnected?.Invoke(this, new ClientEventArgs(ipEp));
+			logger?.LogInformation($"Client connected: {ipEp.Address}.");
 
 			try
 			{
@@ -420,13 +427,33 @@ namespace AMWD.Modbus.Tcp.Server
 					}
 					while (following > 0);
 
-					var request = new Request(requestBytes.ToArray());
-					var response = HandleRequest(request);
+					Response response = null;
+					try
+					{
+						var request = new Request(requestBytes.ToArray());
+						response = HandleRequest(request);
+					}
+					catch (ArgumentException ae)
+					{
+						logger?.LogWarning(ae, $"Parsing request from {ipEp.Address} failed: {ae.Message}.");
+					}
+					catch (NotImplementedException nie)
+					{
+						logger?.LogWarning(nie, $"Request from {ipEp.Address} has an invalid function part.");
+					}
 
 					if (response != null)
 					{
-						bytes = response.Serialize();
-						await stream.WriteAsync(bytes, 0, bytes.Length);
+						try
+						{
+							bytes = response.Serialize();
+							await stream.WriteAsync(bytes, 0, bytes.Length);
+						}
+						catch (NotImplementedException nie)
+						{
+							logger?.LogError(nie, $"Response for {ipEp.Address} has an invalid function part. Sending Message failed.");
+						}
+
 					}
 				}
 			}
@@ -434,18 +461,19 @@ namespace AMWD.Modbus.Tcp.Server
 			{
 				// client closed connection (connecting)
 			}
-			catch (IOException)
-			{
-				// server stopped
-			}
 			catch (ArgumentOutOfRangeException)
 			{
 				// client closed connection (request parsing)
 			}
+			catch (IOException)
+			{
+				// server stopped
+			}
 
 			if (!isDisposed)
 			{
-				ClientDisconnected?.Invoke(this, new ClientEventArgs((IPEndPoint)client.Client.RemoteEndPoint));
+				ClientDisconnected?.Invoke(this, new ClientEventArgs(ipEp));
+				logger?.LogInformation($"Client disconnected: {ipEp.Address}.");
 			}
 
 			lock (tcpClients)

@@ -188,7 +188,22 @@ namespace ConsoleDemo
 								break;
 							case 2:
 								{
-									var info = await client.ReadDeviceInformation(id, DeviceIDCategory.Regular);
+									Console.Write("[1] Basic, [2] Regular, [3] Extended: ");
+									var cat = Convert.ToInt32(Console.ReadLine().Trim());
+
+									Dictionary<DeviceIDObject, string> info = null;
+									switch (cat)
+									{
+										case 1:
+											info = await client.ReadDeviceInformation(id, DeviceIDCategory.Basic);
+											break;
+										case 2:
+											info = await client.ReadDeviceInformation(id, DeviceIDCategory.Regular);
+											break;
+										case 3:
+											info = await client.ReadDeviceInformation(id, DeviceIDCategory.Extended);
+											break;
+									}
 									if (info != null)
 									{
 										foreach (var kvp in info)
