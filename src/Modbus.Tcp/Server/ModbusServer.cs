@@ -6,6 +6,7 @@ using AMWD.Modbus.Tcp.Protocol;
 using AMWD.Modbus.Tcp.Util;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -394,6 +395,20 @@ namespace AMWD.Modbus.Tcp.Server
 			HandleClient(client);
 		}
 
+
+		private static async Task<byte[]> ExpectBytesFromNetwork(NetworkStream stream, int size)
+		{
+			var buffer = new byte[size];
+			for (int offset = 0; offset < buffer.Length; )
+			{
+				var count = await stream.ReadAsync(buffer, offset, buffer.Length - offset); // CancellationToken?
+				if (count < 1)
+					throw new EndOfStreamException($"Expected to read {buffer.Length - offset} more bytes, but end of stream is reached");
+				offset += count;
+			}
+			return buffer;
+		}
+
 		private async void HandleClient(TcpClient client)
 		{
 			var ipEp = (IPEndPoint)client.Client.RemoteEndPoint;
@@ -405,32 +420,21 @@ namespace AMWD.Modbus.Tcp.Server
 				var stream = client.GetStream();
 				while (true)
 				{
-					var requestBytes = new List<byte>();
+					var requestBytes = new MemoryStream();
 
-					var buffer = new byte[6];
-					var count = await stream.ReadAsync(buffer, 0, buffer.Length);
-					requestBytes.AddRange(buffer.Take(count));
+					var header = await ExpectBytesFromNetwork(stream, 6);
+					requestBytes.Write(header, 0, header.Length);
+					int following = BinaryPrimitives.ReadUInt16BigEndian(header.AsSpan(4, 2));
 
-					var bytes = buffer.Skip(4).Take(2).ToArray();
-					if (BitConverter.IsLittleEndian)
 					{
-						Array.Reverse(bytes);
+						var payload = await ExpectBytesFromNetwork(stream, following);
+						requestBytes.Write(payload, 0, payload.Length);
 					}
-					int following = BitConverter.ToUInt16(bytes, 0);
-
-					do
-					{
-						buffer = new byte[following];
-						count = await stream.ReadAsync(buffer, 0, buffer.Length);
-						following -= count;
-						requestBytes.AddRange(buffer.Take(count));
-					}
-					while (following > 0);
 
 					Response response = null;
 					try
 					{
-						var request = new Request(requestBytes.ToArray());
+						var request = new Request(requestBytes.GetBuffer().AsSpan(0, (int)requestBytes.Length));
 						response = HandleRequest(request);
 					}
 					catch (ArgumentException ae)
@@ -446,7 +450,7 @@ namespace AMWD.Modbus.Tcp.Server
 					{
 						try
 						{
-							bytes = response.Serialize();
+							var bytes = response.Serialize();
 							await stream.WriteAsync(bytes, 0, bytes.Length);
 						}
 						catch (NotImplementedException nie)
