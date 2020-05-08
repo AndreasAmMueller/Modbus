@@ -989,9 +989,7 @@ namespace AMWD.Modbus.Serial.Client
 		private async Task<Response> SendRequest(Request request, CancellationToken ct)
 		{
 			if (isDisposed)
-			{
 				throw new ObjectDisposedException(GetType().FullName);
-			}
 
 			logger?.LogTrace("ModbusClient.SendRequest");
 
@@ -1008,31 +1006,35 @@ namespace AMWD.Modbus.Serial.Client
 			try
 			{
 				await sendMutex.WaitAsync(ct);
-
 				logger?.LogTrace(request.ToString());
 
+				await serialPort.BaseStream.FlushAsync();
+				serialPort.DiscardInBuffer();
+				serialPort.DiscardOutBuffer();
+
 				var bytes = request.Serialize();
-				serialPort.Write(bytes, 0, bytes.Length);
+				await serialPort.BaseStream.WriteAsync(bytes, 0, bytes.Length);
+				await serialPort.BaseStream.FlushAsync();
 
 				var responseBytes = new List<byte>
 				{
 					// Device/Slave ID
-					ReadByte()
+					await ReadByte()
 				};
 
 				// Function number
-				var fn = ReadByte();
+				var fn = await ReadByte();
 				responseBytes.Add(fn);
 
 				byte expectedBytes = 0;
-				var function = (FunctionCode)fn;
+				var function = (FunctionCode)((fn & Consts.ErrorMask) > 0 ? fn ^ Consts.ErrorMask : fn);
 				switch (function)
 				{
 					case FunctionCode.ReadCoils:
 					case FunctionCode.ReadDiscreteInputs:
 					case FunctionCode.ReadHoldingRegisters:
 					case FunctionCode.ReadInputRegisters:
-						expectedBytes = ReadByte();
+						expectedBytes = await ReadByte();
 						responseBytes.Add(expectedBytes);
 						break;
 					case FunctionCode.WriteSingleCoil:
@@ -1042,17 +1044,17 @@ namespace AMWD.Modbus.Serial.Client
 						expectedBytes = 4;
 						break;
 					case FunctionCode.EncapsulatedInterface:
-						responseBytes.AddRange(ReadBytes(6));
+						responseBytes.AddRange(await ReadBytes(6));
 						var count = responseBytes.Last();
 						for (var i = 0; i < count; i++)
 						{
 							// id
-							responseBytes.Add(ReadByte());
+							responseBytes.Add(await ReadByte());
 							// length
-							expectedBytes = ReadByte();
+							expectedBytes = await ReadByte();
 							responseBytes.Add(expectedBytes);
 							// value
-							responseBytes.AddRange(ReadBytes(expectedBytes));
+							responseBytes.AddRange(await ReadBytes(expectedBytes));
 						}
 						expectedBytes = 0;
 						break;
@@ -1068,7 +1070,7 @@ namespace AMWD.Modbus.Serial.Client
 
 				expectedBytes += 2; // CRC Check
 
-				responseBytes.AddRange(ReadBytes(expectedBytes));
+				responseBytes.AddRange(await ReadBytes(expectedBytes));
 
 				logger?.LogTrace($"Response received");
 
@@ -1230,14 +1232,11 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			logger?.LogTrace("ModbusClient.Disconnect");
 			if (isDisposed && !disposing)
-			{
 				throw new ObjectDisposedException(GetType().FullName);
-			}
 
 			if (!isStarted)
-			{
 				return;
-			}
+
 			isStarted = false;
 
 			bool wasConnected = IsConnected;
@@ -1261,9 +1260,7 @@ namespace AMWD.Modbus.Serial.Client
 			{ }
 
 			if (wasConnected)
-			{
 				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
-			}
 
 			if (driverModified)
 			{
@@ -1282,29 +1279,27 @@ namespace AMWD.Modbus.Serial.Client
 			}
 		}
 
-		private byte ReadByte()
+		private async Task<byte> ReadByte()
 		{
-			return ReadBytes(1)[0];
+			return (await ReadBytes(1)).First();
 		}
 
-		private byte[] ReadBytes(int length)
+		private async Task<IEnumerable<byte>> ReadBytes(int length)
 		{
 			if (!IsConnected)
-			{
 				throw new InvalidOperationException("No connection");
-			}
 
 			var bytes = new List<byte>(length);
 			do
 			{
 				var buffer = new byte[length];
-				var count = serialPort.Read(buffer, 0, buffer.Length);
+				var count = await serialPort.BaseStream.ReadAsync(buffer, 0, buffer.Length);
 				bytes.AddRange(buffer.Take(count));
 				length -= count;
 			}
 			while (length > 0);
 
-			return bytes.ToArray();
+			return bytes;
 		}
 
 		#endregion Private Methods
