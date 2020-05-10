@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>Andreas Müller</Authors>
+    <Company />
+    <Product>Modbus.Proxy</Product>
+    <Description>Using AMWD.Modbus.TCP and AMWD.Modbus.Serial to build proxies.</Description>
+    <Copyright>Copyright (c) 2018 Andreas Müller</Copyright>
+    <RepositoryUrl>https://github.com/AndreasAmMueller/Modbus.git</RepositoryUrl>
+    <PackageTags>Modbus</PackageTags>
+    <PackageId>AMWD.Modbus.Proxy</PackageId>
+    <AssemblyName>AMWD.Modbus.Proxy</AssemblyName>
+    <RootNamespace>AMWD.Modbus.Proxy</RootNamespace>
+    <NrtRevisionFormat>{semvertag:master}</NrtRevisionFormat>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>$(SolutionDir)artifacts\bin\$(RootNamespace)\$(Configuration)</OutputPath>
+    <IntermediateOutputPath>$(SolutionDir)artifacts\obj\$(RootNamespace)\$(Configuration)</IntermediateOutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>$(OutputPath)\$(AssemblyName).xml</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>$(SolutionDir)artifacts\bin\$(RootNamespace)\$(Configuration)</OutputPath>
+    <IntermediateOutputPath>$(SolutionDir)artifacts\obj\$(RootNamespace)\$(Configuration)</IntermediateOutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DocumentationFile>$(OutputPath)\$(AssemblyName).xml</DocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.0.0" />
+    <PackageReference Include="Unclassified.NetRevisionTask" Version="0.3.0" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Modbus.Tcp\Modbus.Tcp.csproj" />
+  </ItemGroup>
+
+</Project>

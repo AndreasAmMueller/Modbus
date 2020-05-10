@@ -10,7 +10,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 	/// <summary>
 	/// Represents the response from the server to a client.
 	/// </summary>
-	internal class Response
+	public class Response
 	{
 		#region Constructors
 
@@ -31,7 +31,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// Initializes a new instance of the <see cref="Response"/> class.
 		/// </summary>
 		/// <param name="response">The serialized response.</param>
-		internal Response(byte[] response)
+		public Response(byte[] response)
 		{
 			Deserialize(response);
 		}
@@ -85,6 +85,9 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// </summary>
 		public DataBuffer Data { get; set; }
 
+		/// <summary>
+		/// Gets a value indicating whether the response timed out.
+		/// </summary>
 		public bool IsTimeout { get; private set; }
 
 		#region MODBUS Encapsulated Interface Transport
@@ -136,7 +139,11 @@ namespace AMWD.Modbus.Tcp.Protocol
 
 		#region Serialization
 
-		internal byte[] Serialize()
+		/// <summary>
+		/// Serializes the response to send.
+		/// </summary>
+		/// <returns></returns>
+		public byte[] Serialize()
 		{
 			var buffer = new DataBuffer(8);
 

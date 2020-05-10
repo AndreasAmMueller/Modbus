@@ -19,6 +19,13 @@ using Microsoft.Extensions.Logging;
 namespace AMWD.Modbus.Tcp.Server
 {
 	/// <summary>
+	/// A handler to process the modbus requests.
+	/// </summary>
+	/// <param name="request">The request to process.</param>
+	/// <returns>The response.</returns>
+	public delegate Response ModbusTcpRequestHandler(Request request);
+
+	/// <summary>
 	/// A server to communicate via Modbus TCP.
 	/// </summary>
 	public class ModbusServer : IModbusServer
@@ -30,9 +37,7 @@ namespace AMWD.Modbus.Tcp.Server
 		private TcpListener tcpListener;
 		private List<TcpClient> tcpClients = new List<TcpClient>();
 
-		private readonly FunctionCode[] availableFunctionCodes = Enum.GetValues(typeof(FunctionCode))
-			.Cast<FunctionCode>()
-			.ToArray();
+		private readonly ModbusTcpRequestHandler requestHandler;
 
 		private ConcurrentDictionary<byte, ModbusDevice> modbusDevices = new ConcurrentDictionary<byte, ModbusDevice>();
 
@@ -68,11 +73,19 @@ namespace AMWD.Modbus.Tcp.Server
 		/// Initializes a new instance of the <see cref="ModbusServer"/> class.
 		/// </summary>
 		/// <param name="port">The port to listen. (Default: 502)</param>
-		/// <param name="logger"><see cref="ILogger"/> instance to write log entries.</param>
-		public ModbusServer(int port = 502, ILogger logger = null)
+		/// <param name="listenAddress">The ip address to bind on. (Default: <see cref="IPAddress.IPv6Any"/>)</param>
+		/// <param name="logger"><see cref="ILogger"/> instance to write log entries. (Default: no logger)</param>
+		/// <param name="requestHandler">Set this request handler to override the default implemented handling. (Default: serving the data provided by Set* methods)</param>
+		public ModbusServer(int port = 502, IPAddress listenAddress = null, ILogger logger = null, ModbusTcpRequestHandler requestHandler = null)
 		{
 			this.logger = logger;
-			Initialization = Task.Run(() => Initialize(port));
+
+			this.requestHandler = requestHandler ?? HandleRequest;
+
+			if (listenAddress == null)
+				listenAddress = IPAddress.IPv6Any;
+
+			Initialization = Task.Run(() => Initialize(listenAddress, port));
 		}
 
 		#endregion Constructors
@@ -325,7 +338,7 @@ namespace AMWD.Modbus.Tcp.Server
 
 		#region Server
 
-		private void Initialize(int port)
+		private void Initialize(IPAddress listenAddress, int port)
 		{
 			if (isDisposed)
 				throw new ObjectDisposedException(GetType().FullName);
@@ -333,8 +346,11 @@ namespace AMWD.Modbus.Tcp.Server
 			if (port < 1 || port > 65535)
 				throw new ArgumentOutOfRangeException(nameof(port));
 
-			tcpListener = new TcpListener(IPAddress.IPv6Any, port);
-			tcpListener.Server.DualMode = true;
+			tcpListener = new TcpListener(listenAddress, port);
+
+			if (listenAddress.AddressFamily == AddressFamily.InterNetworkV6)
+				tcpListener.Server.DualMode = true;
+
 			tcpListener.Start();
 
 			StartTime = DateTime.UtcNow;
@@ -405,21 +421,22 @@ namespace AMWD.Modbus.Tcp.Server
 					var requestBytes = new MemoryStream();
 
 					byte[] header = await ExpectBytesFromNetwork(stream, 6);
-					requestBytes.Write(header, 0, header.Length);
+					await requestBytes.WriteAsync(header, 0, header.Length);
 
 					byte[] bytes = header.Skip(4).Take(2).ToArray();
 					if (BitConverter.IsLittleEndian)
 						Array.Reverse(bytes);
+
 					int following = BitConverter.ToUInt16(bytes, 0);
 
 					byte[] payload = await ExpectBytesFromNetwork(stream, following);
-					requestBytes.Write(payload, 0, payload.Length);
+					await requestBytes.WriteAsync(payload, 0, payload.Length);
 
 					Response response = null;
 					try
 					{
 						var request = new Request(requestBytes.GetBuffer());
-						response = HandleRequest(request);
+						response = requestHandler(request);
 					}
 					catch (ArgumentException ae)
 					{

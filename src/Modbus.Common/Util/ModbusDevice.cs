@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
 using AMWD.Modbus.Common.Structures;
 
 namespace AMWD.Modbus.Common.Util
@@ -8,10 +9,15 @@ namespace AMWD.Modbus.Common.Util
 	/// </summary>
 	public class ModbusDevice
 	{
-		private List<ushort> coils = new List<ushort>();
-		private List<ushort> discreteInputs = new List<ushort>();
-		private Dictionary<ushort, ushort> inputRegisters = new Dictionary<ushort, ushort>();
-		private Dictionary<ushort, ushort> holdingRegisters = new Dictionary<ushort, ushort>();
+		private readonly ReaderWriterLockSlim coilsLock = new ReaderWriterLockSlim();
+		private readonly ReaderWriterLockSlim discreteInputsLock = new ReaderWriterLockSlim();
+		private readonly ReaderWriterLockSlim inputRegistersLock = new ReaderWriterLockSlim();
+		private readonly ReaderWriterLockSlim holdingRegistersLock = new ReaderWriterLockSlim();
+
+		private readonly List<ushort> coils = new List<ushort>();
+		private readonly List<ushort> discreteInputs = new List<ushort>();
+		private readonly Dictionary<ushort, ushort> inputRegisters = new Dictionary<ushort, ushort>();
+		private readonly Dictionary<ushort, ushort> holdingRegisters = new Dictionary<ushort, ushort>();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ModbusDevice"/> class.
@@ -36,7 +42,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public Coil GetCoil(ushort address)
 		{
-			lock (coils)
+			using (coilsLock.GetReadLock())
 			{
 				return new Coil { Address = address, Value = coils.Contains(address) };
 			}
@@ -49,7 +55,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">A value indicating whether the coil is active.</param>
 		public void SetCoil(ushort address, bool value)
 		{
-			lock (coils)
+			using (coilsLock.GetWriteLock())
 			{
 				if (value && !coils.Contains(address))
 				{
@@ -73,7 +79,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public DiscreteInput GetInput(ushort address)
 		{
-			lock (discreteInputs)
+			using (discreteInputsLock.GetReadLock())
 			{
 				return new DiscreteInput { Address = address, Value = discreteInputs.Contains(address) };
 			}
@@ -86,7 +92,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">A value indicating whether the input is active.</param>
 		public void SetInput(ushort address, bool value)
 		{
-			lock (discreteInputs)
+			using (discreteInputsLock.GetWriteLock())
 			{
 				if (value && !discreteInputs.Contains(address))
 				{
@@ -110,12 +116,10 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public Register GetInputRegister(ushort address)
 		{
-			lock (inputRegisters)
+			using (inputRegistersLock.GetReadLock())
 			{
 				if (inputRegisters.TryGetValue(address, out ushort value))
-				{
 					return new Register { Address = address, Value = value };
-				}
 			}
 			return new Register { Address = address };
 		}
@@ -127,7 +131,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetInputRegister(ushort address, ushort value)
 		{
-			lock (inputRegisters)
+			using (inputRegistersLock.GetWriteLock())
 			{
 				if (value > 0)
 				{
@@ -151,12 +155,10 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public Register GetHoldingRegister(ushort address)
 		{
-			lock (holdingRegisters)
+			using (holdingRegistersLock.GetReadLock())
 			{
 				if (holdingRegisters.TryGetValue(address, out ushort value))
-				{
 					return new Register { Address = address, Value = value };
-				}
 			}
 			return new Register { Address = address };
 		}
@@ -168,7 +170,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value to set.</param>
 		public void SetHoldingRegister(ushort address, ushort value)
 		{
-			lock (holdingRegisters)
+			using (holdingRegistersLock.GetWriteLock())
 			{
 				if (value > 0)
 				{

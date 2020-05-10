@@ -9,7 +9,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 	/// <summary>
 	/// Represents the request from a client to the server.
 	/// </summary>
-	internal class Request
+	public class Request
 	{
 		#region Constructors
 
@@ -19,14 +19,14 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// <remarks>
 		/// The transaction id is automatically set to a unique number.
 		/// </remarks>
-		internal Request()
+		public Request()
 		{ }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Request"/> class.
 		/// </summary>
 		/// <param name="bytes">The serialized request from the client.</param>
-		internal Request(IEnumerable<byte> bytes)
+		public Request(IEnumerable<byte> bytes)
 		{
 			if (bytes == null)
 				throw new ArgumentNullException(nameof(bytes));
@@ -75,7 +75,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// <summary>
 		/// Gets or sets the data.
 		/// </summary>
-		internal DataBuffer Data { get; set; }
+		public DataBuffer Data { get; set; }
 
 		#region MODBUS Encapsulated Interface Transport
 
@@ -110,7 +110,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// Serializes the request ready to send via tcp.
 		/// </summary>
 		/// <returns></returns>
-		internal byte[] Serialize()
+		public byte[] Serialize()
 		{
 			var buffer = new DataBuffer(8);
 

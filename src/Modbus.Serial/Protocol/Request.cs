@@ -8,7 +8,7 @@ namespace AMWD.Modbus.Serial.Protocol
 	/// <summary>
 	/// Represents the request from a client to the server.
 	/// </summary>
-	internal class Request
+	public class Request
 	{
 		#region Constructors
 
@@ -18,14 +18,14 @@ namespace AMWD.Modbus.Serial.Protocol
 		/// <remarks>
 		/// The transaction id is automatically set to a unique number.
 		/// </remarks>
-		internal Request()
+		public Request()
 		{ }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Request"/> class.
 		/// </summary>
 		/// <param name="bytes">The serialized request from the client.</param>
-		internal Request(byte[] bytes)
+		public Request(byte[] bytes)
 		{
 			Deserialize(bytes);
 		}
@@ -101,7 +101,7 @@ namespace AMWD.Modbus.Serial.Protocol
 		/// Serializes the request ready to send via serial.
 		/// </summary>
 		/// <returns></returns>
-		internal byte[] Serialize()
+		public byte[] Serialize()
 		{
 			var buffer = new DataBuffer(2);
 

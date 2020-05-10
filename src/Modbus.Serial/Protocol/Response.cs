@@ -9,7 +9,7 @@ namespace AMWD.Modbus.Serial.Protocol
 	/// <summary>
 	/// Represents the response from the server to a client.
 	/// </summary>
-	internal class Response
+	public class Response
 	{
 		#region Constructors
 
@@ -29,7 +29,7 @@ namespace AMWD.Modbus.Serial.Protocol
 		/// Initializes a new instance of the <see cref="Response"/> class.
 		/// </summary>
 		/// <param name="response">The serialized response.</param>
-		internal Response(byte[] response)
+		public Response(byte[] response)
 		{
 			Deserialize(response);
 		}
@@ -132,7 +132,11 @@ namespace AMWD.Modbus.Serial.Protocol
 
 		#region Serialization
 
-		internal byte[] Serialize()
+		/// <summary>
+		/// Serializes the response to send.
+		/// </summary>
+		/// <returns></returns>
+		public byte[] Serialize()
 		{
 			var buffer = new DataBuffer(2);
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using AMWD.Modbus.Common.Structures;
 
 namespace AMWD.Modbus.Common.Util
@@ -278,5 +279,97 @@ namespace AMWD.Modbus.Common.Util
 		}
 
 		#endregion Enums
+
+		#region ReaderWriterLockSlim
+
+		internal static IDisposable GetReadLock(this ReaderWriterLockSlim rwLock, int millisecondsTimeout = -1)
+		{
+			if (!rwLock.TryEnterReadLock(millisecondsTimeout))
+				throw new TimeoutException("Trying to enter a read lock.");
+
+			return new DisposableReaderWriterLockSlim(rwLock, DisposableReaderWriterLockSlim.LockMode.ReadLock);
+		}
+
+		internal static IDisposable GetReadLock(this ReaderWriterLockSlim rwLock, TimeSpan timeSpan)
+		{
+			if (!rwLock.TryEnterReadLock(timeSpan))
+				throw new TimeoutException("Trying to enter a read lock.");
+
+			return new DisposableReaderWriterLockSlim(rwLock, DisposableReaderWriterLockSlim.LockMode.ReadLock);
+		}
+
+		internal static IDisposable GetUpgradableReadLock(this ReaderWriterLockSlim rwLock, int millisecondsTimeout = -1)
+		{
+			if (!rwLock.TryEnterUpgradeableReadLock(millisecondsTimeout))
+				throw new TimeoutException("Trying to enter an upgradable read lock.");
+
+			return new DisposableReaderWriterLockSlim(rwLock, DisposableReaderWriterLockSlim.LockMode.UpgradableReadLock);
+		}
+
+		internal static IDisposable GetUpgradableReadLock(this ReaderWriterLockSlim rwLock, TimeSpan timeSpan)
+		{
+			if (!rwLock.TryEnterUpgradeableReadLock(timeSpan))
+				throw new TimeoutException("Trying to enter an upgradable read lock.");
+
+			return new DisposableReaderWriterLockSlim(rwLock, DisposableReaderWriterLockSlim.LockMode.UpgradableReadLock);
+		}
+
+		internal static IDisposable GetWriteLock(this ReaderWriterLockSlim rwLock, int millisecondsTimeout = -1)
+		{
+			if (!rwLock.TryEnterWriteLock(millisecondsTimeout))
+				throw new TimeoutException("Trying to enter a write lock.");
+
+			return new DisposableReaderWriterLockSlim(rwLock, DisposableReaderWriterLockSlim.LockMode.WriteLock);
+		}
+
+		internal static IDisposable GetWriteLock(this ReaderWriterLockSlim rwLock, TimeSpan timeSpan)
+		{
+			if (!rwLock.TryEnterWriteLock(timeSpan))
+				throw new TimeoutException("Trying to enter a write lock.");
+
+			return new DisposableReaderWriterLockSlim(rwLock, DisposableReaderWriterLockSlim.LockMode.WriteLock);
+		}
+
+		private class DisposableReaderWriterLockSlim : IDisposable
+		{
+			private ReaderWriterLockSlim rwLock;
+			private LockMode mode;
+
+			public DisposableReaderWriterLockSlim(ReaderWriterLockSlim rwLock, LockMode mode)
+			{
+				this.rwLock = rwLock;
+				this.mode = mode;
+			}
+
+			public void Dispose()
+			{
+				if (rwLock == null || mode == LockMode.None)
+					return;
+
+				if (mode == LockMode.ReadLock)
+					rwLock.ExitReadLock();
+
+				if (mode == LockMode.UpgradableReadLock && rwLock.IsWriteLockHeld)
+					rwLock.ExitWriteLock();
+
+				if (mode == LockMode.UpgradableReadLock)
+					rwLock.ExitUpgradeableReadLock();
+
+				if (mode == LockMode.WriteLock)
+					rwLock.ExitWriteLock();
+
+				mode = LockMode.None;
+			}
+
+			public enum LockMode
+			{
+				None,
+				ReadLock,
+				UpgradableReadLock,
+				WriteLock
+			}
+		}
+
+		#endregion ReaderWriterLockSlim
 	}
 }

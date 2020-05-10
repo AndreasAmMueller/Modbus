@@ -13,6 +13,13 @@ using AMWD.Modbus.Serial.Protocol;
 namespace AMWD.Modbus.Serial.Server
 {
 	/// <summary>
+	/// A handler to process the modbus requests.
+	/// </summary>
+	/// <param name="request">The request to process.</param>
+	/// <returns>The response.</returns>
+	public delegate Response ModbusSerialRequestHandler(Request request);
+
+	/// <summary>
 	/// A server to communicate via Modbus RTU.
 	/// </summary>
 	public class ModbusServer : IModbusServer
@@ -29,6 +36,10 @@ namespace AMWD.Modbus.Serial.Server
 		private int bufferSize = 4096;
 		private int sendTimeout = 1000;
 		private int receiveTimeout = 1000;
+
+		// private Task receivingTask;
+
+		private readonly ModbusSerialRequestHandler requestHandler;
 
 		private readonly FunctionCode[] availableFunctionCodes = Enum.GetValues(typeof(FunctionCode))
 			.Cast<FunctionCode>()
@@ -58,10 +69,13 @@ namespace AMWD.Modbus.Serial.Server
 		/// Initializes a new instance of the <see cref="ModbusServer"/> class.
 		/// </summary>
 		/// <param name="portName">The serial port name.</param>
-		public ModbusServer(string portName)
+		/// <param name="requestHandler">Set this request handler to override the default implemented handling. (Default: serving the data provided by Set* methods)</param>
+		public ModbusServer(string portName, ModbusSerialRequestHandler requestHandler = null)
 		{
 			if (string.IsNullOrWhiteSpace(portName))
 				throw new ArgumentNullException(nameof(portName));
+
+			this.requestHandler = requestHandler ?? HandleRequest;
 
 			PortName = portName;
 
@@ -515,7 +529,7 @@ namespace AMWD.Modbus.Serial.Server
 			while (serialPort.BytesToRead > 0);
 
 			var request = new Request(requestBytes.ToArray());
-			var response = HandleRequest(request);
+			var response = requestHandler(request);
 
 			if (response != null)
 			{
