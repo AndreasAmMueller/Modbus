@@ -1,7 +1,7 @@
-﻿using AMWD.Modbus.Common;
-using AMWD.Modbus.Common.Util;
-using System;
+﻿using System;
 using System.Linq;
+using AMWD.Modbus.Common;
+using AMWD.Modbus.Common.Util;
 
 namespace AMWD.Modbus.Serial.Protocol
 {
@@ -156,7 +156,7 @@ namespace AMWD.Modbus.Serial.Protocol
 					throw new NotImplementedException();
 			}
 
-			var crc = Checksum.CRC16(buffer.Buffer);
+			byte[] crc = Checksum.CRC16(buffer.Buffer);
 			buffer.AddBytes(crc);
 
 			return buffer.Buffer;
@@ -168,13 +168,11 @@ namespace AMWD.Modbus.Serial.Protocol
 			DeviceId = buffer.GetByte(0);
 			Function = (FunctionCode)buffer.GetByte(1);
 
-			var crcBuff = buffer.GetBytes(buffer.Length - 3, 2);
-			var crcCalc = Checksum.CRC16(bytes, 0, bytes.Length - 2);
+			byte[] crcBuff = buffer.GetBytes(buffer.Length - 3, 2);
+			byte[] crcCalc = Checksum.CRC16(bytes, 0, bytes.Length - 2);
 
 			if (crcBuff[0] != crcCalc[0] || crcBuff[1] != crcCalc[1])
-			{
 				throw new InvalidOperationException("Data not valid (CRC check failed).");
-			}
 
 			switch (Function)
 			{
@@ -241,9 +239,7 @@ namespace AMWD.Modbus.Serial.Protocol
 		public override bool Equals(object obj)
 		{
 			if (!(obj is Request req))
-			{
 				return false;
-			}
 
 			return req.DeviceId == DeviceId &&
 				req.Function == Function &&

@@ -1,14 +1,14 @@
-﻿using AMWD.Modbus.Common;
-using AMWD.Modbus.Common.Interfaces;
-using AMWD.Modbus.Common.Structures;
-using AMWD.Modbus.Common.Util;
-using AMWD.Modbus.Serial.Protocol;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading.Tasks;
+using AMWD.Modbus.Common;
+using AMWD.Modbus.Common.Interfaces;
+using AMWD.Modbus.Common.Structures;
+using AMWD.Modbus.Common.Util;
+using AMWD.Modbus.Serial.Protocol;
 
 namespace AMWD.Modbus.Serial.Server
 {
@@ -61,9 +61,7 @@ namespace AMWD.Modbus.Serial.Server
 		public ModbusServer(string portName)
 		{
 			if (string.IsNullOrWhiteSpace(portName))
-			{
 				throw new ArgumentNullException(nameof(portName));
-			}
 
 			PortName = portName;
 
@@ -96,10 +94,9 @@ namespace AMWD.Modbus.Serial.Server
 			set
 			{
 				baudRate = value;
+
 				if (serialPort != null)
-				{
 					serialPort.BaudRate = (int)value;
-				}
 			}
 		}
 
@@ -115,10 +112,9 @@ namespace AMWD.Modbus.Serial.Server
 			set
 			{
 				dataBits = value;
+
 				if (serialPort != null)
-				{
 					serialPort.DataBits = value;
-				}
 			}
 		}
 
@@ -134,10 +130,9 @@ namespace AMWD.Modbus.Serial.Server
 			set
 			{
 				parity = value;
+
 				if (serialPort != null)
-				{
 					serialPort.Parity = value;
-				}
 			}
 		}
 
@@ -153,10 +148,9 @@ namespace AMWD.Modbus.Serial.Server
 			set
 			{
 				stopBits = value;
+
 				if (serialPort != null)
-				{
 					serialPort.StopBits = value;
-				}
 			}
 		}
 
@@ -172,10 +166,9 @@ namespace AMWD.Modbus.Serial.Server
 			set
 			{
 				handshake = value;
+
 				if (serialPort != null)
-				{
 					serialPort.Handshake = value;
-				}
 			}
 		}
 
@@ -211,10 +204,9 @@ namespace AMWD.Modbus.Serial.Server
 			set
 			{
 				sendTimeout = value;
+
 				if (serialPort != null)
-				{
 					serialPort.WriteTimeout = value;
-				}
 			}
 		}
 
@@ -230,10 +222,9 @@ namespace AMWD.Modbus.Serial.Server
 			set
 			{
 				receiveTimeout = value;
+
 				if (serialPort != null)
-				{
 					serialPort.ReadTimeout = value;
-				}
 			}
 		}
 
@@ -267,9 +258,7 @@ namespace AMWD.Modbus.Serial.Server
 		public Coil GetCoil(byte deviceId, ushort coilNumber)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-			{
 				throw new ArgumentException($"Device #{deviceId} does not exist");
-			}
 
 			return device.GetCoil(coilNumber);
 		}
@@ -283,9 +272,7 @@ namespace AMWD.Modbus.Serial.Server
 		public void SetCoil(byte deviceId, ushort coilNumber, bool value)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-			{
 				throw new ArgumentException($"Device #{deviceId} does not exist");
-			}
 
 			device.SetCoil(coilNumber, value);
 		}
@@ -313,9 +300,7 @@ namespace AMWD.Modbus.Serial.Server
 		public DiscreteInput GetDiscreteInput(byte deviceId, ushort inputNumber)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-			{
 				throw new ArgumentException($"Device #{deviceId} does not exist");
-			}
 
 			return device.GetInput(inputNumber);
 		}
@@ -329,9 +314,7 @@ namespace AMWD.Modbus.Serial.Server
 		public void SetDiscreteInput(byte deviceId, ushort inputNumber, bool value)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-			{
 				throw new ArgumentException($"Device #{deviceId} does not exist");
-			}
 
 			device.SetInput(inputNumber, value);
 		}
@@ -359,9 +342,7 @@ namespace AMWD.Modbus.Serial.Server
 		public Register GetInputRegister(byte deviceId, ushort registerNumber)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-			{
 				throw new ArgumentException($"Device #{deviceId} does not exist");
-			}
 
 			return device.GetInputRegister(registerNumber);
 		}
@@ -375,9 +356,8 @@ namespace AMWD.Modbus.Serial.Server
 		public void SetInputRegister(byte deviceId, ushort registerNumber, ushort value)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-			{
 				throw new ArgumentException($"Device #{deviceId} does not exist");
-			}
+
 			device.SetInputRegister(registerNumber, value);
 		}
 
@@ -416,9 +396,7 @@ namespace AMWD.Modbus.Serial.Server
 		public Register GetHoldingRegister(byte deviceId, ushort registerNumber)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-			{
 				throw new ArgumentException($"Device #{deviceId} does not exist");
-			}
 
 			return device.GetHoldingRegister(registerNumber);
 		}
@@ -432,9 +410,8 @@ namespace AMWD.Modbus.Serial.Server
 		public void SetHoldingRegister(byte deviceId, ushort registerNumber, ushort value)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-			{
 				throw new ArgumentException($"Device #{deviceId} does not exist");
-			}
+
 			device.SetHoldingRegister(registerNumber, value);
 		}
 
@@ -495,9 +472,7 @@ namespace AMWD.Modbus.Serial.Server
 		private void Initialize()
 		{
 			if (isDisposed)
-			{
 				throw new ObjectDisposedException(GetType().FullName);
-			}
 
 			try
 			{
@@ -533,8 +508,8 @@ namespace AMWD.Modbus.Serial.Server
 			var requestBytes = new List<byte>();
 			do
 			{
-				var buffer = new byte[BufferSize];
-				var count = serialPort.Read(buffer, 0, buffer.Length);
+				byte[] buffer = new byte[BufferSize];
+				int count = serialPort.Read(buffer, 0, buffer.Length);
 				requestBytes.AddRange(buffer.Take(count));
 			}
 			while (serialPort.BytesToRead > 0);
@@ -544,7 +519,7 @@ namespace AMWD.Modbus.Serial.Server
 
 			if (response != null)
 			{
-				var bytes = response.Serialize();
+				byte[] bytes = response.Serialize();
 				serialPort.Write(bytes, 0, bytes.Length);
 			}
 		}
@@ -553,9 +528,7 @@ namespace AMWD.Modbus.Serial.Server
 		{
 			// The device is not known => no response to send.
 			if (!modbusDevices.ContainsKey(request.DeviceId))
-			{
 				return null;
-			}
 
 			Response response;
 			switch (request.Function)
@@ -619,17 +592,17 @@ namespace AMWD.Modbus.Serial.Server
 				{
 					try
 					{
-						var len = (int)Math.Ceiling(request.Count / 8.0);
+						int len = (int)Math.Ceiling(request.Count / 8.0);
 						response.Data = new DataBuffer(len);
 						for (int i = 0; i < request.Count; i++)
 						{
-							var addr = (ushort)(request.Address + i);
+							ushort addr = (ushort)(request.Address + i);
 							if (GetCoil(request.DeviceId, addr).Value)
 							{
-								var posByte = i / 8;
-								var posBit = i % 8;
+								int posByte = i / 8;
+								int posBit = i % 8;
 
-								var mask = (byte)Math.Pow(2, posBit);
+								byte mask = (byte)Math.Pow(2, posBit);
 								response.Data[posByte] = (byte)(response.Data[posByte] | mask);
 							}
 						}
@@ -665,17 +638,17 @@ namespace AMWD.Modbus.Serial.Server
 				{
 					try
 					{
-						var len = (int)Math.Ceiling(request.Count / 8.0);
+						int len = (int)Math.Ceiling(request.Count / 8.0);
 						response.Data = new DataBuffer(len);
 						for (int i = 0; i < request.Count; i++)
 						{
-							var addr = (ushort)(request.Address + i);
+							ushort addr = (ushort)(request.Address + i);
 							if (GetDiscreteInput(request.DeviceId, addr).Value)
 							{
-								var posByte = i / 8;
-								var posBit = i % 8;
+								int posByte = i / 8;
+								int posBit = i % 8;
 
-								var mask = (byte)Math.Pow(2, posBit);
+								byte mask = (byte)Math.Pow(2, posBit);
 								response.Data[posByte] = (byte)(response.Data[posByte] | mask);
 							}
 						}
@@ -714,7 +687,7 @@ namespace AMWD.Modbus.Serial.Server
 						response.Data = new DataBuffer(request.Count * 2);
 						for (int i = 0; i < request.Count; i++)
 						{
-							var addr = (ushort)(request.Address + i);
+							ushort addr = (ushort)(request.Address + i);
 							var reg = GetHoldingRegister(request.DeviceId, addr);
 							response.Data.SetUInt16(i * 2, reg.Value);
 						}
@@ -754,7 +727,7 @@ namespace AMWD.Modbus.Serial.Server
 						response.Data = new DataBuffer(request.Count * 2);
 						for (int i = 0; i < request.Count; i++)
 						{
-							var addr = (ushort)(request.Address + i);
+							ushort addr = (ushort)(request.Address + i);
 							var reg = GetInputRegister(request.DeviceId, addr);
 							response.Data.SetUInt16(i * 2, reg.Value);
 						}
@@ -783,7 +756,7 @@ namespace AMWD.Modbus.Serial.Server
 
 			try
 			{
-				var val = request.Data.GetUInt16(0);
+				ushort val = request.Data.GetUInt16(0);
 				if (val != 0x0000 && val != 0xFF00)
 				{
 					response.ErrorCode = ErrorCode.IllegalDataValue;
@@ -823,7 +796,7 @@ namespace AMWD.Modbus.Serial.Server
 
 			try
 			{
-				var val = request.Data.GetUInt16(0);
+				ushort val = request.Data.GetUInt16(0);
 
 				if (request.Address < Consts.MinAddress || request.Address > Consts.MaxAddress)
 				{
@@ -860,7 +833,7 @@ namespace AMWD.Modbus.Serial.Server
 			{
 				var response = new Response(request);
 
-				var numBytes = (int)Math.Ceiling(request.Count / 8.0);
+				int numBytes = (int)Math.Ceiling(request.Count / 8.0);
 				if (request.Count < Consts.MinCount || request.Count > Consts.MaxCoilCountWrite || numBytes != request.Data.Length)
 				{
 					response.ErrorCode = ErrorCode.IllegalDataValue;
@@ -876,13 +849,13 @@ namespace AMWD.Modbus.Serial.Server
 						var list = new List<Coil>();
 						for (int i = 0; i < request.Count; i++)
 						{
-							var addr = (ushort)(request.Address + i);
+							ushort addr = (ushort)(request.Address + i);
 
-							var posByte = i / 8;
-							var posBit = i % 8;
+							int posByte = i / 8;
+							int posBit = i % 8;
 
-							var mask = (byte)Math.Pow(2, posBit);
-							var val = request.Data[posByte] & mask;
+							byte mask = (byte)Math.Pow(2, posBit);
+							int val = request.Data[posByte] & mask;
 
 							var coil = new Coil { Address = addr, Value = (val > 0) };
 							SetCoil(request.DeviceId, coil);
@@ -925,8 +898,8 @@ namespace AMWD.Modbus.Serial.Server
 						var list = new List<Register>();
 						for (int i = 0; i < request.Count; i++)
 						{
-							var addr = (ushort)(request.Address + i);
-							var val = request.Data.GetUInt16(i * 2);
+							ushort addr = (ushort)(request.Address + i);
+							ushort val = request.Data.GetUInt16(i * 2);
 
 							var register = new Register { Address = addr, Value = val };
 							SetHoldingRegister(request.DeviceId, register);

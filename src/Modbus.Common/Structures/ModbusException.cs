@@ -1,5 +1,5 @@
-﻿using AMWD.Modbus.Common.Util;
-using System;
+﻿using System;
+using AMWD.Modbus.Common.Util;
 
 namespace AMWD.Modbus.Common.Structures
 {

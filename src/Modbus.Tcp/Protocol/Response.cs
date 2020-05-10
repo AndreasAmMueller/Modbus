@@ -1,9 +1,9 @@
-﻿using AMWD.Modbus.Common;
-using AMWD.Modbus.Common.Util;
-using AMWD.Modbus.Tcp.Util;
-using System;
+﻿using System;
 using System.Linq;
 using System.Text;
+using AMWD.Modbus.Common;
+using AMWD.Modbus.Common.Util;
+using AMWD.Modbus.Tcp.Util;
 
 namespace AMWD.Modbus.Tcp.Protocol
 {
@@ -144,7 +144,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 			buffer.SetUInt16(2, 0x0000);
 			buffer.SetByte(6, DeviceId);
 
-			var fn = (byte)Function;
+			byte fn = (byte)Function;
 			if (IsError)
 			{
 				fn = (byte)(fn | Consts.ErrorMask);
@@ -200,7 +200,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 
 			buffer.SetByte(7, fn);
 
-			var len = buffer.Length - 6;
+			int len = buffer.Length - 6;
 			buffer.SetUInt16(4, (ushort)len);
 
 			return buffer.Buffer;
@@ -216,21 +216,18 @@ namespace AMWD.Modbus.Tcp.Protocol
 			}
 
 			var buffer = new DataBuffer(bytes);
-			var ident = buffer.GetUInt16(2);
+			ushort ident = buffer.GetUInt16(2);
 			if (ident != 0)
-			{
 				throw new ArgumentException("Response not valid Modbus TCP protocol");
-			}
-			var len = buffer.GetUInt16(4);
+
+			ushort len = buffer.GetUInt16(4);
 			if (buffer.Length != len + 6)
-			{
 				throw new ArgumentException("Response incomplete");
-			}
 
 			TransactionId = buffer.GetUInt16(0);
 			DeviceId = buffer.GetByte(6);
 
-			var fn = buffer.GetByte(7);
+			byte fn = buffer.GetByte(7);
 			if ((fn & Consts.ErrorMask) > 0)
 			{
 				Function = (FunctionCode)(fn ^ Consts.ErrorMask);
@@ -248,9 +245,8 @@ namespace AMWD.Modbus.Tcp.Protocol
 					case FunctionCode.ReadInputRegisters:
 						len = buffer.GetByte(8);
 						if (buffer.Length != len + 9)
-						{
 							throw new ArgumentException("Response incomplete");
-						}
+
 						Data = new DataBuffer(buffer.Buffer.Skip(9).ToArray());
 						break;
 					case FunctionCode.WriteMultipleCoils:
@@ -298,12 +294,11 @@ namespace AMWD.Modbus.Tcp.Protocol
 			var sb = new StringBuilder();
 			if (Data != null)
 			{
-				foreach (var b in Data.Buffer)
+				foreach (byte b in Data.Buffer)
 				{
 					if (sb.Length > 0)
-					{
 						sb.Append(" ");
-					}
+
 					sb.Append(b.ToString("X2"));
 				}
 			}
@@ -327,9 +322,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 		public override bool Equals(object obj)
 		{
 			if (!(obj is Response res))
-			{
 				return false;
-			}
 
 			return res.TransactionId == TransactionId &&
 				res.DeviceId == DeviceId &&

@@ -11,7 +11,7 @@ namespace AMWD.Modbus.Common.Util
 	{
 		#region Fields
 
-		private static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+		private static readonly DateTime unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 
 		#endregion Fields
 
@@ -43,7 +43,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="bytes">New buffer as byte array.</param>
 		public DataBuffer(ReadOnlySpan<byte> bytes)
 		{
-			this.Buffer = bytes.ToArray();
+			Buffer = bytes.ToArray();
 		}
 
 		/// <summary>
@@ -108,6 +108,7 @@ namespace AMWD.Modbus.Common.Util
 		{
 			if (index < 0 || Length <= index)
 				throw new ArgumentOutOfRangeException(nameof(index));
+
 			if (Length < index + bytes.Length)
 				throw new ArgumentOutOfRangeException("Buffer too small.");
 
@@ -156,11 +157,15 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetUInt16(int index, ushort value)
 		{
-			var span = this.Buffer.AsSpan(index, 2);
-			if (this.IsLittleEndian)
+			var span = Buffer.AsSpan(index, 2);
+			if (IsLittleEndian)
+			{
 				BinaryPrimitives.WriteUInt16LittleEndian(span, value);
+			}
 			else
+			{
 				BinaryPrimitives.WriteUInt16BigEndian(span, value);
+			}
 		}
 
 		/// <summary>
@@ -170,11 +175,15 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetUInt32(int index, uint value)
 		{
-			var span = this.Buffer.AsSpan(index, 4);
-			if (this.IsLittleEndian)
+			var span = Buffer.AsSpan(index, 4);
+			if (IsLittleEndian)
+			{
 				BinaryPrimitives.WriteUInt32LittleEndian(span, value);
+			}
 			else
+			{
 				BinaryPrimitives.WriteUInt32BigEndian(span, value);
+			}
 		}
 
 		/// <summary>
@@ -184,11 +193,15 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetUInt64(int index, ulong value)
 		{
-			var span = this.Buffer.AsSpan(index, 8);
-			if (this.IsLittleEndian)
+			var span = Buffer.AsSpan(index, 8);
+			if (IsLittleEndian)
+			{
 				BinaryPrimitives.WriteUInt64LittleEndian(span, value);
+			}
 			else
+			{
 				BinaryPrimitives.WriteUInt64BigEndian(span, value);
+			}
 		}
 
 		#endregion Unsigned
@@ -215,11 +228,15 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetInt16(int index, short value)
 		{
-			var span = this.Buffer.AsSpan(index, 2);
-			if (this.IsLittleEndian)
+			var span = Buffer.AsSpan(index, 2);
+			if (IsLittleEndian)
+			{
 				BinaryPrimitives.WriteInt16LittleEndian(span, value);
+			}
 			else
+			{
 				BinaryPrimitives.WriteInt16BigEndian(span, value);
+			}
 		}
 
 		/// <summary>
@@ -229,11 +246,15 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetInt32(int index, int value)
 		{
-			var span = this.Buffer.AsSpan(index, 4);
-			if (this.IsLittleEndian)
+			var span = Buffer.AsSpan(index, 4);
+			if (IsLittleEndian)
+			{
 				BinaryPrimitives.WriteInt32LittleEndian(span, value);
+			}
 			else
+			{
 				BinaryPrimitives.WriteInt32BigEndian(span, value);
+			}
 		}
 
 		/// <summary>
@@ -243,11 +264,15 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetInt64(int index, long value)
 		{
-			var span = this.Buffer.AsSpan(index, 8);
-			if (this.IsLittleEndian)
+			var span = Buffer.AsSpan(index, 8);
+			if (IsLittleEndian)
+			{
 				BinaryPrimitives.WriteInt64LittleEndian(span, value);
+			}
 			else
+			{
 				BinaryPrimitives.WriteInt64BigEndian(span, value);
+			}
 		}
 
 		#endregion Signed
@@ -273,7 +298,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetDouble(int index, double value)
 		{
-			this.SetInt64(index, BitConverter.DoubleToInt64Bits(value));
+			SetInt64(index, BitConverter.DoubleToInt64Bits(value));
 		}
 
 		#endregion Floating point
@@ -295,10 +320,11 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="index">The index.</param>
 		/// <param name="value">The value.</param>
+		/// <param name="localTime">A value indicating whether the given value is in local time.</param>
 		public void SetDateTime(int index, DateTime value, bool localTime = false)
 		{
 			var dt = localTime ? value.ToUniversalTime() : value;
-			var ts = dt.Subtract(UnixEpoch);
+			var ts = dt.Subtract(unixEpoch);
 			SetTimeSpan(index, ts);
 		}
 
@@ -347,7 +373,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="bytes">The bytes.</param>
 		public void AddBytes(byte[] bytes)
 		{
-			var newBytes = new byte[Length + bytes.Length];
+			byte[] newBytes = new byte[Length + bytes.Length];
 			Array.Copy(Buffer, 0, newBytes, 0, Length);
 			Array.Copy(bytes, 0, newBytes, Length, bytes.Length);
 
@@ -378,7 +404,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The Value.</param>
 		public void AddUInt16(ushort value)
 		{
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			InternalSwap(blob);
 			AddBytes(blob);
 		}
@@ -389,7 +415,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void AddUInt32(uint value)
 		{
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			InternalSwap(blob);
 			AddBytes(blob);
 		}
@@ -400,7 +426,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void AddUInt64(ulong value)
 		{
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			InternalSwap(blob);
 			AddBytes(blob);
 		}
@@ -424,7 +450,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void AddInt16(short value)
 		{
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			InternalSwap(blob);
 			AddBytes(blob);
 		}
@@ -435,7 +461,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void AddInt32(int value)
 		{
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			InternalSwap(blob);
 			AddBytes(blob);
 		}
@@ -446,7 +472,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void AddInt64(long value)
 		{
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			InternalSwap(blob);
 			AddBytes(blob);
 		}
@@ -461,7 +487,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The vlaue.</param>
 		public void AddSingle(float value)
 		{
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			InternalSwap(blob);
 			AddBytes(blob);
 		}
@@ -472,7 +498,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void AddDouble(double value)
 		{
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			InternalSwap(blob);
 			AddBytes(blob);
 		}
@@ -497,7 +523,7 @@ namespace AMWD.Modbus.Common.Util
 		public void AddDateTime(DateTime value)
 		{
 			var dt = value.ToUniversalTime();
-			var ts = value.Subtract(UnixEpoch);
+			var ts = value.Subtract(unixEpoch);
 			AddTimeSpan(ts);
 		}
 
@@ -546,6 +572,7 @@ namespace AMWD.Modbus.Common.Util
 		{
 			if (index < 0 || Length <= index)
 				throw new ArgumentOutOfRangeException(nameof(index));
+
 			if (Length < index + count)
 				throw new ArgumentOutOfRangeException(nameof(count));
 
@@ -587,8 +614,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public ushort GetUInt16(int index)
 		{
-			var span = this.Buffer.AsSpan(index, 2);
-			return this.IsLittleEndian
+			var span = Buffer.AsSpan(index, 2);
+			return IsLittleEndian
 				? BinaryPrimitives.ReadUInt16LittleEndian(span)
 				: BinaryPrimitives.ReadUInt16BigEndian(span);
 		}
@@ -600,8 +627,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public uint GetUInt32(int index)
 		{
-			var span = this.Buffer.AsSpan(index, 4);
-			return this.IsLittleEndian
+			var span = Buffer.AsSpan(index, 4);
+			return IsLittleEndian
 				? BinaryPrimitives.ReadUInt32LittleEndian(span)
 				: BinaryPrimitives.ReadUInt32BigEndian(span);
 		}
@@ -613,8 +640,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public ulong GetUInt64(int index)
 		{
-			var span = this.Buffer.AsSpan(index, 8);
-			return this.IsLittleEndian
+			var span = Buffer.AsSpan(index, 8);
+			return IsLittleEndian
 				? BinaryPrimitives.ReadUInt64LittleEndian(span)
 				: BinaryPrimitives.ReadUInt64BigEndian(span);
 		}
@@ -643,8 +670,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public short GetInt16(int index)
 		{
-			var span = this.Buffer.AsSpan(index, 2);
-			return this.IsLittleEndian
+			var span = Buffer.AsSpan(index, 2);
+			return IsLittleEndian
 				? BinaryPrimitives.ReadInt16LittleEndian(span)
 				: BinaryPrimitives.ReadInt16BigEndian(span);
 		}
@@ -656,8 +683,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public int GetInt32(int index)
 		{
-			var span = this.Buffer.AsSpan(index, 4);
-			return this.IsLittleEndian
+			var span = Buffer.AsSpan(index, 4);
+			return IsLittleEndian
 				? BinaryPrimitives.ReadInt32LittleEndian(span)
 				: BinaryPrimitives.ReadInt32BigEndian(span);
 		}
@@ -669,8 +696,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public long GetInt64(int index)
 		{
-			var span = this.Buffer.AsSpan(index, 8);
-			return this.IsLittleEndian
+			var span = Buffer.AsSpan(index, 8);
+			return IsLittleEndian
 				? BinaryPrimitives.ReadInt64LittleEndian(span)
 				: BinaryPrimitives.ReadInt64BigEndian(span);
 		}
@@ -698,7 +725,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public double GetDouble(int index)
 		{
-			return BitConverter.Int64BitsToDouble(this.GetInt64(index));
+			return BitConverter.Int64BitsToDouble(GetInt64(index));
 		}
 
 		#endregion Floating point
@@ -724,7 +751,7 @@ namespace AMWD.Modbus.Common.Util
 		public DateTime GetDateTime(int index, bool localTime = false)
 		{
 			var ts = GetTimeSpan(index);
-			var dt = UnixEpoch.Add(ts);
+			var dt = unixEpoch.Add(ts);
 			return localTime ? dt.ToLocalTime() : dt;
 		}
 
@@ -807,17 +834,13 @@ namespace AMWD.Modbus.Common.Util
 		public override bool Equals(object obj)
 		{
 			if (!(obj is DataBuffer block))
-			{
 				return false;
-			}
+
 			if (block.IsLittleEndian != IsLittleEndian)
-			{
 				return false;
-			}
+
 			if (block.Length != Length)
-			{
 				return false;
-			}
 
 			return IsEqual(0, block.Buffer);
 		}
@@ -846,7 +869,7 @@ namespace AMWD.Modbus.Common.Util
 					sb.Append("0x" + i.ToString("X4"));
 					sb.Append(" ");
 				}
-				var hex = Buffer[i].ToString("X2");
+				string hex = Buffer[i].ToString("X2");
 				sb.Append($" {hex}");
 			}
 			sb.AppendLine();
@@ -865,9 +888,7 @@ namespace AMWD.Modbus.Common.Util
 		protected virtual void InternalSwap(byte[] array)
 		{
 			if (IsLittleEndian != BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(array);
-			}
 		}
 
 		#endregion Protected methods

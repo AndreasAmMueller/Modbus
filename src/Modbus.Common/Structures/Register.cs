@@ -57,11 +57,9 @@ namespace AMWD.Modbus.Common.Structures
 			}
 
 			var list = new List<Register>();
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
@@ -85,16 +83,12 @@ namespace AMWD.Modbus.Common.Structures
 		public static List<Register> Create(ulong value, ushort address)
 		{
 			if (address + 3 > Consts.MaxAddress)
-			{
 				throw new ArgumentOutOfRangeException(nameof(address));
-			}
 
 			var list = new List<Register>();
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
@@ -136,11 +130,9 @@ namespace AMWD.Modbus.Common.Structures
 		/// <returns></returns>
 		public static Register Create(short value, ushort address)
 		{
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			return new Register
 			{
@@ -159,16 +151,12 @@ namespace AMWD.Modbus.Common.Structures
 		public static List<Register> Create(int value, ushort address)
 		{
 			if (address + 1 > Consts.MaxAddress)
-			{
 				throw new ArgumentOutOfRangeException(nameof(address));
-			}
 
 			var list = new List<Register>();
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
@@ -192,16 +180,12 @@ namespace AMWD.Modbus.Common.Structures
 		public static List<Register> Create(long value, ushort address)
 		{
 			if (address + 3 > Consts.MaxAddress)
-			{
 				throw new ArgumentOutOfRangeException(nameof(address));
-			}
 
 			var list = new List<Register>();
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
@@ -229,16 +213,12 @@ namespace AMWD.Modbus.Common.Structures
 		public static List<Register> Create(float value, ushort address)
 		{
 			if (address + 1 > Consts.MaxAddress)
-			{
 				throw new ArgumentOutOfRangeException(nameof(address));
-			}
 
 			var list = new List<Register>();
-			var blob = BitConverter.GetBytes(value);
+			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
@@ -262,17 +242,13 @@ namespace AMWD.Modbus.Common.Structures
 		public static List<Register> Create(double value, ushort address)
 		{
 			if (address + 3 > Consts.MaxAddress)
-			{
 				throw new ArgumentOutOfRangeException(nameof(address));
-			}
+
+			byte[] blob = BitConverter.GetBytes(value);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(blob);
 
 			var list = new List<Register>();
-			var blob = BitConverter.GetBytes(value);
-			if (BitConverter.IsLittleEndian)
-			{
-				Array.Reverse(blob);
-			}
-
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
 				list.Add(new Register
@@ -300,18 +276,14 @@ namespace AMWD.Modbus.Common.Structures
 		public static List<Register> Create(string str, ushort address, Encoding encoding = null)
 		{
 			if (encoding == null)
-			{
 				encoding = Encoding.UTF8;
-			}
 
 			var list = new List<Register>();
-			var blob = encoding.GetBytes(str);
-			var numRegister = (int)Math.Ceiling(blob.Length / 2.0);
+			byte[] blob = encoding.GetBytes(str);
+			int numRegister = (int)Math.Ceiling(blob.Length / 2.0);
 
 			if (address + numRegister > Consts.MaxAddress)
-			{
 				throw new ArgumentOutOfRangeException(nameof(address));
-			}
 
 			for (int i = 0; i < numRegister; i++)
 			{
@@ -337,7 +309,7 @@ namespace AMWD.Modbus.Common.Structures
 			return list;
 		}
 
-		#endregion
+		#endregion String
 
 		#endregion Creates
 
@@ -365,20 +337,18 @@ namespace AMWD.Modbus.Common.Structures
 		{
 			get
 			{
-				var blob = new[] { HiByte, LoByte };
+				byte[] blob = new[] { HiByte, LoByte };
 				if (BitConverter.IsLittleEndian)
-				{
 					Array.Reverse(blob);
-				}
+
 				return BitConverter.ToUInt16(blob, 0);
 			}
 			set
 			{
-				var blob = BitConverter.GetBytes(value);
+				byte[] blob = BitConverter.GetBytes(value);
 				if (BitConverter.IsLittleEndian)
-				{
 					Array.Reverse(blob);
-				}
+
 				HiByte = blob[0];
 				LoByte = blob[1];
 			}
@@ -398,9 +368,7 @@ namespace AMWD.Modbus.Common.Structures
 		public override bool Equals(object obj)
 		{
 			if (!(obj is Register reg))
-			{
 				return false;
-			}
 
 			return reg.Address == Address &&
 				reg.HiByte == HiByte &&

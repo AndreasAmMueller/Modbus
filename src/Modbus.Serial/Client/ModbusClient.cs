@@ -1,11 +1,4 @@
-﻿using AMWD.Modbus.Common;
-using AMWD.Modbus.Common.Interfaces;
-using AMWD.Modbus.Common.Structures;
-using AMWD.Modbus.Common.Util;
-using AMWD.Modbus.Serial.Protocol;
-using AMWD.Modbus.Serial.Util;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Ports;
@@ -14,6 +7,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AMWD.Modbus.Common;
+using AMWD.Modbus.Common.Interfaces;
+using AMWD.Modbus.Common.Structures;
+using AMWD.Modbus.Common.Util;
+using AMWD.Modbus.Serial.Protocol;
+using AMWD.Modbus.Serial.Util;
+using Microsoft.Extensions.Logging;
 
 namespace AMWD.Modbus.Serial.Client
 {
@@ -79,9 +79,8 @@ namespace AMWD.Modbus.Serial.Client
 			this.logger = logger;
 
 			if (string.IsNullOrWhiteSpace(portName))
-			{
 				throw new ArgumentNullException(nameof(portName), "Portname has to be set");
-			}
+
 			PortName = portName;
 		}
 
@@ -106,10 +105,9 @@ namespace AMWD.Modbus.Serial.Client
 			set
 			{
 				baudRate = value;
+
 				if (serialPort != null)
-				{
 					serialPort.BaudRate = (int)value;
-				}
 			}
 		}
 
@@ -125,10 +123,9 @@ namespace AMWD.Modbus.Serial.Client
 			set
 			{
 				dataBits = value;
+
 				if (serialPort != null)
-				{
 					serialPort.DataBits = value;
-				}
 			}
 		}
 
@@ -144,10 +141,9 @@ namespace AMWD.Modbus.Serial.Client
 			set
 			{
 				parity = value;
+
 				if (serialPort != null)
-				{
 					serialPort.Parity = value;
-				}
 			}
 		}
 
@@ -163,10 +159,9 @@ namespace AMWD.Modbus.Serial.Client
 			set
 			{
 				stopBits = value;
+
 				if (serialPort != null)
-				{
 					serialPort.StopBits = value;
-				}
 			}
 		}
 
@@ -182,10 +177,9 @@ namespace AMWD.Modbus.Serial.Client
 			set
 			{
 				handshake = value;
+
 				if (serialPort != null)
-				{
 					serialPort.Handshake = value;
-				}
 			}
 		}
 
@@ -216,10 +210,9 @@ namespace AMWD.Modbus.Serial.Client
 			set
 			{
 				sendTimeout = value;
+
 				if (serialPort != null)
-				{
 					serialPort.WriteTimeout = value;
-				}
 			}
 		}
 
@@ -235,10 +228,9 @@ namespace AMWD.Modbus.Serial.Client
 			set
 			{
 				receiveTimeout = value;
+
 				if (serialPort != null)
-				{
 					serialPort.ReadTimeout = value;
-				}
 			}
 		}
 
@@ -294,14 +286,10 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			logger?.LogTrace("ModbusClient.Connect");
 			if (isDisposed)
-			{
 				throw new ObjectDisposedException(GetType().FullName);
-			}
 
 			if (isStarted)
-			{
 				return ConnectingTask;
-			}
 
 			isStarted = true;
 			logger?.LogInformation("ModbusClient starting");
@@ -358,17 +346,13 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			logger?.LogTrace($"ModbusClient.ReadCoils({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
-			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
-			}
+
 			if (startAddress < Consts.MinAddress || Consts.MaxAddress < startAddress + count)
-			{
 				throw new ArgumentOutOfRangeException(nameof(startAddress));
-			}
+
 			if (count < Consts.MinCount || Consts.MaxCoilCountRead < count)
-			{
 				throw new ArgumentOutOfRangeException(nameof(count));
-			}
 
 			List<Coil> list = null;
 			try
@@ -382,21 +366,18 @@ namespace AMWD.Modbus.Serial.Client
 				};
 				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
-				{
 					throw new IOException("Request timed out");
-				}
+
 				if (response.IsError)
-				{
 					throw new ModbusException(response.ErrorMessage);
-				}
 
 				list = new List<Coil>();
 				for (int i = 0; i < count; i++)
 				{
-					var posByte = i / 8;
-					var posBit = i % 8;
+					int posByte = i / 8;
+					int posBit = i % 8;
 
-					var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
+					int val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
 
 					list.Add(new Coil
 					{
@@ -426,17 +407,13 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			logger?.LogTrace($"ModbusClient.ReadDiscreteInputs({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
-			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
-			}
+
 			if (startAddress < Consts.MinAddress || Consts.MaxAddress < startAddress + count)
-			{
 				throw new ArgumentOutOfRangeException(nameof(startAddress));
-			}
+
 			if (count < Consts.MinCount || Consts.MaxCoilCountRead < count)
-			{
 				throw new ArgumentOutOfRangeException(nameof(count));
-			}
 
 			List<DiscreteInput> list = null;
 			try
@@ -450,21 +427,18 @@ namespace AMWD.Modbus.Serial.Client
 				};
 				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
-				{
 					throw new IOException("Request timed out");
-				}
+
 				if (response.IsError)
-				{
 					throw new ModbusException(response.ErrorMessage);
-				}
 
 				list = new List<DiscreteInput>();
 				for (int i = 0; i < count; i++)
 				{
-					var posByte = i / 8;
-					var posBit = i % 8;
+					int posByte = i / 8;
+					int posBit = i % 8;
 
-					var val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
+					int val = response.Data[posByte] & (byte)Math.Pow(2, posBit);
 
 					list.Add(new DiscreteInput
 					{
@@ -494,17 +468,13 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			logger?.LogTrace($"ModbusClient.ReadHoldingRegisters({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
-			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
-			}
+
 			if (startAddress < Consts.MinAddress || Consts.MaxAddress < startAddress + count)
-			{
 				throw new ArgumentOutOfRangeException(nameof(startAddress));
-			}
+
 			if (count < Consts.MinCount || Consts.MaxRegisterCountRead < count)
-			{
 				throw new ArgumentOutOfRangeException(nameof(count));
-			}
 
 			List<Register> list = null;
 			try
@@ -518,13 +488,10 @@ namespace AMWD.Modbus.Serial.Client
 				};
 				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
-				{
 					throw new IOException("Request timed out");
-				}
+
 				if (response.IsError)
-				{
 					throw new ModbusException(response.ErrorMessage);
-				}
 
 				list = new List<Register>();
 				for (int i = 0; i < count; i++)
@@ -558,17 +525,13 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			logger?.LogTrace($"ModbusClient.ReadInputRegisters({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
-			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
-			}
+
 			if (startAddress < Consts.MinAddress || Consts.MaxAddress < startAddress + count)
-			{
 				throw new ArgumentOutOfRangeException(nameof(startAddress));
-			}
+
 			if (count < Consts.MinCount || Consts.MaxRegisterCountRead < count)
-			{
 				throw new ArgumentOutOfRangeException(nameof(count));
-			}
 
 			List<Register> list = null;
 			try
@@ -582,13 +545,10 @@ namespace AMWD.Modbus.Serial.Client
 				};
 				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
-				{
 					throw new IOException("Request timed out");
-				}
+
 				if (response.IsError)
-				{
 					throw new ModbusException(response.ErrorMessage);
-				}
 
 				list = new List<Register>();
 				for (int i = 0; i < count; i++)
@@ -622,9 +582,7 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			var raw = await ReadDeviceInformationRaw(deviceId, categoryId, objectId);
 			if (raw == null)
-			{
 				return null;
-			}
 
 			var dict = new Dictionary<DeviceIDObject, string>();
 			foreach (var kvp in raw)
@@ -645,9 +603,7 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			logger?.LogTrace($"ModbusClient.ReadDeviceInformation({deviceId}, {categoryId}, {objectId})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
-			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
-			}
 
 			try
 			{
@@ -662,13 +618,10 @@ namespace AMWD.Modbus.Serial.Client
 				var response = await SendRequest(request, mainCts.Token);
 
 				if (response.IsTimeout)
-				{
 					throw new IOException("Request timed out");
-				}
+
 				if (response.IsError)
-				{
 					throw new ModbusException(response.ErrorMessage);
-				}
 
 				var dict = new Dictionary<byte, byte[]>();
 				for (int i = 0, idx = 0; i < response.ObjectCount && idx < response.Data.Length; i++)
@@ -718,17 +671,13 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			logger?.LogTrace($"ModbusClient.WriteSingleRegister({deviceId}, {coil})");
 			if (coil == null)
-			{
 				throw new ArgumentNullException(nameof(coil));
-			}
+
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
-			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
-			}
+
 			if (coil.Address < Consts.MinAddress || Consts.MaxAddress < coil.Address)
-			{
 				throw new ArgumentOutOfRangeException(nameof(coil.Address));
-			}
 
 			try
 			{
@@ -739,17 +688,14 @@ namespace AMWD.Modbus.Serial.Client
 					Address = coil.Address,
 					Data = new DataBuffer(2)
 				};
-				var value = (ushort)(coil.Value ? 0xFF00 : 0x0000);
+				ushort value = (ushort)(coil.Value ? 0xFF00 : 0x0000);
 				request.Data.SetUInt16(0, value);
 				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
-				{
 					throw new ModbusException("Response timed out. Device id invalid?");
-				}
+
 				if (response.IsError)
-				{
 					throw new ModbusException(response.ErrorMessage);
-				}
 
 				return request.DeviceId == response.DeviceId &&
 					request.Function == response.Function &&
@@ -776,17 +722,13 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			logger?.LogTrace($"ModbusClient.WriteSingleRegister({deviceId}, {register})");
 			if (register == null)
-			{
 				throw new ArgumentNullException(nameof(register));
-			}
+
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
-			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
-			}
+
 			if (register.Address < Consts.MinAddress || Consts.MaxAddress < register.Address)
-			{
 				throw new ArgumentOutOfRangeException(nameof(register.Address));
-			}
 
 			try
 			{
@@ -799,13 +741,10 @@ namespace AMWD.Modbus.Serial.Client
 				};
 				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
-				{
 					throw new ModbusException("Response timed out. Device id invalid?");
-				}
+
 				if (response.IsError)
-				{
 					throw new ModbusException(response.ErrorMessage);
-				}
 
 				return request.DeviceId == response.DeviceId &&
 					request.Function == response.Function &&
@@ -832,42 +771,34 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			logger?.LogTrace($"ModbusClient.WriteCoils({deviceId}, Length: {coils.Count()})");
 			if (coils == null || !coils.Any())
-			{
 				throw new ArgumentNullException(nameof(coils));
-			}
+
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
-			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
-			}
 
 			var orderedList = coils.OrderBy(c => c.Address).ToList();
 			if (orderedList.Count < Consts.MinCount || Consts.MaxCoilCountWrite < orderedList.Count)
-			{
 				throw new ArgumentOutOfRangeException("Count");
-			}
 
-			var firstAddress = orderedList.First().Address;
-			var lastAddress = orderedList.Last().Address;
+			ushort firstAddress = orderedList.First().Address;
+			ushort lastAddress = orderedList.Last().Address;
 
 			if (firstAddress + orderedList.Count - 1 != lastAddress)
-			{
 				throw new ArgumentException("No address gabs allowed within a request");
-			}
-			if (firstAddress < Consts.MinAddress || Consts.MaxAddress < lastAddress)
-			{
-				throw new ArgumentOutOfRangeException("Address");
-			}
 
-			var numBytes = (int)Math.Ceiling(orderedList.Count / 8.0);
-			var coilBytes = new byte[numBytes];
+			if (firstAddress < Consts.MinAddress || Consts.MaxAddress < lastAddress)
+				throw new ArgumentOutOfRangeException("Address");
+
+			int numBytes = (int)Math.Ceiling(orderedList.Count / 8.0);
+			byte[] coilBytes = new byte[numBytes];
 			for (int i = 0; i < orderedList.Count; i++)
 			{
 				if (orderedList[i].Value)
 				{
-					var posByte = i / 8;
-					var posBit = i % 8;
+					int posByte = i / 8;
+					int posBit = i % 8;
 
-					var mask = (byte)Math.Pow(2, posBit);
+					byte mask = (byte)Math.Pow(2, posBit);
 					coilBytes[posByte] = (byte)(coilBytes[posByte] | mask);
 				}
 			}
@@ -884,13 +815,10 @@ namespace AMWD.Modbus.Serial.Client
 				};
 				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
-				{
 					throw new ModbusException("Response timed out. Device id invalid?");
-				}
+
 				if (response.IsError)
-				{
 					throw new ModbusException(response.ErrorMessage);
-				}
 
 				return request.Address == response.Address &&
 					request.Count == response.Count;
@@ -915,31 +843,23 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			logger?.LogTrace($"ModbusClient.WriteRegisters({deviceId}, Length: {registers.Count()})");
 			if (registers == null || !registers.Any())
-			{
 				throw new ArgumentNullException(nameof(registers));
-			}
+
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
-			{
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
-			}
 
 			var orderedList = registers.OrderBy(c => c.Address).ToList();
 			if (orderedList.Count < Consts.MinCount || Consts.MaxRegisterCountWrite < orderedList.Count)
-			{
 				throw new ArgumentOutOfRangeException("Count");
-			}
 
-			var firstAddress = orderedList.First().Address;
-			var lastAddress = orderedList.Last().Address;
+			ushort firstAddress = orderedList.First().Address;
+			ushort lastAddress = orderedList.Last().Address;
 
 			if (firstAddress + orderedList.Count - 1 != lastAddress)
-			{
 				throw new ArgumentException("No address gabs allowed within a request");
-			}
+
 			if (firstAddress < Consts.MinAddress || Consts.MaxAddress < lastAddress)
-			{
 				throw new ArgumentOutOfRangeException("Address");
-			}
 
 			try
 			{
@@ -959,13 +879,10 @@ namespace AMWD.Modbus.Serial.Client
 				}
 				var response = await SendRequest(request, mainCts.Token);
 				if (response.IsTimeout)
-				{
 					throw new ModbusException("Response timed out. Device id invalid?");
-				}
+
 				if (response.IsError)
-				{
 					throw new ModbusException(response.ErrorMessage);
-				}
 
 				return request.Address == response.Address &&
 					request.Count == response.Count;
@@ -1000,6 +917,7 @@ namespace AMWD.Modbus.Serial.Client
 					Task.Run(() => Reconnect(mainCts.Token)).Forget();
 					ConnectingTask = GetWaitTask(mainCts.Token);
 				}
+
 				throw new InvalidOperationException("Client is not connected");
 			}
 
@@ -1012,7 +930,7 @@ namespace AMWD.Modbus.Serial.Client
 				serialPort.DiscardInBuffer();
 				serialPort.DiscardOutBuffer();
 
-				var bytes = request.Serialize();
+				byte[] bytes = request.Serialize();
 				await serialPort.BaseStream.WriteAsync(bytes, 0, bytes.Length);
 				await serialPort.BaseStream.FlushAsync();
 
@@ -1023,7 +941,7 @@ namespace AMWD.Modbus.Serial.Client
 				};
 
 				// Function number
-				var fn = await ReadByte();
+				byte fn = await ReadByte();
 				responseBytes.Add(fn);
 
 				byte expectedBytes = 0;
@@ -1045,8 +963,8 @@ namespace AMWD.Modbus.Serial.Client
 						break;
 					case FunctionCode.EncapsulatedInterface:
 						responseBytes.AddRange(await ReadBytes(6));
-						var count = responseBytes.Last();
-						for (var i = 0; i < count; i++)
+						byte count = responseBytes.Last();
+						for (int i = 0; i < count; i++)
 						{
 							// id
 							responseBytes.Add(await ReadByte());
@@ -1092,17 +1010,13 @@ namespace AMWD.Modbus.Serial.Client
 		private async void Reconnect(CancellationToken ct)
 		{
 			if (isReconnecting || ct.IsCancellationRequested)
-			{
 				return;
-			}
 
 			isReconnecting = true;
 			reconnectTcs = new TaskCompletionSource<bool>();
 
 			if (wasConnected)
-			{
 				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
-			}
 
 			ConnectingTask = GetWaitTask(ct);
 			int timeout = 2;
@@ -1152,9 +1066,7 @@ namespace AMWD.Modbus.Serial.Client
 								logger?.LogWarning($"ModbusClient.Reconnect failed to connect withing {timeout} seconds");
 								timeout += 2;
 								if (timeout > maxTimeout)
-								{
 									timeout = maxTimeout;
-								}
 
 								throw new IOException();
 							}
@@ -1199,9 +1111,7 @@ namespace AMWD.Modbus.Serial.Client
 			{
 				handle = UnsafeNativeMethods.Open(PortName, UnsafeNativeMethods.O_RDWR | UnsafeNativeMethods.O_NOCTTY);
 				if (UnsafeNativeMethods.IoCtl(handle, UnsafeNativeMethods.TIOCGRS485, ref rs485) == -1)
-				{
 					throw new UnixIOException();
-				}
 			}
 			finally
 			{
@@ -1218,9 +1128,7 @@ namespace AMWD.Modbus.Serial.Client
 			{
 				handle = UnsafeNativeMethods.Open(PortName, UnsafeNativeMethods.O_RDWR | UnsafeNativeMethods.O_NOCTTY);
 				if (UnsafeNativeMethods.IoCtl(handle, UnsafeNativeMethods.TIOCSRS485, ref rs485) == -1)
-				{
 					throw new UnixIOException();
-				}
 			}
 			finally
 			{
@@ -1292,8 +1200,8 @@ namespace AMWD.Modbus.Serial.Client
 			var bytes = new List<byte>(length);
 			do
 			{
-				var buffer = new byte[length];
-				var count = await serialPort.BaseStream.ReadAsync(buffer, 0, buffer.Length);
+				byte[] buffer = new byte[length];
+				int count = await serialPort.BaseStream.ReadAsync(buffer, 0, buffer.Length);
 				bytes.AddRange(buffer.Take(count));
 				length -= count;
 			}
@@ -1320,9 +1228,8 @@ namespace AMWD.Modbus.Serial.Client
 		private void Dispose(bool disposing)
 		{
 			if (isDisposed)
-			{
 				return;
-			}
+
 			isDisposed = true;
 			DisconnectInternal(true);
 		}
@@ -1335,9 +1242,7 @@ namespace AMWD.Modbus.Serial.Client
 		public override string ToString()
 		{
 			if (isDisposed)
-			{
 				throw new ObjectDisposedException(GetType().FullName);
-			}
 
 			return $"Modbus Serial {PortName} - Connected: {IsConnected}";
 		}

@@ -33,9 +33,7 @@
 		public override bool Equals(object obj)
 		{
 			if (!(obj is DiscreteInput input))
-			{
 				return false;
-			}
 
 			return Address == input.Address &&
 				Value == input.Value;

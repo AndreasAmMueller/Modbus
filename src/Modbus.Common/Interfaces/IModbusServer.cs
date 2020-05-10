@@ -1,7 +1,7 @@
-﻿using AMWD.Modbus.Common.Structures;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AMWD.Modbus.Common.Structures;
 
 namespace AMWD.Modbus.Common.Interfaces
 {

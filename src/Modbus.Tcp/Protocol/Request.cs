@@ -1,9 +1,8 @@
-﻿using AMWD.Modbus.Common;
-using AMWD.Modbus.Common.Util;
-using System;
+﻿using System;
 using System.Buffers.Binary;
 using System.Linq;
-using System.Threading;
+using AMWD.Modbus.Common;
+using AMWD.Modbus.Common.Util;
 
 namespace AMWD.Modbus.Tcp.Protocol
 {
@@ -167,7 +166,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 					throw new NotImplementedException();
 			}
 
-			var len = buffer.Length - 6;
+			int len = buffer.Length - 6;
 			buffer.SetUInt16(4, (ushort)len);
 
 			return buffer.Buffer;
@@ -176,16 +175,14 @@ namespace AMWD.Modbus.Tcp.Protocol
 		private void Deserialize(ReadOnlySpan<byte> bytes)
 		{
 			TransactionId = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(0, 2));
-			var ident = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(2, 2));
+			ushort ident = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(2, 2));
 			if (ident != 0)
-			{
 				throw new ArgumentException("Protocol ident not valid");
-			}
-			var length = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(4, 2));
+
+			ushort length = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(4, 2));
 			if (length + 6 != bytes.Length)
-			{
 				throw new ArgumentException("Data incomplete");
-			}
+
 			DeviceId = bytes[6];
 			Function = (FunctionCode)bytes[7];
 
@@ -255,9 +252,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 		public override bool Equals(object obj)
 		{
 			if (!(obj is Request req))
-			{
 				return false;
-			}
 
 			return req.TransactionId == TransactionId &&
 				req.DeviceId == DeviceId &&

@@ -1,7 +1,6 @@
-﻿using System;
+﻿using System.Text;
 using AMWD.Modbus.Common.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Text;
 
 namespace UnitTests
 {
@@ -11,10 +10,10 @@ namespace UnitTests
 		[TestMethod]
 		public void Crc16Test()
 		{
-			var bytes = Encoding.ASCII.GetBytes("0123456789");
-			var expected = new byte[] { 77, 67 };
+			byte[] bytes = Encoding.ASCII.GetBytes("0123456789");
+			byte[] expected = new byte[] { 77, 67 };
 
-			var crc = bytes.CRC16();
+			byte[] crc = bytes.CRC16();
 
 			CollectionAssert.AreEqual(expected, crc);
 		}

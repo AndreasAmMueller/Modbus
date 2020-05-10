@@ -1,9 +1,9 @@
-﻿using AMWD.Modbus.Common.Structures;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using AMWD.Modbus.Common.Structures;
 
 namespace AMWD.Modbus.Common.Util
 {
@@ -45,7 +45,7 @@ namespace AMWD.Modbus.Common.Util
 		public static uint GetUInt32(this IEnumerable<Register> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(2).ToArray();
-			var blob = new byte[registers.Length * 2];
+			byte[] blob = new byte[registers.Length * 2];
 
 			for (int i = 0; i < registers.Length; i++)
 			{
@@ -54,9 +54,7 @@ namespace AMWD.Modbus.Common.Util
 			}
 
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			return BitConverter.ToUInt32(blob, 0);
 		}
@@ -70,7 +68,7 @@ namespace AMWD.Modbus.Common.Util
 		public static ulong GetUInt64(this IEnumerable<Register> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(4).ToArray();
-			var blob = new byte[registers.Length * 2];
+			byte[] blob = new byte[registers.Length * 2];
 
 			for (int i = 0; i < registers.Length; i++)
 			{
@@ -79,9 +77,7 @@ namespace AMWD.Modbus.Common.Util
 			}
 
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			return BitConverter.ToUInt64(blob, 0);
 		}
@@ -107,11 +103,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public static short GetInt16(this Register register)
 		{
-			var blob = new[] { register.HiByte, register.LoByte };
+			byte[] blob = new[] { register.HiByte, register.LoByte };
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			return BitConverter.ToInt16(blob, 0);
 		}
@@ -125,7 +119,7 @@ namespace AMWD.Modbus.Common.Util
 		public static int GetInt32(this IEnumerable<Register> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(2).ToArray();
-			var blob = new byte[registers.Length * 2];
+			byte[] blob = new byte[registers.Length * 2];
 
 			for (int i = 0; i < registers.Length; i++)
 			{
@@ -134,9 +128,7 @@ namespace AMWD.Modbus.Common.Util
 			}
 
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			return BitConverter.ToInt32(blob, 0);
 		}
@@ -150,7 +142,7 @@ namespace AMWD.Modbus.Common.Util
 		public static long GetInt64(this IEnumerable<Register> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(4).ToArray();
-			var blob = new byte[registers.Length * 2];
+			byte[] blob = new byte[registers.Length * 2];
 
 			for (int i = 0; i < registers.Length; i++)
 			{
@@ -159,9 +151,7 @@ namespace AMWD.Modbus.Common.Util
 			}
 
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			return BitConverter.ToInt64(blob, 0);
 		}
@@ -179,7 +169,7 @@ namespace AMWD.Modbus.Common.Util
 		public static float GetSingle(this IEnumerable<Register> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(2).ToArray();
-			var blob = new byte[registers.Length * 2];
+			byte[] blob = new byte[registers.Length * 2];
 
 			for (int i = 0; i < registers.Length; i++)
 			{
@@ -188,9 +178,7 @@ namespace AMWD.Modbus.Common.Util
 			}
 
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			return BitConverter.ToSingle(blob, 0);
 		}
@@ -204,7 +192,7 @@ namespace AMWD.Modbus.Common.Util
 		public static double GetDouble(this IEnumerable<Register> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(4).ToArray();
-			var blob = new byte[registers.Length * 2];
+			byte[] blob = new byte[registers.Length * 2];
 
 			for (int i = 0; i < registers.Length; i++)
 			{
@@ -213,9 +201,7 @@ namespace AMWD.Modbus.Common.Util
 			}
 
 			if (BitConverter.IsLittleEndian)
-			{
 				Array.Reverse(blob);
-			}
 
 			return BitConverter.ToDouble(blob, 0);
 		}
@@ -240,7 +226,7 @@ namespace AMWD.Modbus.Common.Util
 			}
 
 			var registers = list.Skip(index).Take(length).ToArray();
-			var blob = new byte[registers.Length * 2];
+			byte[] blob = new byte[registers.Length * 2];
 
 			for (int i = 0; i < registers.Length; i++)
 			{
@@ -248,12 +234,12 @@ namespace AMWD.Modbus.Common.Util
 				blob[i * 2 + 1] = registers[i].LoByte;
 			}
 
-			var str = encoding.GetString(blob).Trim(new[] { ' ', '\t', '\0', '\r', '\n' });
-			var nullIdx = str.IndexOf('\0');
+			string str = encoding.GetString(blob).Trim(new[] { ' ', '\t', '\0', '\r', '\n' });
+			int nullIdx = str.IndexOf('\0');
+
 			if (nullIdx >= 0)
-			{
 				return str.Substring(0, nullIdx);
-			}
+
 			return str;
 		}
 

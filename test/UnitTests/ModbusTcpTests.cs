@@ -1,10 +1,4 @@
-﻿using AMWD.Modbus.Common;
-using AMWD.Modbus.Common.Structures;
-using AMWD.Modbus.Common.Util;
-using AMWD.Modbus.Tcp.Client;
-using AMWD.Modbus.Tcp.Server;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -13,6 +7,11 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AMWD.Modbus.Common;
+using AMWD.Modbus.Common.Structures;
+using AMWD.Modbus.Tcp.Client;
+using AMWD.Modbus.Tcp.Server;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace UnitTests
 {
@@ -121,8 +120,8 @@ namespace UnitTests
 		[TestMethod]
 		public async Task ClientReadExceptionTest()
 		{
-			var expectedRequest = new byte[] { 0, 0, 0, 6, 2, 1, 0, 24, 0, 2 };
-			var expectedExceptionMessage = ErrorCode.GatewayTargetDevice.GetDescription();
+			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 2, 1, 0, 24, 0, 2 };
+			string expectedExceptionMessage = ErrorCode.GatewayTargetDevice.GetDescription();
 
 			using (var server = new MiniTestServer())
 			{
@@ -157,7 +156,7 @@ namespace UnitTests
 		{
 			// Function Code 0x01
 
-			var expectedRequest = new byte[] { 0, 0, 0, 6, 12, 1, 0, 20, 0, 10 };
+			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 12, 1, 0, 20, 0, 10 };
 			var expectedResponse = new List<Coil>
 					{
 						new Coil { Address = 20, Value = true },
@@ -198,7 +197,7 @@ namespace UnitTests
 		{
 			// Function Code 0x02
 
-			var expectedRequest = new byte[] { 0, 0, 0, 6, 1, 2, 0, 12, 0, 2 };
+			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 1, 2, 0, 12, 0, 2 };
 			var expectedResponse = new List<DiscreteInput>
 			{
 				new DiscreteInput { Address = 12, Value = true },
@@ -231,7 +230,7 @@ namespace UnitTests
 		{
 			// Function Code 0x03
 
-			var expectedRequest = new byte[] { 0, 0, 0, 6, 5, 3, 0, 10, 0, 2 };
+			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 5, 3, 0, 10, 0, 2 };
 			var expectedResponse = new List<Register>
 			{
 				new Register { Address = 10, Value = 3 },
@@ -264,7 +263,7 @@ namespace UnitTests
 		{
 			// Function Code 0x04
 
-			var expectedRequest = new byte[] { 0, 0, 0, 6, 3, 4, 0, 6, 0, 3 };
+			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 3, 4, 0, 6, 0, 3 };
 			var expectedResponse = new List<Register>
 			{
 				new Register { Address = 6, Value = 123 },
@@ -296,7 +295,7 @@ namespace UnitTests
 		[TestMethod]
 		public async Task ClientReadDeviceInformationBasicTest()
 		{
-			var expectedRequest = new byte[] { 0, 0, 0, 5, 13, 43, 14, 1, 0 };
+			byte[] expectedRequest = new byte[] { 0, 0, 0, 5, 13, 43, 14, 1, 0 };
 			var expectedResponse = new Dictionary<DeviceIDObject, string>
 			{
 				{ DeviceIDObject.VendorName, "AM.WD" },
@@ -314,10 +313,10 @@ namespace UnitTests
 					var bytes = new List<byte>();
 					bytes.AddRange(request.Take(2));
 					bytes.AddRange(new byte[] { 0, 0, 0, 0, 13, 43, 14, 1, 1, 0, 0, (byte)expectedResponse.Count });
-					var len = 8;
+					int len = 8;
 					foreach (var kvp in expectedResponse)
 					{
-						var b = Encoding.ASCII.GetBytes(kvp.Value);
+						byte[] b = Encoding.ASCII.GetBytes(kvp.Value);
 						bytes.Add((byte)kvp.Key);
 						len++;
 						bytes.Add((byte)b.Length);
@@ -345,7 +344,7 @@ namespace UnitTests
 		[TestMethod]
 		public async Task ClientReadDeviceInformationIndividualTest()
 		{
-			var expectedRequest = new byte[] { 0, 0, 0, 5, 13, 43, 14, 4, (byte)DeviceIDObject.ModelName };
+			byte[] expectedRequest = new byte[] { 0, 0, 0, 5, 13, 43, 14, 4, (byte)DeviceIDObject.ModelName };
 			var expectedResponse = new Dictionary<DeviceIDObject, string>
 			{
 				{ DeviceIDObject.ModelName, "TestModel" }
@@ -361,10 +360,10 @@ namespace UnitTests
 					var bytes = new List<byte>();
 					bytes.AddRange(request.Take(2));
 					bytes.AddRange(new byte[] { 0, 0, 0, 0, 13, 43, 14, 4, 2, 0, 0, (byte)expectedResponse.Count });
-					var len = 8;
+					int len = 8;
 					foreach (var kvp in expectedResponse)
 					{
-						var b = Encoding.ASCII.GetBytes(kvp.Value);
+						byte[] b = Encoding.ASCII.GetBytes(kvp.Value);
 						bytes.Add((byte)kvp.Key);
 						len++;
 						bytes.Add((byte)b.Length);
@@ -398,7 +397,7 @@ namespace UnitTests
 		{
 			// Function Code 0x05
 
-			var expectedRequest = new byte[] { 0, 0, 0, 6, 1, 5, 0, 173, 255, 0 };
+			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 1, 5, 0, 173, 255, 0 };
 
 			using (var server = new MiniTestServer())
 			{
@@ -419,7 +418,7 @@ namespace UnitTests
 						Address = 173,
 						Value = true
 					};
-					var success = await client.WriteSingleCoil(1, coil);
+					bool success = await client.WriteSingleCoil(1, coil);
 					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
 					Assert.IsTrue(success);
 				}
@@ -431,7 +430,7 @@ namespace UnitTests
 		{
 			// Function Code 0x06
 
-			var expectedRequest = new byte[] { 0, 0, 0, 6, 2, 6, 0, 5, 48, 57 };
+			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 2, 6, 0, 5, 48, 57 };
 
 			using (var server = new MiniTestServer())
 			{
@@ -452,7 +451,7 @@ namespace UnitTests
 						Address = 5,
 						Value = 12345
 					};
-					var success = await client.WriteSingleRegister(2, register);
+					bool success = await client.WriteSingleRegister(2, register);
 					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
 					Assert.IsTrue(success);
 				}
@@ -464,7 +463,7 @@ namespace UnitTests
 		{
 			// Function Code 0x0F
 
-			var expectedRequest = new byte[] { 0, 0, 0, 9, 4, 15, 0, 20, 0, 10, 2, 205, 1 };
+			byte[] expectedRequest = new byte[] { 0, 0, 0, 9, 4, 15, 0, 20, 0, 10, 2, 205, 1 };
 
 			using (var server = new MiniTestServer())
 			{
@@ -493,7 +492,7 @@ namespace UnitTests
 						new Coil { Address = 28, Value = true },
 						new Coil { Address = 29, Value = false },
 					};
-					var success = await client.WriteCoils(4, coils);
+					bool success = await client.WriteCoils(4, coils);
 					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
 					Assert.IsTrue(success);
 				}
@@ -505,7 +504,7 @@ namespace UnitTests
 		{
 			// Function Code 0x10
 
-			var expectedRequest = new byte[] { 0, 0, 0, 11, 10, 16, 0, 2, 0, 2, 4, 0, 10, 1, 2 };
+			byte[] expectedRequest = new byte[] { 0, 0, 0, 11, 10, 16, 0, 2, 0, 2, 4, 0, 10, 1, 2 };
 
 			using (var server = new MiniTestServer())
 			{
@@ -526,7 +525,7 @@ namespace UnitTests
 						new Register { Address = 2, Value = 10 },
 						new Register { Address = 3, Value = 258 }
 					};
-					var success = await client.WriteRegisters(10, registers);
+					bool success = await client.WriteRegisters(10, registers);
 					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
 					Assert.IsTrue(success);
 				}
@@ -542,7 +541,7 @@ namespace UnitTests
 		[TestMethod]
 		public async Task ServerStartTest()
 		{
-			var port = 0;
+			int port = 0;
 			using (var testServer = new MiniTestServer())
 			{
 				testServer.Start();
@@ -632,11 +631,11 @@ namespace UnitTests
 									return;
 								}
 
-								var buffer = new byte[100];
+								byte[] buffer = new byte[100];
 								var bytes = new List<byte>();
 								do
 								{
-									var count = await stream.ReadAsync(buffer, 0, buffer.Length, ct);
+									int count = await stream.ReadAsync(buffer, 0, buffer.Length, ct);
 									bytes.AddRange(buffer.Take(count));
 								}
 								while (stream.DataAvailable && !ct.IsCancellationRequested);
@@ -653,7 +652,7 @@ namespace UnitTests
 									Console.WriteLine("Server send RequestHandler");
 									try
 									{
-										var response = RequestHandler(bytes.ToArray(), clientEndPoint);
+										byte[] response = RequestHandler(bytes.ToArray(), clientEndPoint);
 										Console.WriteLine($"Server response: {response?.Length ?? -1}");
 										if (response != null)
 										{
@@ -671,7 +670,7 @@ namespace UnitTests
 					}
 					catch (Exception ex)
 					{
-						var msg = ex.InnerException?.Message ?? ex.Message;
+						string msg = ex.InnerException?.Message ?? ex.Message;
 						Console.WriteLine($"Server exception: " + msg);
 					}
 				}

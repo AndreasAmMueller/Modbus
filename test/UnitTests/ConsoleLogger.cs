@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
+using Microsoft.Extensions.Logging;
 
 namespace UnitTests
 {
@@ -45,13 +45,10 @@ namespace UnitTests
 		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
 		{
 			if (!IsEnabled(logLevel))
-			{
 				return;
-			}
+
 			if (formatter == null)
-			{
 				throw new ArgumentNullException(nameof(formatter));
-			}
 
 			string message = formatter(state, exception);
 
@@ -102,10 +99,9 @@ namespace UnitTests
 					string timestamp = DateTime.Now.ToString(TimestampFormat) + " ";
 					Console.Write(timestamp);
 					timestampPadding = new string(' ', timestamp.Length);
+
 					if (changedColor)
-					{
 						Console.ResetColor();
-					}
 				}
 
 				changedColor = false;
@@ -138,10 +134,9 @@ namespace UnitTests
 					}
 				}
 				Console.Write(GetLogLevelString(logLevel));
+
 				if (changedColor)
-				{
 					Console.ResetColor();
-				}
 
 				changedColor = false;
 				if (!DisableColors)
@@ -155,10 +150,9 @@ namespace UnitTests
 					}
 				}
 				Console.WriteLine(": " + (!string.IsNullOrEmpty(name) ? "[" + name + "] " : "") + message.Replace("\n", "\n      " + timestampPadding));
+
 				if (changedColor)
-				{
 					Console.ResetColor();
-				}
 			}
 		}
 

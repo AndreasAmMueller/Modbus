@@ -48,7 +48,7 @@ namespace UnitTests
 		/// Forgets about the result of the task. (Prevent compiler warning).
 		/// </summary>
 		/// <param name="task">The task to forget.</param>
-		public static async void Forget(this Task task)
+		internal static async void Forget(this Task task)
 		{
 			try
 			{

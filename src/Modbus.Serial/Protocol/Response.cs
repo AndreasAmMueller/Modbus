@@ -1,8 +1,8 @@
-﻿using AMWD.Modbus.Common;
+﻿using System;
+using System.Linq;
+using AMWD.Modbus.Common;
 using AMWD.Modbus.Common.Util;
 using AMWD.Modbus.Serial.Util;
-using System;
-using System.Linq;
 
 namespace AMWD.Modbus.Serial.Protocol
 {
@@ -138,7 +138,7 @@ namespace AMWD.Modbus.Serial.Protocol
 
 			buffer.SetByte(0, DeviceId);
 
-			var fn = (byte)Function;
+			byte fn = (byte)Function;
 			if (IsError)
 			{
 				fn = (byte)(fn & Consts.ErrorMask);
@@ -194,7 +194,7 @@ namespace AMWD.Modbus.Serial.Protocol
 
 			buffer.SetByte(1, fn);
 
-			var crc = Checksum.CRC16(buffer.Buffer);
+			byte[] crc = Checksum.CRC16(buffer.Buffer);
 			buffer.AddBytes(crc);
 
 			return buffer.Buffer;
@@ -211,17 +211,15 @@ namespace AMWD.Modbus.Serial.Protocol
 
 			var buffer = new DataBuffer(bytes);
 
-			var crcBuff = buffer.GetBytes(buffer.Length - 2, 2);
-			var crcCalc = Checksum.CRC16(bytes, 0, bytes.Length - 2);
+			byte[] crcBuff = buffer.GetBytes(buffer.Length - 2, 2);
+			byte[] crcCalc = Checksum.CRC16(bytes, 0, bytes.Length - 2);
 
 			if (crcBuff[0] != crcCalc[0] || crcBuff[1] != crcCalc[1])
-			{
 				throw new InvalidOperationException("Data not valid (CRC check failed).");
-			}
 
 			DeviceId = buffer.GetByte(0);
 
-			var fn = buffer.GetByte(1);
+			byte fn = buffer.GetByte(1);
 			if ((fn & Consts.ErrorMask) > 0)
 			{
 				Function = (FunctionCode)(fn ^ Consts.ErrorMask);
@@ -237,7 +235,7 @@ namespace AMWD.Modbus.Serial.Protocol
 					case FunctionCode.ReadDiscreteInputs:
 					case FunctionCode.ReadHoldingRegisters:
 					case FunctionCode.ReadInputRegisters:
-						var len = buffer.GetByte(2);
+						byte len = buffer.GetByte(2);
 						if (buffer.Length != len + 3 + 2)   // following bytes + 3 byte head + 2 byte CRC
 						{
 							throw new ArgumentException("Response incomplete");
@@ -304,9 +302,7 @@ namespace AMWD.Modbus.Serial.Protocol
 		public override bool Equals(object obj)
 		{
 			if (!(obj is Response res))
-			{
 				return false;
-			}
 
 			return res.DeviceId == DeviceId &&
 				res.Function == Function &&

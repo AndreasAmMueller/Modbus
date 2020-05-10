@@ -86,7 +86,7 @@ namespace AMWD.Modbus.Common
 	/// <remarks>
 	/// MEI = MODBUS Encapsulated Interface (Fn 43).
 	/// </remarks>
-	public enum MEIType: byte
+	public enum MEIType : byte
 	{
 		/// <summary>
 		/// The request contains data of CANopen

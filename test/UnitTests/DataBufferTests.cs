@@ -1,7 +1,6 @@
+using System.Linq;
 using AMWD.Modbus.Common.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Linq;
 
 namespace UnitTests
 {
@@ -41,9 +40,8 @@ namespace UnitTests
 		[TestMethod]
 		public void ByteTests()
 		{
-
 		}
 
-		#endregion
+		#endregion Unsigned
 	}
 }

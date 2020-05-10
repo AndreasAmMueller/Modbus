@@ -1,14 +1,14 @@
-﻿using AMWD.Modbus.Common;
-using AMWD.Modbus.Common.Interfaces;
-using AMWD.Modbus.Common.Structures;
-using AMWD.Modbus.Common.Util;
-using AMWD.Modbus.Serial;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AMWD.Modbus.Common;
+using AMWD.Modbus.Common.Interfaces;
+using AMWD.Modbus.Common.Structures;
+using AMWD.Modbus.Common.Util;
+using AMWD.Modbus.Serial;
 using SerialClient = AMWD.Modbus.Serial.Client.ModbusClient;
 using TcpClient = AMWD.Modbus.Tcp.Client.ModbusClient;
 
@@ -36,7 +36,7 @@ namespace ConsoleDemo
 			Console.WriteLine();
 
 			Console.Write("Connection Type [1] TCP, [2] RS485: ");
-			var cType = Convert.ToInt32(Console.ReadLine().Trim());
+			int cType = Convert.ToInt32(Console.ReadLine().Trim());
 
 			IModbusClient client = null;
 			try
@@ -46,9 +46,9 @@ namespace ConsoleDemo
 					case 1:
 						{
 							Console.Write("Hostname: ");
-							var host = Console.ReadLine().Trim();
+							string host = Console.ReadLine().Trim();
 							Console.Write("Port: ");
-							var port = Convert.ToInt32(Console.ReadLine().Trim());
+							int port = Convert.ToInt32(Console.ReadLine().Trim());
 
 							client = new TcpClient(host, port);
 						}
@@ -56,25 +56,25 @@ namespace ConsoleDemo
 					case 2:
 						{
 							Console.Write("Interface: ");
-							var port = Console.ReadLine().Trim();
+							string port = Console.ReadLine().Trim();
 
 							Console.Write("Baud: ");
-							var baud = Convert.ToInt32(Console.ReadLine().Trim());
+							int baud = Convert.ToInt32(Console.ReadLine().Trim());
 
 							Console.Write("Stop-Bits [0|1|2|3=1.5]: ");
-							var stopBits = Convert.ToInt32(Console.ReadLine().Trim());
+							int stopBits = Convert.ToInt32(Console.ReadLine().Trim());
 
 							Console.Write("Parity [0] None [1] Odd [2] Even [3] Mark [4] Space: ");
-							var parity = Convert.ToInt32(Console.ReadLine().Trim());
+							int parity = Convert.ToInt32(Console.ReadLine().Trim());
 
 							Console.Write("Handshake [0] None [1] X-On/Off [2] RTS [3] RTS+X-On/Off: ");
-							var handshake = Convert.ToInt32(Console.ReadLine().Trim());
+							int handshake = Convert.ToInt32(Console.ReadLine().Trim());
 
 							Console.Write("Timeout: ");
-							var timeout = Convert.ToInt32(Console.ReadLine().Trim());
+							int timeout = Convert.ToInt32(Console.ReadLine().Trim());
 
 							Console.Write("Set Driver to RS485 [0] No [1] Yes: ");
-							var setDriver = Convert.ToInt32(Console.ReadLine().Trim());
+							int setDriver = Convert.ToInt32(Console.ReadLine().Trim());
 
 							client = new SerialClient(port)
 							{
@@ -102,10 +102,10 @@ namespace ConsoleDemo
 				while (run)
 				{
 					Console.Write("Device ID: ");
-					var id = Convert.ToByte(Console.ReadLine().Trim());
+					byte id = Convert.ToByte(Console.ReadLine().Trim());
 
 					Console.Write("Function [1] Read Register, [2] Device Info, [9] Write Register : ");
-					var fn = Convert.ToInt32(Console.ReadLine().Trim());
+					int fn = Convert.ToInt32(Console.ReadLine().Trim());
 
 					try
 					{
@@ -189,7 +189,7 @@ namespace ConsoleDemo
 							case 2:
 								{
 									Console.Write("[1] Basic, [2] Regular, [3] Extended: ");
-									var cat = Convert.ToInt32(Console.ReadLine().Trim());
+									int cat = Convert.ToInt32(Console.ReadLine().Trim());
 
 									Dictionary<DeviceIDObject, string> info = null;
 									switch (cat)
@@ -216,13 +216,13 @@ namespace ConsoleDemo
 							case 9:
 								{
 									Console.Write("Address: ");
-									var address = Convert.ToUInt16(Console.ReadLine().Trim());
+									ushort address = Convert.ToUInt16(Console.ReadLine().Trim());
 
 									Console.Write("Bytes (HEX): ");
-									var byteStr = Console.ReadLine().Trim();
+									string byteStr = Console.ReadLine().Trim();
 									byteStr = byteStr.Replace(" ", "").ToLower();
 
-									var bytes = Enumerable.Range(0, byteStr.Length)
+									byte[] bytes = Enumerable.Range(0, byteStr.Length)
 										.Where(i => i % 2 == 0)
 										.Select(i => Convert.ToByte(byteStr.Substring(i, 2), 16))
 										.ToArray();
@@ -241,9 +241,7 @@ namespace ConsoleDemo
 										.ToList();
 
 									if (!await client.WriteRegisters(id, registers))
-									{
 										throw new Exception($"Writing '{byteStr}' to address {address} failed");
-									}
 								}
 								break;
 						}
@@ -255,7 +253,7 @@ namespace ConsoleDemo
 					}
 
 					Console.Write("New Request? [y/N]: ");
-					var again = Console.ReadLine().Trim().ToLower();
+					string again = Console.ReadLine().Trim().ToLower();
 					if (again == "y" || again == "yes" || again == "j" || again == "ja")
 					{
 						run = true;
