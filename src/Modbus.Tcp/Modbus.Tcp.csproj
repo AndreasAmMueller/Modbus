@@ -48,4 +48,8 @@
     <ProjectReference Include="..\Modbus.Common\Modbus.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Client\" />
+  </ItemGroup>
+
 </Project>

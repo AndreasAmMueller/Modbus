@@ -39,6 +39,11 @@ namespace AMWD.Modbus.Tcp.Client
 		private bool isReconnecting = false;
 		private Task receiveTask;
 
+		// Reconnection parameters
+        private int timeout;
+        private int maxTimeout;
+        private bool endlessReconnection;
+
 		// Transaction handling
 		private readonly object syncLock = new object();
 		private ushort transactionId = 0;
@@ -68,9 +73,21 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <param name="host">The remote host name or ip.</param>
 		/// <param name="port">The remote port.</param>
 		/// <param name="logger"><see cref="ILogger"/> instance to write log entries.</param>
-		public ModbusClient(string host, int port = 502, ILogger logger = null)
+		/// <param name="timeout">Reconnection timeout.</param>
+		/// <param name="maxTimeout">Maximal timeout. If the endlessReconnection is false then it doesn't matter. Will be increased step by step if the endlessReconnection equals false.</param>
+		/// <param name="endlessReconnection">When it is true then the client tries to reconnect endlessly.</param>
+		public ModbusClient(string host, int port = 502, ILogger logger = null, bool endlessReconnection = false, int timeout = 2, int maxTimeout = 30)
 		{
 			this.logger = logger;
+			this.endlessReconnection = endlessReconnection;
+
+			if (timeout <= 0)
+				throw new ArgumentOutOfRangeException(nameof(timeout), "Timeout must be greater than 0.");
+			this.timeout = timeout;
+
+			if (maxTimeout <= 0)
+				throw new ArgumentOutOfRangeException(nameof(maxTimeout), "MaxTimeout must be greater than 0.");
+			this.maxTimeout = maxTimeout;
 
 			if (string.IsNullOrWhiteSpace(host))
 			{
@@ -135,10 +152,11 @@ namespace AMWD.Modbus.Tcp.Client
 		/// </summary>
 		public Task ConnectingTask { get; private set; }
 
-		/// <summary>
-		/// Gets a value indicating whether the connection is established.
-		/// </summary>
-		public bool IsConnected => !isReconnecting && (tcpClient?.Connected ?? false);
+
+        /// <summary>
+        /// Gets a value indicating whether the connection is established.
+        /// </summary>
+        public bool IsConnected => !isReconnecting && (tcpClient?.Connected ?? false);
 
 		/// <summary>
 		/// Gets or sets the max. reconnect timespan until the reconnect is aborted.
@@ -1155,8 +1173,6 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 
 			ConnectingTask = GetWaitTask(ct);
-			int timeout = 2;
-			int maxTimeout = 30;
 			var startTime = DateTime.UtcNow;
 
 			try
@@ -1186,14 +1202,17 @@ namespace AMWD.Modbus.Tcp.Client
 						}
 						else
 						{
-							timeout += 2;
+							if(!endlessReconnection)
+								timeout += 2;
+
 							if (timeout > maxTimeout)
 							{
 								timeout = maxTimeout;
 							}
 							else
 							{
-								logger?.LogWarning($"ModbusClient.Reconnect failed to connect within {timeout - 2} seconds");
+								var currentTimeoutValue = endlessReconnection ? timeout : timeout - 2;
+								logger?.LogWarning($"ModbusClient.Reconnect failed to connect within {currentTimeoutValue} seconds");
 							}
 
 							throw new SocketException((int)SocketError.TimedOut);
