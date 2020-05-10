@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -407,7 +406,11 @@ namespace AMWD.Modbus.Tcp.Server
 
 					byte[] header = await ExpectBytesFromNetwork(stream, 6);
 					requestBytes.Write(header, 0, header.Length);
-					int following = BinaryPrimitives.ReadUInt16BigEndian(header.AsSpan(4, 2));
+
+					byte[] bytes = header.Skip(4).Take(2).ToArray();
+					if (BitConverter.IsLittleEndian)
+						Array.Reverse(bytes);
+					int following = BitConverter.ToUInt16(bytes, 0);
 
 					byte[] payload = await ExpectBytesFromNetwork(stream, following);
 					requestBytes.Write(payload, 0, payload.Length);
@@ -415,7 +418,7 @@ namespace AMWD.Modbus.Tcp.Server
 					Response response = null;
 					try
 					{
-						var request = new Request(requestBytes.GetBuffer().AsSpan(0, (int)requestBytes.Length));
+						var request = new Request(requestBytes.GetBuffer());
 						response = HandleRequest(request);
 					}
 					catch (ArgumentException ae)
@@ -431,7 +434,7 @@ namespace AMWD.Modbus.Tcp.Server
 					{
 						try
 						{
-							byte[] bytes = response.Serialize();
+							bytes = response.Serialize();
 							await stream.WriteAsync(bytes, 0, bytes.Length);
 						}
 						catch (NotImplementedException nie)

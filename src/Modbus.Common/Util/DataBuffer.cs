@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Buffers.Binary;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace AMWD.Modbus.Common.Util
@@ -41,8 +42,11 @@ namespace AMWD.Modbus.Common.Util
 		/// Initializes a new instance of the <see cref="DataBuffer"/> class using the bytes a existing buffer.
 		/// </summary>
 		/// <param name="bytes">New buffer as byte array.</param>
-		public DataBuffer(ReadOnlySpan<byte> bytes)
+		public DataBuffer(IEnumerable<byte> bytes)
 		{
+			if (bytes == null)
+				throw new ArgumentNullException(nameof(bytes));
+
 			Buffer = bytes.ToArray();
 		}
 
@@ -157,15 +161,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetUInt16(int index, ushort value)
 		{
-			var span = Buffer.AsSpan(index, 2);
-			if (IsLittleEndian)
-			{
-				BinaryPrimitives.WriteUInt16LittleEndian(span, value);
-			}
-			else
-			{
-				BinaryPrimitives.WriteUInt16BigEndian(span, value);
-			}
+			byte[] blob = BitConverter.GetBytes(value);
+			InternalSwap(blob);
+			SetBytes(index, blob);
 		}
 
 		/// <summary>
@@ -175,15 +173,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetUInt32(int index, uint value)
 		{
-			var span = Buffer.AsSpan(index, 4);
-			if (IsLittleEndian)
-			{
-				BinaryPrimitives.WriteUInt32LittleEndian(span, value);
-			}
-			else
-			{
-				BinaryPrimitives.WriteUInt32BigEndian(span, value);
-			}
+			byte[] blob = BitConverter.GetBytes(value);
+			InternalSwap(blob);
+			SetBytes(index, blob);
 		}
 
 		/// <summary>
@@ -193,15 +185,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetUInt64(int index, ulong value)
 		{
-			var span = Buffer.AsSpan(index, 8);
-			if (IsLittleEndian)
-			{
-				BinaryPrimitives.WriteUInt64LittleEndian(span, value);
-			}
-			else
-			{
-				BinaryPrimitives.WriteUInt64BigEndian(span, value);
-			}
+			byte[] blob = BitConverter.GetBytes(value);
+			InternalSwap(blob);
+			SetBytes(index, blob);
 		}
 
 		#endregion Unsigned
@@ -228,15 +214,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetInt16(int index, short value)
 		{
-			var span = Buffer.AsSpan(index, 2);
-			if (IsLittleEndian)
-			{
-				BinaryPrimitives.WriteInt16LittleEndian(span, value);
-			}
-			else
-			{
-				BinaryPrimitives.WriteInt16BigEndian(span, value);
-			}
+			byte[] blob = BitConverter.GetBytes(value);
+			InternalSwap(blob);
+			SetBytes(index, blob);
 		}
 
 		/// <summary>
@@ -246,15 +226,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetInt32(int index, int value)
 		{
-			var span = Buffer.AsSpan(index, 4);
-			if (IsLittleEndian)
-			{
-				BinaryPrimitives.WriteInt32LittleEndian(span, value);
-			}
-			else
-			{
-				BinaryPrimitives.WriteInt32BigEndian(span, value);
-			}
+			byte[] blob = BitConverter.GetBytes(value);
+			InternalSwap(blob);
+			SetBytes(index, blob);
 		}
 
 		/// <summary>
@@ -264,15 +238,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void SetInt64(int index, long value)
 		{
-			var span = Buffer.AsSpan(index, 8);
-			if (IsLittleEndian)
-			{
-				BinaryPrimitives.WriteInt64LittleEndian(span, value);
-			}
-			else
-			{
-				BinaryPrimitives.WriteInt64BigEndian(span, value);
-			}
+			byte[] blob = BitConverter.GetBytes(value);
+			InternalSwap(blob);
+			SetBytes(index, blob);
 		}
 
 		#endregion Signed
@@ -614,10 +582,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public ushort GetUInt16(int index)
 		{
-			var span = Buffer.AsSpan(index, 2);
-			return IsLittleEndian
-				? BinaryPrimitives.ReadUInt16LittleEndian(span)
-				: BinaryPrimitives.ReadUInt16BigEndian(span);
+			byte[] blob = GetBytes(index, 2);
+			InternalSwap(blob);
+			return BitConverter.ToUInt16(blob, 0);
 		}
 
 		/// <summary>
@@ -627,10 +594,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public uint GetUInt32(int index)
 		{
-			var span = Buffer.AsSpan(index, 4);
-			return IsLittleEndian
-				? BinaryPrimitives.ReadUInt32LittleEndian(span)
-				: BinaryPrimitives.ReadUInt32BigEndian(span);
+			byte[] blob = GetBytes(index, 4);
+			InternalSwap(blob);
+			return BitConverter.ToUInt32(blob, 0);
 		}
 
 		/// <summary>
@@ -640,10 +606,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public ulong GetUInt64(int index)
 		{
-			var span = Buffer.AsSpan(index, 8);
-			return IsLittleEndian
-				? BinaryPrimitives.ReadUInt64LittleEndian(span)
-				: BinaryPrimitives.ReadUInt64BigEndian(span);
+			byte[] blob = GetBytes(index, 8);
+			InternalSwap(blob);
+			return BitConverter.ToUInt64(blob, 0);
 		}
 
 		#endregion Unsigned
@@ -670,10 +635,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public short GetInt16(int index)
 		{
-			var span = Buffer.AsSpan(index, 2);
-			return IsLittleEndian
-				? BinaryPrimitives.ReadInt16LittleEndian(span)
-				: BinaryPrimitives.ReadInt16BigEndian(span);
+			byte[] blob = GetBytes(index, 2);
+			InternalSwap(blob);
+			return BitConverter.ToInt16(blob, 0);
 		}
 
 		/// <summary>
@@ -683,10 +647,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public int GetInt32(int index)
 		{
-			var span = Buffer.AsSpan(index, 4);
-			return IsLittleEndian
-				? BinaryPrimitives.ReadInt32LittleEndian(span)
-				: BinaryPrimitives.ReadInt32BigEndian(span);
+			byte[] blob = GetBytes(index, 4);
+			InternalSwap(blob);
+			return BitConverter.ToInt32(blob, 0);
 		}
 
 		/// <summary>
@@ -696,10 +659,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns>The value.</returns>
 		public long GetInt64(int index)
 		{
-			var span = Buffer.AsSpan(index, 8);
-			return IsLittleEndian
-				? BinaryPrimitives.ReadInt64LittleEndian(span)
-				: BinaryPrimitives.ReadInt64BigEndian(span);
+			byte[] blob = GetBytes(index, 8);
+			InternalSwap(blob);
+			return BitConverter.ToInt64(blob, 0);
 		}
 
 		#endregion Signed

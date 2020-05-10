@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.Linq;
 using AMWD.Modbus.Common;
 using AMWD.Modbus.Common.Util;
@@ -26,8 +26,11 @@ namespace AMWD.Modbus.Tcp.Protocol
 		/// Initializes a new instance of the <see cref="Request"/> class.
 		/// </summary>
 		/// <param name="bytes">The serialized request from the client.</param>
-		internal Request(ReadOnlySpan<byte> bytes)
+		internal Request(IEnumerable<byte> bytes)
 		{
+			if (bytes == null)
+				throw new ArgumentNullException(nameof(bytes));
+
 			Deserialize(bytes);
 		}
 
@@ -172,19 +175,21 @@ namespace AMWD.Modbus.Tcp.Protocol
 			return buffer.Buffer;
 		}
 
-		private void Deserialize(ReadOnlySpan<byte> bytes)
+		private void Deserialize(IEnumerable<byte> bytes)
 		{
-			TransactionId = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(0, 2));
-			ushort ident = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(2, 2));
+			var buffer = new DataBuffer(bytes);
+
+			TransactionId = buffer.GetUInt16(0);
+			ushort ident = buffer.GetUInt16(2);
 			if (ident != 0)
 				throw new ArgumentException("Protocol ident not valid");
 
-			ushort length = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(4, 2));
-			if (length + 6 != bytes.Length)
+			ushort length = buffer.GetUInt16(4);
+			if (length + 6 != bytes.Count())
 				throw new ArgumentException("Data incomplete");
 
-			DeviceId = bytes[6];
-			Function = (FunctionCode)bytes[7];
+			DeviceId = buffer.GetByte(6);
+			Function = (FunctionCode)buffer.GetByte(7);
 
 			switch (Function)
 			{
@@ -192,30 +197,30 @@ namespace AMWD.Modbus.Tcp.Protocol
 				case FunctionCode.ReadDiscreteInputs:
 				case FunctionCode.ReadHoldingRegisters:
 				case FunctionCode.ReadInputRegisters:
-					Address = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(8, 2));
-					Count = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(10, 2));
+					Address = buffer.GetUInt16(8);
+					Count = buffer.GetUInt16(10);
 					break;
 				case FunctionCode.WriteMultipleCoils:
 				case FunctionCode.WriteMultipleRegisters:
-					Address = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(8, 2));
-					Count = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(10, 2));
-					Data = new DataBuffer(bytes.Slice(12).ToArray());
+					Address = buffer.GetUInt16(8);
+					Count = buffer.GetUInt16(10);
+					Data = new DataBuffer(buffer.Buffer.Skip(12));
 					break;
 				case FunctionCode.WriteSingleCoil:
 				case FunctionCode.WriteSingleRegister:
-					Address = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(8, 2));
-					Data = new DataBuffer(bytes.Slice(10).ToArray());
+					Address = buffer.GetUInt16(8);
+					Data = new DataBuffer(buffer.Buffer.Skip(10));
 					break;
 				case FunctionCode.EncapsulatedInterface:
-					MEIType = (MEIType)bytes[8];
+					MEIType = (MEIType)buffer.GetByte(8);
 					switch (MEIType)
 					{
 						case MEIType.CANOpenGeneralReference:
-							Data = new DataBuffer(bytes.Slice(9).ToArray());
+							Data = new DataBuffer(buffer.Buffer.Skip(9));
 							break;
 						case MEIType.ReadDeviceInformation:
-							MEICategory = (DeviceIDCategory)bytes[9];
-							MEIObject = (DeviceIDObject)bytes[10];
+							MEICategory = (DeviceIDCategory)buffer.GetByte(9);
+							MEIObject = (DeviceIDObject)buffer.GetByte(10);
 							break;
 						default:
 							throw new NotImplementedException();
