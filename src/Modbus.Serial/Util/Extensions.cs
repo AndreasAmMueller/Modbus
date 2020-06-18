@@ -1,6 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
+using System.IO;
+using System.IO.Ports;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AMWD.Modbus.Serial.Util
@@ -59,5 +63,77 @@ namespace AMWD.Modbus.Serial.Util
 		}
 
 		#endregion Task handling
+
+		#region Async fixes
+
+		// idea found on: https://stackoverflow.com/a/54610437/11906695
+		internal static async Task<int> ReadAsync(this SerialPort serialPort, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+		{
+			// The async stream implementation on windows seems to be broken.
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			{
+				using (var cts = new CancellationTokenSource(serialPort.ReadTimeout))
+				using (cts.Token.Register(() => serialPort.DiscardInBuffer()))
+				using (cancellationToken.Register(() => cts.Cancel()))
+				{
+					try
+					{
+						return await serialPort.BaseStream.ReadAsync(buffer, offset, count, cts.Token);
+					}
+					catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+					{
+						cancellationToken.ThrowIfCancellationRequested();
+						return 0;
+					}
+					catch (OperationCanceledException) when (cts.IsCancellationRequested)
+					{
+						throw new TimeoutException("No bytes to read within the ReadTimeout.");
+					}
+					catch (IOException) when (cts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+					{
+						throw new TimeoutException("No bytes to read within the ReadTimeout.");
+					}
+				}
+			}
+			else
+			{
+				return await serialPort.BaseStream.ReadAsync(buffer, offset, count, cancellationToken);
+			}
+		}
+
+		internal static async Task WriteAsync(this SerialPort serialPort, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+		{
+			// The async stream implementation on windows seems to be broken.
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			{
+				using (var cts = new CancellationTokenSource(serialPort.WriteTimeout))
+				using (cts.Token.Register(() => serialPort.DiscardOutBuffer()))
+				using (cancellationToken.Register(() => cts.Cancel()))
+				{
+					try
+					{
+						await serialPort.BaseStream.WriteAsync(buffer, offset, count, cts.Token);
+					}
+					catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+					{
+						cancellationToken.ThrowIfCancellationRequested();
+					}
+					catch (OperationCanceledException) when (cts.IsCancellationRequested)
+					{
+						throw new TimeoutException("No bytes written within the WriteTimeout.");
+					}
+					catch (IOException) when (cts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+					{
+						throw new TimeoutException("No bytes written within the WriteTimeout.");
+					}
+				}
+			}
+			else
+			{
+				await serialPort.BaseStream.WriteAsync(buffer, offset, count, cancellationToken);
+			}
+		}
+
+		#endregion Async fixes
 	}
 }

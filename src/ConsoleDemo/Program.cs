@@ -11,6 +11,10 @@ using AMWD.Modbus.Common.Util;
 using AMWD.Modbus.Serial;
 using SerialClient = AMWD.Modbus.Serial.Client.ModbusClient;
 using TcpClient = AMWD.Modbus.Tcp.Client.ModbusClient;
+using SerialServer = AMWD.Modbus.Serial.Server.ModbusServer;
+using TcpServer = AMWD.Modbus.Tcp.Server.ModbusServer;
+using System.Threading;
+using System.Net;
 
 namespace ConsoleDemo
 {
@@ -22,7 +26,8 @@ namespace ConsoleDemo
 		{
 			try
 			{
-				MainAsync(args).GetAwaiter().GetResult();
+				ClientMainAsync(args).GetAwaiter().GetResult();
+				//ServerMain(args);
 			}
 			catch (Exception ex)
 			{
@@ -30,7 +35,7 @@ namespace ConsoleDemo
 			}
 		}
 
-		private static async Task MainAsync(string[] args)
+		private static async Task ClientMainAsync(string[] args)
 		{
 			Console.WriteLine("Console Demo Modbus Client");
 			Console.WriteLine();
@@ -267,6 +272,82 @@ namespace ConsoleDemo
 			finally
 			{
 				client?.Dispose();
+			}
+		}
+
+		private static void ServerMain(string[] args)
+		{
+			Console.WriteLine("Demo Modbus Server");
+			Console.WriteLine();
+
+			Console.Write("Connection Type [1] TCP, [2] RS485: ");
+			int cType = Convert.ToInt32(Console.ReadLine().Trim());
+
+			IModbusServer server = null;
+			try
+			{
+				bool run = true;
+				Console.CancelKeyPress += (object _, ConsoleCancelEventArgs evArgs) =>
+				{
+					evArgs.Cancel = true;
+					run = false;
+				};
+
+				switch(cType)
+				{
+					case 1:
+						{
+							Console.Write("Bind IP address: ");
+							var ip = IPAddress.Parse(Console.ReadLine().Trim());
+
+							Console.Write("Port: ");
+							int port = Convert.ToInt32(Console.ReadLine().Trim());
+
+							server = new TcpServer(port, ip);
+						}
+						break;
+					case 2:
+						{
+							Console.Write("Interface: ");
+							string port = Console.ReadLine().Trim();
+
+							Console.Write("Baud: ");
+							int baud = Convert.ToInt32(Console.ReadLine().Trim());
+
+							Console.Write("Stop-Bits [0|1|2|3=1.5]: ");
+							int stopBits = Convert.ToInt32(Console.ReadLine().Trim());
+
+							Console.Write("Parity [0] None [1] Odd [2] Even [3] Mark [4] Space: ");
+							int parity = Convert.ToInt32(Console.ReadLine().Trim());
+
+							Console.Write("Handshake [0] None [1] X-On/Off [2] RTS [3] RTS+X-On/Off: ");
+							int handshake = Convert.ToInt32(Console.ReadLine().Trim());
+
+							Console.Write("Timeout: ");
+							int timeout = Convert.ToInt32(Console.ReadLine().Trim());
+
+							server = new SerialServer(port)
+							{
+								BaudRate = (BaudRate)baud,
+								DataBits = 8,
+								StopBits = (StopBits)stopBits,
+								Parity = (Parity)parity,
+								Handshake = (Handshake)handshake,
+								SendTimeout = timeout,
+								ReceiveTimeout = timeout
+							};
+						}
+						break;
+					default:
+						throw new ArgumentException("Type unknown");
+				}
+
+				Console.WriteLine("Server is running... press CTRL+C to exit.");
+				SpinWait.SpinUntil(() => !run);
+			}
+			finally
+			{
+				server?.Dispose();
 			}
 		}
 	}

@@ -209,8 +209,9 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="startAddress">The first coil number to read.</param>
 		/// <param name="count">The number of coils to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of coils or null on error.</returns>
-		public async Task<List<Coil>> ReadCoils(byte deviceId, ushort startAddress, ushort count)
+		public async Task<List<Coil>> ReadCoils(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadCoils({deviceId}, {startAddress}, {count})");
 
@@ -233,7 +234,7 @@ namespace AMWD.Modbus.Tcp.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new SocketException((int)SocketError.TimedOut);
 
@@ -284,8 +285,9 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="startAddress">The first discrete input number to read.</param>
 		/// <param name="count">The number of discrete inputs to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of discrete inputs or null on error.</returns>
-		public async Task<List<DiscreteInput>> ReadDiscreteInputs(byte deviceId, ushort startAddress, ushort count)
+		public async Task<List<DiscreteInput>> ReadDiscreteInputs(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadDiscreteInputs({deviceId}, {startAddress}, {count})");
 
@@ -308,7 +310,7 @@ namespace AMWD.Modbus.Tcp.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new SocketException((int)SocketError.TimedOut);
 
@@ -359,8 +361,9 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="startAddress">The first register number to read.</param>
 		/// <param name="count">The number of registers to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		public async Task<List<Register>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count)
+		public async Task<List<Register>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadHoldingRegisters({deviceId}, {startAddress}, {count})");
 
@@ -383,7 +386,7 @@ namespace AMWD.Modbus.Tcp.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new SocketException((int)SocketError.TimedOut);
 
@@ -430,8 +433,9 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="startAddress">The first register number to read.</param>
 		/// <param name="count">The number of registers to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		public async Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count)
+		public async Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadInputRegisters({deviceId}, {startAddress}, {count})");
 
@@ -454,7 +458,7 @@ namespace AMWD.Modbus.Tcp.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new SocketException((int)SocketError.TimedOut);
 
@@ -501,10 +505,11 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="categoryId">The category to read (basic, regular, extended, individual).</param>
 		/// <param name="objectId">The first object id to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A map of device information and their content as string.</returns>
-		public async Task<Dictionary<DeviceIDObject, string>> ReadDeviceInformation(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName)
+		public async Task<Dictionary<DeviceIDObject, string>> ReadDeviceInformation(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			var raw = await ReadDeviceInformationRaw(deviceId, categoryId, objectId);
+			var raw = await ReadDeviceInformationRaw(deviceId, categoryId, objectId, cancellationToken);
 			if (raw == null)
 				return null;
 
@@ -522,8 +527,9 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="categoryId">The category to read (basic, regular, extended, individual).</param>
 		/// <param name="objectId">The first object id to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A map of device information and their content as raw bytes.</returns>
-		public async Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName)
+		public async Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadDeviceInformation({deviceId}, {categoryId}, {objectId})");
 
@@ -540,7 +546,7 @@ namespace AMWD.Modbus.Tcp.Client
 					MEICategory = categoryId,
 					MEIObject = objectId
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new SocketException((int)SocketError.TimedOut);
 
@@ -603,8 +609,9 @@ namespace AMWD.Modbus.Tcp.Client
 		/// </summary>
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="coil">The coil to write.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteSingleCoil(byte deviceId, Coil coil)
+		public async Task<bool> WriteSingleCoil(byte deviceId, Coil coil, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.WriteSingleCoil({deviceId}, {coil})");
 
@@ -628,7 +635,7 @@ namespace AMWD.Modbus.Tcp.Client
 				};
 				ushort value = (ushort)(coil.Value ? 0xFF00 : 0x0000);
 				request.Data.SetUInt16(0, value);
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new SocketException((int)SocketError.TimedOut);
 
@@ -669,8 +676,9 @@ namespace AMWD.Modbus.Tcp.Client
 		/// </summary>
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="register">The register to write.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteSingleRegister(byte deviceId, Register register)
+		public async Task<bool> WriteSingleRegister(byte deviceId, Register register, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.WriteSingleRegister({deviceId}, {register})");
 			if (isDisposed)
@@ -694,7 +702,7 @@ namespace AMWD.Modbus.Tcp.Client
 					Address = register.Address,
 					Data = new DataBuffer(new[] { register.HiByte, register.LoByte })
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request,cancellationToken);
 				if (response.IsTimeout)
 					throw new SocketException((int)SocketError.TimedOut);
 
@@ -735,8 +743,9 @@ namespace AMWD.Modbus.Tcp.Client
 		/// </summary>
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="coils">A list of coils to write.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteCoils(byte deviceId, IEnumerable<Coil> coils)
+		public async Task<bool> WriteCoils(byte deviceId, IEnumerable<Coil> coils, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.WriteCoils({deviceId}, Length: {coils.Count()})");
 
@@ -783,7 +792,7 @@ namespace AMWD.Modbus.Tcp.Client
 					Count = (ushort)orderedList.Count,
 					Data = new DataBuffer(coilBytes)
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new SocketException((int)SocketError.TimedOut);
 
@@ -822,8 +831,9 @@ namespace AMWD.Modbus.Tcp.Client
 		/// </summary>
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="registers">A list of registers to write.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteRegisters(byte deviceId, IEnumerable<Register> registers)
+		public async Task<bool> WriteRegisters(byte deviceId, IEnumerable<Register> registers, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.WriteRegisters({deviceId}, Length: {registers.Count()})");
 			if (isDisposed)
@@ -864,7 +874,7 @@ namespace AMWD.Modbus.Tcp.Client
 					Count = (ushort)orderedList.Count,
 					Data = data
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new SocketException((int)SocketError.TimedOut);
 
@@ -1019,40 +1029,50 @@ namespace AMWD.Modbus.Tcp.Client
 			var stream = tcpClient.GetStream();
 
 			var tcs = new TaskCompletionSource<Response>();
-			using (ct.Register(() => tcs.TrySetCanceled()))
+
+			try
 			{
-				try
+				using (var cts = new CancellationTokenSource())
+				using (cts.Token.Register(() => tcs.TrySetCanceled()))
+				using (ct.Register(() => cts.Cancel()))
+				using (mainCts.Token.Register(() => cts.Cancel()))
 				{
-					lock (syncLock)
+					try
 					{
-						request.TransactionId = transactionId;
-						transactionId++;
-
-						awaitedResponses[request.TransactionId] = tcs;
-					}
-
-					logger?.LogTrace(request.ToString());
-
-					byte[] bytes = request.Serialize();
-					var task = stream.WriteAsync(bytes, 0, bytes.Length, ct);
-					if (await Task.WhenAny(task, Task.Delay(SendTimeout, ct)) == task && !ct.IsCancellationRequested)
-					{
-						logger?.LogTrace("ModbusClient.SendRequest - Request sent");
-						if (await Task.WhenAny(tcs.Task, Task.Delay(ReceiveTimeout, ct)) == tcs.Task && !ct.IsCancellationRequested)
+						lock (syncLock)
 						{
-							logger?.LogTrace("ModbusClient.SendRequest - Response received");
-							var response = await tcs.Task;
-							return response;
+							request.TransactionId = transactionId;
+							transactionId++;
+
+							awaitedResponses[request.TransactionId] = tcs;
+						}
+
+						logger?.LogTrace(request.ToString());
+
+						byte[] bytes = request.Serialize();
+						var task = stream.WriteAsync(bytes, 0, bytes.Length, cts.Token);
+						if (await Task.WhenAny(task, Task.Delay(SendTimeout, cts.Token)) == task && !cts.Token.IsCancellationRequested)
+						{
+							logger?.LogTrace("ModbusClient.SendRequest - Request sent");
+							if (await Task.WhenAny(tcs.Task, Task.Delay(ReceiveTimeout, cts.Token)) == tcs.Task && !cts.Token.IsCancellationRequested)
+							{
+								logger?.LogTrace("ModbusClient.SendRequest - Response received");
+								var response = await tcs.Task;
+								return response;
+							}
 						}
 					}
+					catch (Exception ex)
+					{
+						logger?.LogError(ex, $"ModbusClient.SendRequest - Transaction {request.TransactionId}");
+					}
 				}
-				catch (Exception ex)
-				{
-					logger?.LogError(ex, $"ModbusClient.SendRequest - Transaction {request.TransactionId}");
-				}
-
-				return new Response(new byte[] { 0, 0, 0, 0, 0, 0 });
 			}
+			catch (OperationCanceledException) when (mainCts.IsCancellationRequested)
+			{
+				// keep it quiet on shutdown
+			}
+			return new Response(new byte[] { 0, 0, 0, 0, 0, 0 });
 		}
 
 		private async Task Reconnect(CancellationToken ct)

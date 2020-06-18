@@ -341,8 +341,9 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="startAddress">The first coil number to read.</param>
 		/// <param name="count">The number of coils to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of coils or null on error.</returns>
-		public async Task<List<Coil>> ReadCoils(byte deviceId, ushort startAddress, ushort count)
+		public async Task<List<Coil>> ReadCoils(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadCoils({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -364,7 +365,7 @@ namespace AMWD.Modbus.Serial.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new IOException("Request timed out");
 
@@ -402,8 +403,9 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="startAddress">The first discrete input number to read.</param>
 		/// <param name="count">The number of discrete inputs to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of discrete inputs or null on error.</returns>
-		public async Task<List<DiscreteInput>> ReadDiscreteInputs(byte deviceId, ushort startAddress, ushort count)
+		public async Task<List<DiscreteInput>> ReadDiscreteInputs(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadDiscreteInputs({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -425,7 +427,7 @@ namespace AMWD.Modbus.Serial.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new IOException("Request timed out");
 
@@ -463,8 +465,9 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="startAddress">The first register number to read.</param>
 		/// <param name="count">The number of registers to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		public async Task<List<Register>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count)
+		public async Task<List<Register>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadHoldingRegisters({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -486,7 +489,7 @@ namespace AMWD.Modbus.Serial.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new IOException("Request timed out");
 
@@ -520,8 +523,9 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="startAddress">The first register number to read.</param>
 		/// <param name="count">The number of registers to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		public async Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count)
+		public async Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadInputRegisters({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -543,7 +547,7 @@ namespace AMWD.Modbus.Serial.Client
 					Address = startAddress,
 					Count = count
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new IOException("Request timed out");
 
@@ -577,10 +581,11 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="categoryId">The category to read (basic, regular, extended, individual).</param>
 		/// <param name="objectId">The first object id to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A map of device information and their content as string.</returns>
-		public async Task<Dictionary<DeviceIDObject, string>> ReadDeviceInformation(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName)
+		public async Task<Dictionary<DeviceIDObject, string>> ReadDeviceInformation(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			var raw = await ReadDeviceInformationRaw(deviceId, categoryId, objectId);
+			var raw = await ReadDeviceInformationRaw(deviceId, categoryId, objectId, cancellationToken);
 			if (raw == null)
 				return null;
 
@@ -598,8 +603,9 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="categoryId">The category to read (basic, regular, extended, individual).</param>
 		/// <param name="objectId">The first object id to read.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A map of device information and their content as raw bytes.</returns>>
-		public async Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName)
+		public async Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadDeviceInformation({deviceId}, {categoryId}, {objectId})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -615,7 +621,7 @@ namespace AMWD.Modbus.Serial.Client
 					MEICategory = categoryId,
 					MEIObject = objectId
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 
 				if (response.IsTimeout)
 					throw new IOException("Request timed out");
@@ -666,8 +672,9 @@ namespace AMWD.Modbus.Serial.Client
 		/// </summary>
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="coil">The coil to write.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteSingleCoil(byte deviceId, Coil coil)
+		public async Task<bool> WriteSingleCoil(byte deviceId, Coil coil, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.WriteSingleRegister({deviceId}, {coil})");
 			if (coil == null)
@@ -690,7 +697,7 @@ namespace AMWD.Modbus.Serial.Client
 				};
 				ushort value = (ushort)(coil.Value ? 0xFF00 : 0x0000);
 				request.Data.SetUInt16(0, value);
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new ModbusException("Response timed out. Device id invalid?");
 
@@ -717,8 +724,9 @@ namespace AMWD.Modbus.Serial.Client
 		/// </summary>
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="register">The register to write.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteSingleRegister(byte deviceId, Register register)
+		public async Task<bool> WriteSingleRegister(byte deviceId, Register register, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.WriteSingleRegister({deviceId}, {register})");
 			if (register == null)
@@ -739,7 +747,7 @@ namespace AMWD.Modbus.Serial.Client
 					Address = register.Address,
 					Data = new DataBuffer(new[] { register.HiByte, register.LoByte })
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new ModbusException("Response timed out. Device id invalid?");
 
@@ -766,8 +774,9 @@ namespace AMWD.Modbus.Serial.Client
 		/// </summary>
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="coils">A list of coils to write.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteCoils(byte deviceId, IEnumerable<Coil> coils)
+		public async Task<bool> WriteCoils(byte deviceId, IEnumerable<Coil> coils, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.WriteCoils({deviceId}, Length: {coils.Count()})");
 			if (coils == null || !coils.Any())
@@ -813,7 +822,7 @@ namespace AMWD.Modbus.Serial.Client
 					Count = (ushort)orderedList.Count,
 					Data = new DataBuffer(coilBytes)
 				};
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new ModbusException("Response timed out. Device id invalid?");
 
@@ -838,8 +847,9 @@ namespace AMWD.Modbus.Serial.Client
 		/// </summary>
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="registers">A list of registers to write.</param>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteRegisters(byte deviceId, IEnumerable<Register> registers)
+		public async Task<bool> WriteRegisters(byte deviceId, IEnumerable<Register> registers, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.WriteRegisters({deviceId}, Length: {registers.Count()})");
 			if (registers == null || !registers.Any())
@@ -877,7 +887,7 @@ namespace AMWD.Modbus.Serial.Client
 				{
 					request.Data.SetUInt16(i * 2 + 1, orderedList[i].Value);
 				}
-				var response = await SendRequest(request, mainCts.Token);
+				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
 					throw new ModbusException("Response timed out. Device id invalid?");
 
@@ -921,87 +931,95 @@ namespace AMWD.Modbus.Serial.Client
 				throw new InvalidOperationException("Client is not connected");
 			}
 
-			try
+			using (var cts = new CancellationTokenSource())
+			using (ct.Register(() => cts.Cancel()))
+			using (mainCts.Token.Register(() => cts.Cancel()))
 			{
-				await sendMutex.WaitAsync(ct);
-				logger?.LogTrace(request.ToString());
+				try
+				{
+					await sendMutex.WaitAsync(cts.Token);
+					logger?.LogTrace(request.ToString());
 
-				await serialPort.BaseStream.FlushAsync();
-				serialPort.DiscardInBuffer();
-				serialPort.DiscardOutBuffer();
+					// clear all data
+					await serialPort.BaseStream.FlushAsync();
+					serialPort.DiscardInBuffer();
+					serialPort.DiscardOutBuffer();
 
-				byte[] bytes = request.Serialize();
-				await serialPort.BaseStream.WriteAsync(bytes, 0, bytes.Length);
-				await serialPort.BaseStream.FlushAsync();
+					byte[] bytes = request.Serialize();
+					await serialPort.WriteAsync(bytes, 0, bytes.Length, cts.Token);
 
-				var responseBytes = new List<byte>
+					var responseBytes = new List<byte>
 				{
 					// Device/Slave ID
-					await ReadByte()
+					await ReadByte(cts.Token)
 				};
 
-				// Function number
-				byte fn = await ReadByte();
-				responseBytes.Add(fn);
+					// Function number
+					byte fn = await ReadByte(cts.Token);
+					responseBytes.Add(fn);
 
-				byte expectedBytes = 0;
-				var function = (FunctionCode)((fn & Consts.ErrorMask) > 0 ? fn ^ Consts.ErrorMask : fn);
-				switch (function)
-				{
-					case FunctionCode.ReadCoils:
-					case FunctionCode.ReadDiscreteInputs:
-					case FunctionCode.ReadHoldingRegisters:
-					case FunctionCode.ReadInputRegisters:
-						expectedBytes = await ReadByte();
-						responseBytes.Add(expectedBytes);
-						break;
-					case FunctionCode.WriteSingleCoil:
-					case FunctionCode.WriteSingleRegister:
-					case FunctionCode.WriteMultipleCoils:
-					case FunctionCode.WriteMultipleRegisters:
-						expectedBytes = 4;
-						break;
-					case FunctionCode.EncapsulatedInterface:
-						responseBytes.AddRange(await ReadBytes(6));
-						byte count = responseBytes.Last();
-						for (int i = 0; i < count; i++)
-						{
-							// id
-							responseBytes.Add(await ReadByte());
-							// length
-							expectedBytes = await ReadByte();
+					byte expectedBytes = 0;
+					var function = (FunctionCode)((fn & Consts.ErrorMask) > 0 ? fn ^ Consts.ErrorMask : fn);
+					switch (function)
+					{
+						case FunctionCode.ReadCoils:
+						case FunctionCode.ReadDiscreteInputs:
+						case FunctionCode.ReadHoldingRegisters:
+						case FunctionCode.ReadInputRegisters:
+							expectedBytes = await ReadByte(cts.Token);
 							responseBytes.Add(expectedBytes);
-							// value
-							responseBytes.AddRange(await ReadBytes(expectedBytes));
-						}
-						expectedBytes = 0;
-						break;
-					default:
-						if ((fn & Consts.ErrorMask) == 0)
-						{
-							throw new NotImplementedException();
-						}
+							break;
+						case FunctionCode.WriteSingleCoil:
+						case FunctionCode.WriteSingleRegister:
+						case FunctionCode.WriteMultipleCoils:
+						case FunctionCode.WriteMultipleRegisters:
+							expectedBytes = 4;
+							break;
+						case FunctionCode.EncapsulatedInterface:
+							responseBytes.AddRange(await ReadBytes(6, cts.Token));
+							byte count = responseBytes.Last();
+							for (int i = 0; i < count; i++)
+							{
+								// id
+								responseBytes.Add(await ReadByte(cts.Token));
+								// length
+								expectedBytes = await ReadByte(cts.Token);
+								responseBytes.Add(expectedBytes);
+								// value
+								responseBytes.AddRange(await ReadBytes(expectedBytes, cts.Token));
+							}
+							expectedBytes = 0;
+							break;
+						default:
+							if ((fn & Consts.ErrorMask) == 0)
+							{
+								throw new NotImplementedException();
+							}
 
-						expectedBytes = 1;
-						break;
+							expectedBytes = 1;
+							break;
+					}
+
+					expectedBytes += 2; // CRC Check
+
+					responseBytes.AddRange(await ReadBytes(expectedBytes, cts.Token));
+
+					logger?.LogTrace($"Response received");
+
+					return new Response(responseBytes.ToArray());
 				}
-
-				expectedBytes += 2; // CRC Check
-
-				responseBytes.AddRange(await ReadBytes(expectedBytes));
-
-				logger?.LogTrace($"Response received");
-
-				await Task.CompletedTask;
-				return new Response(responseBytes.ToArray());
-			}
-			catch (Exception ex)
-			{
-				logger?.LogError(ex, "Sending Request");
-			}
-			finally
-			{
-				sendMutex.Release();
+				catch (OperationCanceledException) when (mainCts.IsCancellationRequested)
+				{
+					// keep it quiet on shutdown
+				}
+				catch (Exception ex)
+				{
+					logger?.LogError(ex, "Sending Request");
+				}
+				finally
+				{
+					sendMutex.Release();
+				}
 			}
 
 			return new Response(new byte[] { 0, 0, 0, 0, 0, 0 });
@@ -1031,6 +1049,7 @@ namespace AMWD.Modbus.Serial.Client
 					{
 						try
 						{
+							serialPort?.Close();
 							serialPort?.Dispose();
 							serialPort = new SerialPort
 							{
@@ -1187,27 +1206,26 @@ namespace AMWD.Modbus.Serial.Client
 			}
 		}
 
-		private async Task<byte> ReadByte()
+		private async Task<byte> ReadByte(CancellationToken cancellationToken)
 		{
-			return (await ReadBytes(1)).First();
+			return (await ReadBytes(1, cancellationToken))[0];
 		}
 
-		private async Task<IEnumerable<byte>> ReadBytes(int length)
+		private async Task<byte[]> ReadBytes(int length, CancellationToken cancellationToken)
 		{
 			if (!IsConnected)
 				throw new InvalidOperationException("No connection");
 
-			var bytes = new List<byte>(length);
-			do
+			byte[] buffer = new byte[length];
+			for (int offset = 0; offset < buffer.Length;)
 			{
-				byte[] buffer = new byte[length];
-				int count = await serialPort.BaseStream.ReadAsync(buffer, 0, buffer.Length);
-				bytes.AddRange(buffer.Take(count));
-				length -= count;
+				int count = await serialPort.ReadAsync(buffer, offset, buffer.Length - offset, cancellationToken);
+				if (count < 1)
+					throw new EndOfStreamException($"Expected to read {buffer.Length - offset} more bytes but end of stream is reached.");
+				offset += count;
 			}
-			while (length > 0);
 
-			return bytes;
+			return buffer;
 		}
 
 		#endregion Private Methods
