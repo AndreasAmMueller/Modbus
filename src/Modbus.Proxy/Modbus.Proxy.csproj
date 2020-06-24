@@ -14,6 +14,7 @@
     <AssemblyName>AMWD.Modbus.Proxy</AssemblyName>
     <RootNamespace>AMWD.Modbus.Proxy</RootNamespace>
     <NrtRevisionFormat>{semvertag:master}</NrtRevisionFormat>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>

@@ -14,6 +14,7 @@
     <AssemblyName>AMWD.Modbus.Serial</AssemblyName>
     <RootNamespace>AMWD.Modbus.Serial</RootNamespace>
     <NrtRevisionFormat>{semvertag:master}</NrtRevisionFormat>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
