@@ -25,7 +25,7 @@ namespace AMWD.Modbus.Serial.Client
 		#region Fields
 
 		// Optional logger for all actions
-		private readonly ILogger<ModbusClient> logger;
+		private readonly ILogger logger;
 
 		// The serial port to connect to the remote.
 		private SerialPort serialPort;
@@ -37,7 +37,7 @@ namespace AMWD.Modbus.Serial.Client
 		private Handshake handshake = Handshake.None;
 		private int sendTimeout = 1000;
 		private int receiveTimeout = 1000;
-		private int bufferSize = 4096;
+		private int bufferSize = 0;
 
 		// driver switch
 		private RS485Flags serialDriverFlags;
@@ -74,7 +74,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// </summary>
 		/// <param name="portName">The serial port name.</param>
 		/// <param name="logger"><see cref="ILogger"/> instance to write log entries.</param>
-		public ModbusClient(string portName, ILogger<ModbusClient> logger = null)
+		public ModbusClient(string portName, ILogger logger = null)
 		{
 			this.logger = logger;
 
@@ -241,7 +241,7 @@ namespace AMWD.Modbus.Serial.Client
 		{
 			get
 			{
-				return bufferSize;
+				return serialPort == null ? bufferSize : serialPort.ReadBufferSize;
 			}
 			set
 			{
@@ -1051,19 +1051,23 @@ namespace AMWD.Modbus.Serial.Client
 						{
 							serialPort?.Close();
 							serialPort?.Dispose();
-							serialPort = new SerialPort
+							serialPort = new SerialPort(PortName)
 							{
-								PortName = PortName,
 								BaudRate = (int)BaudRate,
 								DataBits = DataBits,
 								Parity = Parity,
 								StopBits = StopBits,
 								Handshake = Handshake,
 								ReadTimeout = ReceiveTimeout,
-								WriteTimeout = SendTimeout,
-								ReadBufferSize = bufferSize,
-								WriteBufferSize = bufferSize
+								WriteTimeout = SendTimeout
 							};
+
+							if (bufferSize > 0)
+							{
+								serialPort.ReadBufferSize = bufferSize;
+								serialPort.WriteBufferSize = bufferSize;
+							}
+
 
 							var task = Task.Run(() => serialPort.Open());
 							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task && serialPort.IsOpen)
