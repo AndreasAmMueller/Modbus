@@ -122,6 +122,9 @@ namespace AMWD.Modbus.Serial.Client
 			}
 			set
 			{
+				if (value < 5 || 8 < value)
+					throw new ArgumentOutOfRangeException("Only DataBits from 5 to 8 are allowed.");
+
 				dataBits = value;
 
 				if (serialPort != null)
@@ -158,6 +161,9 @@ namespace AMWD.Modbus.Serial.Client
 			}
 			set
 			{
+				if (value == StopBits.None)
+					throw new ArgumentOutOfRangeException("StopBits.None is not a valid value.");
+
 				stopBits = value;
 
 				if (serialPort != null)
@@ -949,10 +955,10 @@ namespace AMWD.Modbus.Serial.Client
 					await serialPort.WriteAsync(bytes, 0, bytes.Length, cts.Token);
 
 					var responseBytes = new List<byte>
-				{
-					// Device/Slave ID
-					await ReadByte(cts.Token)
-				};
+					{
+						// Device/Slave ID
+						await ReadByte(cts.Token)
+					};
 
 					// Function number
 					byte fn = await ReadByte(cts.Token);
@@ -1012,6 +1018,11 @@ namespace AMWD.Modbus.Serial.Client
 				{
 					// keep it quiet on shutdown
 				}
+				catch (TimeoutException)
+				{
+					// request timed out, will be logged in the requesting method.
+					// no need to log here.
+				}
 				catch (Exception ex)
 				{
 					logger?.LogError(ex, "Sending Request");
@@ -1051,6 +1062,7 @@ namespace AMWD.Modbus.Serial.Client
 						{
 							serialPort?.Close();
 							serialPort?.Dispose();
+
 							serialPort = new SerialPort(PortName)
 							{
 								BaudRate = (int)BaudRate,
@@ -1067,7 +1079,6 @@ namespace AMWD.Modbus.Serial.Client
 								serialPort.ReadBufferSize = bufferSize;
 								serialPort.WriteBufferSize = bufferSize;
 							}
-
 
 							var task = Task.Run(() => serialPort.Open());
 							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task && serialPort.IsOpen)
