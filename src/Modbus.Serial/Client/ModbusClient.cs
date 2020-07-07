@@ -321,7 +321,7 @@ namespace AMWD.Modbus.Serial.Client
 			wasConnected = false;
 			mainCts = new CancellationTokenSource();
 
-			Task.Run(() => Reconnect(mainCts.Token));
+			Task.Run(() => Reconnect(mainCts.Token)).Forget();
 			ConnectingTask = GetWaitTask(mainCts.Token);
 
 			return ConnectingTask;
@@ -1060,7 +1060,6 @@ namespace AMWD.Modbus.Serial.Client
 					{
 						try
 						{
-							serialPort?.Close();
 							serialPort?.Dispose();
 
 							serialPort = new SerialPort(PortName)
@@ -1081,14 +1080,23 @@ namespace AMWD.Modbus.Serial.Client
 							}
 
 							var task = Task.Run(() => serialPort.Open());
-							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task && serialPort.IsOpen)
+							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task)
 							{
-								logger?.LogInformation("ModbusClient.Reconnect connected");
-								Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
-								reconnectTcs.TrySetResult(true);
-								reconnectTcs = null;
-								wasConnected = true;
-								return;
+								if (serialPort.IsOpen)
+								{
+									logger?.LogInformation("ModbusClient.Reconnect connected");
+									Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
+									reconnectTcs.TrySetResult(true);
+									reconnectTcs = null;
+									wasConnected = true;
+									return;
+								}
+								else
+								{
+									logger?.LogError($"ModbusClient.Reconnect failed to open port {serialPort.PortName}");
+									reconnectTcs.TrySetException((Exception)task.Exception ?? new IOException("Serial port not opened"));
+									return;
+								}
 							}
 							else if (ct.IsCancellationRequested)
 							{
@@ -1097,7 +1105,7 @@ namespace AMWD.Modbus.Serial.Client
 							}
 							else
 							{
-								logger?.LogWarning($"ModbusClient.Reconnect failed to connect withing {timeout} seconds");
+								logger?.LogWarning($"ModbusClient.Reconnect failed to connect within {timeout} seconds");
 								timeout += 2;
 								if (timeout > maxTimeout)
 									timeout = maxTimeout;
@@ -1107,13 +1115,19 @@ namespace AMWD.Modbus.Serial.Client
 						}
 						catch (IOException) when (ReconnectTimeSpan == TimeSpan.MaxValue || DateTime.UtcNow <= startTime + ReconnectTimeSpan)
 						{
-							await Task.Delay(1000, ct);
+							try
+							{
+								await Task.Delay(1000, ct);
+							}
+							catch (OperationCanceledException)
+							{ /* Keep it quiet */ }
 							continue;
 						}
 						catch (Exception ex)
 						{
 							logger?.LogError(ex, "ModbusClient.Reconnect failed");
 							reconnectTcs.TrySetException(ex);
+							return;
 						}
 					}
 				}
