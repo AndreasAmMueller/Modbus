@@ -114,14 +114,14 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="address">The address.</param>
 		/// <returns></returns>
-		public Register GetInputRegister(ushort address)
+		public InputRegister GetInputRegister(ushort address)
 		{
 			using (inputRegistersLock.GetReadLock())
 			{
 				if (inputRegisters.TryGetValue(address, out ushort value))
-					return new Register { Address = address, Value = value };
+					return new InputRegister { Address = address, Value = value };
 			}
-			return new Register { Address = address };
+			return new InputRegister { Address = address };
 		}
 
 		/// <summary>
@@ -153,14 +153,14 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="address">The address.</param>
 		/// <returns></returns>
-		public Register GetHoldingRegister(ushort address)
+		public HoldingRegister GetHoldingRegister(ushort address)
 		{
 			using (holdingRegistersLock.GetReadLock())
 			{
 				if (holdingRegisters.TryGetValue(address, out ushort value))
-					return new Register { Address = address, Value = value };
+					return new HoldingRegister { Address = address, Value = value };
 			}
-			return new Register { Address = address };
+			return new HoldingRegister { Address = address };
 		}
 
 		/// <summary>

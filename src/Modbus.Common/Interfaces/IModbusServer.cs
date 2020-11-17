@@ -15,10 +15,10 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <summary>
 		/// Raised when a coil was written.
 		/// </summary>
-		event EventHandler<WriteEventArgs> CoilWritten;
+		event EventHandler<WriteEventArgs> InputWritten;
 
 		/// <summary>
-		/// Raised when a register was written.
+		/// Raised when a holding register was written.
 		/// </summary>
 		event EventHandler<WriteEventArgs> RegisterWritten;
 
@@ -116,7 +116,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="registerNumber">The input register address.</param>
 		/// <returns>The input register.</returns>
-		Register GetInputRegister(byte deviceId, ushort registerNumber);
+		InputRegister GetInputRegister(byte deviceId, ushort registerNumber);
 
 		/// <summary>
 		/// Sets an input register of a device.
@@ -140,7 +140,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="register">The input register.</param>
-		void SetInputRegister(byte deviceId, Register register);
+		void SetInputRegister(byte deviceId, InputRegister register);
 
 		#endregion Input Registers
 
@@ -152,7 +152,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="registerNumber">The holding register address.</param>
 		/// <returns>The holding register.</returns>
-		Register GetHoldingRegister(byte deviceId, ushort registerNumber);
+		HoldingRegister GetHoldingRegister(byte deviceId, ushort registerNumber);
 
 		/// <summary>
 		/// Sets a holding register of a device.
@@ -176,7 +176,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="register">The register.</param>
-		void SetHoldingRegister(byte deviceId, Register register);
+		void SetHoldingRegister(byte deviceId, HoldingRegister register);
 
 		#endregion Holding Registers
 
@@ -213,6 +213,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="coil">The coil.</param>
 		public WriteEventArgs(byte deviceId, Coil coil)
 		{
+			DeviceId = deviceId;
 			Coils = new List<Coil> { coil };
 		}
 
@@ -223,6 +224,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="coils">A list of coils.</param>
 		public WriteEventArgs(byte deviceId, List<Coil> coils)
 		{
+			DeviceId = deviceId;
 			Coils = coils;
 		}
 
@@ -231,9 +233,10 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="register">The register.</param>
-		public WriteEventArgs(byte deviceId, Register register)
+		public WriteEventArgs(byte deviceId, HoldingRegister register)
 		{
-			Registers = new List<Register> { register };
+			DeviceId = deviceId;
+			Registers = new List<HoldingRegister> { register };
 		}
 
 		/// <summary>
@@ -241,10 +244,16 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="registers">A list of registers.</param>
-		public WriteEventArgs(byte deviceId, List<Register> registers)
+		public WriteEventArgs(byte deviceId, List<HoldingRegister> registers)
 		{
+			DeviceId = deviceId;
 			Registers = registers;
 		}
+
+		/// <summary>
+		/// Gets the device id of the written values.
+		/// </summary>
+		public byte DeviceId { get; private set; }
 
 		/// <summary>
 		/// Gets a list of written coils.
@@ -254,6 +263,6 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <summary>
 		/// Gets a list of written registers.
 		/// </summary>
-		public List<Register> Registers { get; private set; }
+		public List<HoldingRegister> Registers { get; private set; }
 	}
 }

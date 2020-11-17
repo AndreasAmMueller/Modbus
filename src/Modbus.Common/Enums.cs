@@ -224,4 +224,31 @@ namespace AMWD.Modbus.Common
 		[Description("Gateway target device failed to respond")]
 		GatewayTargetDevice = 11
 	}
+
+	/// <summary>
+	/// Defines the specific type when working with abstract base classes.
+	/// </summary>
+	public enum ValueType
+	{
+		/// <summary>
+		/// The type is unknown (should not happen).
+		/// </summary>
+		Unknown,
+		/// <summary>
+		/// The discrete value is a coil (read/write).
+		/// </summary>
+		Coil,
+		/// <summary>
+		/// The discrete value is an input (read only).
+		/// </summary>
+		DiscreteInput,
+		/// <summary>
+		/// The value is an holding register (read/write).
+		/// </summary>
+		HoldingRegister,
+		/// <summary>
+		/// The value is an input register (read only).
+		/// </summary>
+		InputRegister
+	}
 }

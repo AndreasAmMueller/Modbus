@@ -86,7 +86,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="count">The number of registers to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		Task<List<Register>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken));
+		Task<List<HoldingRegister>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken));
 
 		/// <summary>
 		/// Reads one or more input registers of a device. (Modbus function 4).
@@ -96,7 +96,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="count">The number of registers to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken));
+		Task<List<InputRegister>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken));
 
 		/// <summary>
 		/// Reads device information. (Modbus function 43).
@@ -132,13 +132,13 @@ namespace AMWD.Modbus.Common.Interfaces
 		Task<bool> WriteSingleCoil(byte deviceId, Coil coil, CancellationToken cancellationToken = default(CancellationToken));
 
 		/// <summary>
-		/// Writes a single register to the Modbus device. (Modbus function 6)
+		/// Writes a single holding register to the Modbus device. (Modbus function 6)
 		/// </summary>
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="register">The register to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		Task<bool> WriteSingleRegister(byte deviceId, Register register, CancellationToken cancellationToken = default(CancellationToken));
+		Task<bool> WriteSingleRegister(byte deviceId, HoldingRegister register, CancellationToken cancellationToken = default(CancellationToken));
 
 		/// <summary>
 		/// Writes multiple coil status to the Modbus device. (Modbus function 15)
@@ -150,13 +150,13 @@ namespace AMWD.Modbus.Common.Interfaces
 		Task<bool> WriteCoils(byte deviceId, IEnumerable<Coil> coils, CancellationToken cancellationToken = default(CancellationToken));
 
 		/// <summary>
-		/// Writes multiple registers to the Modbus device. (Modbus function 16)
+		/// Writes multiple holding registers to the Modbus device. (Modbus function 16)
 		/// </summary>
 		/// <param name="deviceId">The id to address the device (slave).</param>
 		/// <param name="registers">A list of registers to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		Task<bool> WriteRegisters(byte deviceId, IEnumerable<Register> registers, CancellationToken cancellationToken = default(CancellationToken));
+		Task<bool> WriteRegisters(byte deviceId, IEnumerable<HoldingRegister> registers, CancellationToken cancellationToken = default(CancellationToken));
 
 		#endregion Write methods
 	}

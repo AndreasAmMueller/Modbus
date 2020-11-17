@@ -473,7 +473,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="count">The number of registers to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		public async Task<List<Register>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<List<HoldingRegister>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadHoldingRegisters({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -485,7 +485,7 @@ namespace AMWD.Modbus.Serial.Client
 			if (count < Consts.MinCount || Consts.MaxRegisterCountRead < count)
 				throw new ArgumentOutOfRangeException(nameof(count));
 
-			List<Register> list = null;
+			List<HoldingRegister> list = null;
 			try
 			{
 				var request = new Request
@@ -502,10 +502,10 @@ namespace AMWD.Modbus.Serial.Client
 				if (response.IsError)
 					throw new ModbusException(response.ErrorMessage);
 
-				list = new List<Register>();
+				list = new List<HoldingRegister>();
 				for (int i = 0; i < count; i++)
 				{
-					list.Add(new Register
+					list.Add(new HoldingRegister
 					{
 						Address = (ushort)(startAddress + i),
 						HiByte = response.Data[i * 2],
@@ -531,7 +531,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="count">The number of registers to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		public async Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<List<InputRegister>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.ReadInputRegisters({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -543,7 +543,7 @@ namespace AMWD.Modbus.Serial.Client
 			if (count < Consts.MinCount || Consts.MaxRegisterCountRead < count)
 				throw new ArgumentOutOfRangeException(nameof(count));
 
-			List<Register> list = null;
+			List<InputRegister> list = null;
 			try
 			{
 				var request = new Request
@@ -560,10 +560,10 @@ namespace AMWD.Modbus.Serial.Client
 				if (response.IsError)
 					throw new ModbusException(response.ErrorMessage);
 
-				list = new List<Register>();
+				list = new List<InputRegister>();
 				for (int i = 0; i < count; i++)
 				{
-					list.Add(new Register
+					list.Add(new InputRegister
 					{
 						Address = (ushort)(startAddress + i),
 						HiByte = response.Data[i * 2],
@@ -732,7 +732,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="register">The register to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteSingleRegister(byte deviceId, Register register, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<bool> WriteSingleRegister(byte deviceId, HoldingRegister register, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.WriteSingleRegister({deviceId}, {register})");
 			if (register == null)
@@ -855,7 +855,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="registers">A list of registers to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteRegisters(byte deviceId, IEnumerable<Register> registers, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<bool> WriteRegisters(byte deviceId, IEnumerable<HoldingRegister> registers, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			logger?.LogTrace($"ModbusClient.WriteRegisters({deviceId}, Length: {registers.Count()})");
 			if (registers == null || !registers.Any())

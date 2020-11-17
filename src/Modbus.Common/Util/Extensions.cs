@@ -22,7 +22,7 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="register">The register.</param>
 		/// <returns></returns>
-		public static byte GetByte(this Register register)
+		public static byte GetByte(this ModbusRegister register)
 		{
 			return (byte)register.Value;
 		}
@@ -32,7 +32,7 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="register">The register.</param>
 		/// <returns></returns>
-		public static ushort GetUInt16(this Register register)
+		public static ushort GetUInt16(this ModbusRegister register)
 		{
 			return register.Value;
 		}
@@ -43,7 +43,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">The list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static uint GetUInt32(this IEnumerable<Register> list, int startIndex = 0)
+		public static uint GetUInt32(this IEnumerable<ModbusRegister> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(2).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
@@ -66,7 +66,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">The list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static ulong GetUInt64(this IEnumerable<Register> list, int startIndex = 0)
+		public static ulong GetUInt64(this IEnumerable<ModbusRegister> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(4).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
@@ -92,7 +92,7 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="register">The register.</param>
 		/// <returns></returns>
-		public static sbyte GetSByte(this Register register)
+		public static sbyte GetSByte(this ModbusRegister register)
 		{
 			return (sbyte)register.Value;
 		}
@@ -102,7 +102,7 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="register">The register.</param>
 		/// <returns></returns>
-		public static short GetInt16(this Register register)
+		public static short GetInt16(this ModbusRegister register)
 		{
 			byte[] blob = new[] { register.HiByte, register.LoByte };
 			if (BitConverter.IsLittleEndian)
@@ -117,7 +117,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static int GetInt32(this IEnumerable<Register> list, int startIndex = 0)
+		public static int GetInt32(this IEnumerable<ModbusRegister> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(2).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
@@ -140,7 +140,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static long GetInt64(this IEnumerable<Register> list, int startIndex = 0)
+		public static long GetInt64(this IEnumerable<ModbusRegister> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(4).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
@@ -167,7 +167,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static float GetSingle(this IEnumerable<Register> list, int startIndex = 0)
+		public static float GetSingle(this IEnumerable<ModbusRegister> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(2).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
@@ -190,7 +190,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static double GetDouble(this IEnumerable<Register> list, int startIndex = 0)
+		public static double GetDouble(this IEnumerable<ModbusRegister> list, int startIndex = 0)
 		{
 			var registers = list.Skip(startIndex).Take(4).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
@@ -219,7 +219,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="index">The start index. Default: 0.</param>
 		/// <param name="encoding">The encoding to convert the string. Default: <see cref="Encoding.UTF8"/>.</param>
 		/// <returns></returns>
-		public static string GetString(this IEnumerable<Register> list, int length, int index = 0, Encoding encoding = null)
+		public static string GetString(this IEnumerable<ModbusRegister> list, int length, int index = 0, Encoding encoding = null)
 		{
 			if (encoding == null)
 			{
@@ -265,7 +265,7 @@ namespace AMWD.Modbus.Common.Util
 				var attrs = (T[])fi?.GetCustomAttributes(typeof(T), inherit: false);
 				return attrs?.FirstOrDefault();
 			}
-			return default(T);
+			return default;
 		}
 
 		/// <summary>
@@ -332,7 +332,7 @@ namespace AMWD.Modbus.Common.Util
 
 		private class DisposableReaderWriterLockSlim : IDisposable
 		{
-			private ReaderWriterLockSlim rwLock;
+			private readonly ReaderWriterLockSlim rwLock;
 			private LockMode mode;
 
 			public DisposableReaderWriterLockSlim(ReaderWriterLockSlim rwLock, LockMode mode)

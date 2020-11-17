@@ -1,6 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AMWD.Modbus.Tcp.Util
@@ -59,5 +61,26 @@ namespace AMWD.Modbus.Tcp.Util
 		}
 
 		#endregion Task handling
+
+		#region Stream
+
+		internal static async Task<byte[]> ReadExpectedBytes(this Stream stream, int expectedBytes, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			byte[] buffer = new byte[expectedBytes];
+			int offset = 0;
+			do
+			{
+				int count = await stream.ReadAsync(buffer, offset, expectedBytes - offset, cancellationToken);
+				//if (count < 1)
+				//	throw new EndOfStreamException($"Expected to read {buffer.Length - offset} more bytes, but end of stream is reached");
+
+				offset += count;
+			}
+			while (expectedBytes - offset > 0);
+
+			return buffer;
+		}
+
+		#endregion
 	}
 }

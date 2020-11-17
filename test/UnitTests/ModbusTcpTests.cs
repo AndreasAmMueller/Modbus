@@ -25,42 +25,36 @@ namespace UnitTests
 		[TestMethod]
 		public async Task ClientConnectTest()
 		{
-			using (var server = new MiniTestServer())
-			{
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
+			using var server = new MiniTestServer();
+			server.Start();
 
-					await client.Disconnect();
-					Assert.IsFalse(client.IsConnected);
-				}
-			}
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port);
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			await client.Disconnect();
+			Assert.IsFalse(client.IsConnected);
 		}
 
 		[TestMethod]
 		public async Task ClientReconnectTest()
 		{
-			using (var server = new MiniTestServer())
-			{
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
+			using var server = new MiniTestServer();
+			server.Start();
 
-					await server.Stop();
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
 
-					await client.ReadHoldingRegisters(0, 0, 1);
-					await EnsureWait();  // time to set all information
-					Assert.IsFalse(client.IsConnected);
+			await server.Stop();
 
-					server.Start();
-					await client.ConnectingTask;
-					Assert.IsTrue(client.IsConnected);
-				}
-			}
+			await client.ReadHoldingRegisters(0, 0, 1);
+			await EnsureWait();  // time to set all information
+			Assert.IsFalse(client.IsConnected);
+
+			server.Start();
+			await client.ConnectingTask;
+			Assert.IsTrue(client.IsConnected);
 		}
 
 		[TestMethod]
@@ -68,49 +62,48 @@ namespace UnitTests
 		{
 			int connectEvents = 0;
 			int disconnectEvents = 0;
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer();
+			server.Start();
+
+			using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
 			{
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
+				client.Connected += (sender, args) =>
 				{
-					client.Connected += (sender, args) =>
-					{
-						connectEvents++;
-					};
-					client.Disconnected += (sender, args) =>
-					{
-						disconnectEvents++;
-					};
+					connectEvents++;
+				};
+				client.Disconnected += (sender, args) =>
+				{
+					disconnectEvents++;
+				};
 
-					Assert.AreEqual(0, connectEvents);
-					Assert.AreEqual(0, disconnectEvents);
+				Assert.AreEqual(0, connectEvents);
+				Assert.AreEqual(0, disconnectEvents);
 
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
-
-					await EnsureWait(); // get events raised
-					Assert.AreEqual(1, connectEvents);
-					Assert.AreEqual(0, disconnectEvents);
-
-					await server.Stop();
-
-					await client.ReadHoldingRegisters(0, 0, 1);
-					await EnsureWait();  // time to set all information
-					Assert.IsFalse(client.IsConnected);
-
-					await EnsureWait(); // get events raised
-					Assert.AreEqual(1, connectEvents);
-					Assert.AreEqual(1, disconnectEvents);
-
-					server.Start();
-					await client.ConnectingTask;
-					Assert.IsTrue(client.IsConnected);
-				}
+				await client.Connect();
+				Assert.IsTrue(client.IsConnected);
 
 				await EnsureWait(); // get events raised
-				Assert.AreEqual(2, connectEvents);
-				Assert.AreEqual(2, disconnectEvents);
+				Assert.AreEqual(1, connectEvents);
+				Assert.AreEqual(0, disconnectEvents);
+
+				await server.Stop();
+
+				await client.ReadHoldingRegisters(0, 0, 1);
+				await EnsureWait();  // time to set all information
+				Assert.IsFalse(client.IsConnected);
+
+				await EnsureWait(); // get events raised
+				Assert.AreEqual(1, connectEvents);
+				Assert.AreEqual(1, disconnectEvents);
+
+				server.Start();
+				await client.ConnectingTask;
+				Assert.IsTrue(client.IsConnected);
 			}
+
+			await EnsureWait(); // get events raised
+			Assert.AreEqual(2, connectEvents);
+			Assert.AreEqual(2, disconnectEvents);
 		}
 
 		#endregion Control
@@ -123,31 +116,30 @@ namespace UnitTests
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 2, 1, 0, 24, 0, 2 };
 			string expectedExceptionMessage = ErrorCode.GatewayTargetDevice.GetDescription();
 
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer
 			{
-				server.RequestHandler = (request, clientIp) =>
+				RequestHandler = (request, clientIp) =>
 				{
 					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
 					Console.WriteLine("Server sending error response");
 					return new byte[] { request[0], request[1], 0, 0, 0, 3, 2, 129, 11 };
-				};
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
-
-					try
-					{
-						var response = await client.ReadCoils(2, 24, 2);
-						Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
-						Assert.Fail("Exception not thrown");
-					}
-					catch (ModbusException ex)
-					{
-						Assert.AreEqual(expectedExceptionMessage, ex.Message);
-					}
 				}
+			};
+			server.Start();
+
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			try
+			{
+				var response = await client.ReadCoils(2, 24, 2);
+				Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+				Assert.Fail("Exception not thrown");
+			}
+			catch (ModbusException ex)
+			{
+				Assert.AreEqual(expectedExceptionMessage, ex.Message);
 			}
 		}
 
@@ -171,25 +163,24 @@ namespace UnitTests
 						new Coil { Address = 29, Value = false },
 					};
 
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer
 			{
-				server.RequestHandler = (request, clientIp) =>
+				RequestHandler = (request, clientIp) =>
 				{
 					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
 					Console.WriteLine("Server sending response");
 					return new byte[] { request[0], request[1], 0, 0, 0, 5, 12, 1, 2, 205, 1 };
-				};
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
-
-					var coils = await client.ReadCoils(12, 20, 10);
-					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
-					CollectionAssert.AreEqual(expectedResponse, coils, "Response is incorrect");
 				}
-			}
+			};
+			server.Start();
+
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			var coils = await client.ReadCoils(12, 20, 10);
+			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+			CollectionAssert.AreEqual(expectedResponse, coils, "Response is incorrect");
 		}
 
 		[TestMethod]
@@ -204,25 +195,24 @@ namespace UnitTests
 				new DiscreteInput { Address = 13, Value = true }
 			};
 
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer
 			{
-				server.RequestHandler = (request, clientIp) =>
+				RequestHandler = (request, clientIp) =>
 				{
 					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
 					Console.WriteLine("Server sending response");
 					return new byte[] { request[0], request[1], 0, 0, 0, 4, 1, 2, 1, 3 };
-				};
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
-
-					var inputs = await client.ReadDiscreteInputs(1, 12, 2);
-					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
-					CollectionAssert.AreEqual(expectedResponse, inputs, "Response is incorrect");
 				}
-			}
+			};
+			server.Start();
+
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			var inputs = await client.ReadDiscreteInputs(1, 12, 2);
+			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+			CollectionAssert.AreEqual(expectedResponse, inputs, "Response is incorrect");
 		}
 
 		[TestMethod]
@@ -231,31 +221,30 @@ namespace UnitTests
 			// Function Code 0x03
 
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 5, 3, 0, 10, 0, 2 };
-			var expectedResponse = new List<Register>
+			var expectedResponse = new List<HoldingRegister>
 			{
-				new Register { Address = 10, Value = 3 },
-				new Register { Address = 11, Value = 7 }
+				new HoldingRegister { Address = 10, Value = 3 },
+				new HoldingRegister { Address = 11, Value = 7 }
 			};
 
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer
 			{
-				server.RequestHandler = (request, clientIp) =>
+				RequestHandler = (request, clientIp) =>
 				{
 					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
 					Console.WriteLine("Server sending response");
 					return new byte[] { request[0], request[1], 0, 0, 0, 7, 5, 3, 4, 0, 3, 0, 7 };
-				};
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
-
-					var registers = await client.ReadHoldingRegisters(5, 10, 2);
-					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
-					CollectionAssert.AreEqual(expectedResponse, registers, "Response is incorrect");
 				}
-			}
+			};
+			server.Start();
+
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			var registers = await client.ReadHoldingRegisters(5, 10, 2);
+			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+			CollectionAssert.AreEqual(expectedResponse, registers, "Response is incorrect");
 		}
 
 		[TestMethod]
@@ -264,32 +253,31 @@ namespace UnitTests
 			// Function Code 0x04
 
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 3, 4, 0, 6, 0, 3 };
-			var expectedResponse = new List<Register>
+			var expectedResponse = new List<InputRegister>
 			{
-				new Register { Address = 6, Value = 123 },
-				new Register { Address = 7, Value = 0 },
-				new Register { Address = 8, Value = 12345 }
+				new InputRegister { Address = 6, Value = 123 },
+				new InputRegister { Address = 7, Value = 0 },
+				new InputRegister { Address = 8, Value = 12345 }
 			};
 
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer
 			{
-				server.RequestHandler = (request, clientIp) =>
+				RequestHandler = (request, clientIp) =>
 				{
 					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
 					Console.WriteLine("Server sending response");
 					return new byte[] { request[0], request[1], 0, 0, 0, 9, 3, 4, 6, 0, 123, 0, 0, 48, 57 };
-				};
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
-
-					var registers = await client.ReadInputRegisters(3, 6, 3);
-					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
-					CollectionAssert.AreEqual(expectedResponse, registers, "Response is incorrect");
 				}
-			}
+			};
+			server.Start();
+
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			var registers = await client.ReadInputRegisters(3, 6, 3);
+			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+			CollectionAssert.AreEqual(expectedResponse, registers, "Response is incorrect");
 		}
 
 		[TestMethod]
@@ -303,9 +291,9 @@ namespace UnitTests
 				{ DeviceIDObject.MajorMinorRevision, "1.2.3.4" }
 			};
 
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer
 			{
-				server.RequestHandler = (request, clientIp) =>
+				RequestHandler = (request, clientIp) =>
 				{
 					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
 					Console.WriteLine("Server sending response");
@@ -327,18 +315,17 @@ namespace UnitTests
 					bytes[5] = (byte)len;
 
 					return bytes.ToArray();
-				};
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
-
-					var deviceInfo = await client.ReadDeviceInformation(13, DeviceIDCategory.Basic);
-					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
-					CollectionAssert.AreEqual(expectedResponse, deviceInfo, "Response is incorrect");
 				}
-			}
+			};
+			server.Start();
+
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			var deviceInfo = await client.ReadDeviceInformation(13, DeviceIDCategory.Basic);
+			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+			CollectionAssert.AreEqual(expectedResponse, deviceInfo, "Response is incorrect");
 		}
 
 		[TestMethod]
@@ -350,9 +337,9 @@ namespace UnitTests
 				{ DeviceIDObject.ModelName, "TestModel" }
 			};
 
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer
 			{
-				server.RequestHandler = (request, clientIp) =>
+				RequestHandler = (request, clientIp) =>
 				{
 					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
 					Console.WriteLine("Server sending response");
@@ -374,18 +361,17 @@ namespace UnitTests
 					bytes[5] = (byte)len;
 
 					return bytes.ToArray();
-				};
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
-
-					var deviceInfo = await client.ReadDeviceInformation(13, DeviceIDCategory.Individual, DeviceIDObject.ModelName);
-					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
-					CollectionAssert.AreEqual(expectedResponse, deviceInfo, "Response is incorrect");
 				}
-			}
+			};
+			server.Start();
+
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			var deviceInfo = await client.ReadDeviceInformation(13, DeviceIDCategory.Individual, DeviceIDObject.ModelName);
+			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+			CollectionAssert.AreEqual(expectedResponse, deviceInfo, "Response is incorrect");
 		}
 
 		#endregion Read
@@ -399,30 +385,29 @@ namespace UnitTests
 
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 1, 5, 0, 173, 255, 0 };
 
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer
 			{
-				server.RequestHandler = (request, clientIp) =>
+				RequestHandler = (request, clientIp) =>
 				{
 					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
 					Console.WriteLine("Server sending response");
 					return request;
-				};
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
-
-					var coil = new Coil
-					{
-						Address = 173,
-						Value = true
-					};
-					bool success = await client.WriteSingleCoil(1, coil);
-					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
-					Assert.IsTrue(success);
 				}
-			}
+			};
+			server.Start();
+
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			var coil = new Coil
+			{
+				Address = 173,
+				Value = true
+			};
+			bool success = await client.WriteSingleCoil(1, coil);
+			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+			Assert.IsTrue(success);
 		}
 
 		[TestMethod]
@@ -432,30 +417,29 @@ namespace UnitTests
 
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 2, 6, 0, 5, 48, 57 };
 
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer
 			{
-				server.RequestHandler = (request, clientIp) =>
+				RequestHandler = (request, clientIp) =>
 				{
 					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
 					Console.WriteLine("Server sending response");
 					return request;
-				};
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
-
-					var register = new Register
-					{
-						Address = 5,
-						Value = 12345
-					};
-					bool success = await client.WriteSingleRegister(2, register);
-					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
-					Assert.IsTrue(success);
 				}
-			}
+			};
+			server.Start();
+
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			var register = new HoldingRegister
+			{
+				Address = 5,
+				Value = 12345
+			};
+			bool success = await client.WriteSingleRegister(2, register);
+			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+			Assert.IsTrue(success);
 		}
 
 		[TestMethod]
@@ -465,21 +449,22 @@ namespace UnitTests
 
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 9, 4, 15, 0, 20, 0, 10, 2, 205, 1 };
 
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer
 			{
-				server.RequestHandler = (request, clientIp) =>
+				RequestHandler = (request, clientIp) =>
 				{
 					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
 					Console.WriteLine("Server sending response");
 					return new byte[] { request[0], request[1], 0, 0, 0, 6, 4, 15, 0, 20, 0, 10 };
-				};
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
+				}
+			};
+			server.Start();
 
-					var coils = new List<Coil>
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			var coils = new List<Coil>
 					{
 						new Coil { Address = 20, Value = true },
 						new Coil { Address = 21, Value = false },
@@ -492,11 +477,9 @@ namespace UnitTests
 						new Coil { Address = 28, Value = true },
 						new Coil { Address = 29, Value = false },
 					};
-					bool success = await client.WriteCoils(4, coils);
-					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
-					Assert.IsTrue(success);
-				}
-			}
+			bool success = await client.WriteCoils(4, coils);
+			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+			Assert.IsTrue(success);
 		}
 
 		[TestMethod]
@@ -506,30 +489,29 @@ namespace UnitTests
 
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 11, 10, 16, 0, 2, 0, 2, 4, 0, 10, 1, 2 };
 
-			using (var server = new MiniTestServer())
+			using var server = new MiniTestServer
 			{
-				server.RequestHandler = (request, clientIp) =>
+				RequestHandler = (request, clientIp) =>
 				{
 					CollectionAssert.AreEqual(expectedRequest, request.Skip(2).ToArray(), "Request is incorrect");
 					Console.WriteLine("Server sending response");
 					return new byte[] { request[0], request[1], 0, 0, 0, 6, 10, 16, 0, 2, 0, 2 };
-				};
-				server.Start();
-				using (var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger()))
-				{
-					await client.Connect();
-					Assert.IsTrue(client.IsConnected);
-
-					var registers = new List<Register>
-					{
-						new Register { Address = 2, Value = 10 },
-						new Register { Address = 3, Value = 258 }
-					};
-					bool success = await client.WriteRegisters(10, registers);
-					Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
-					Assert.IsTrue(success);
 				}
-			}
+			};
+			server.Start();
+
+			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
+			await client.Connect();
+			Assert.IsTrue(client.IsConnected);
+
+			var registers = new List<HoldingRegister>
+			{
+				new HoldingRegister { Address = 2, Value = 10 },
+				new HoldingRegister { Address = 3, Value = 258 }
+			};
+			bool success = await client.WriteRegisters(10, registers);
+			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
+			Assert.IsTrue(success);
 		}
 
 		#endregion Write
@@ -548,11 +530,9 @@ namespace UnitTests
 				port = testServer.Port;
 			}
 
-			using (var server = new ModbusServer(port))
-			{
-				await server.Initialization;
-				Assert.IsTrue(server.IsRunning);
-			}
+			using var server = new ModbusServer(port);
+			await server.Initialization;
+			Assert.IsTrue(server.IsRunning);
 		}
 
 		#endregion Modbus Server
@@ -619,51 +599,50 @@ namespace UnitTests
 						var waitForClient = listener.AcceptTcpClientAsync();
 						if (await Task.WhenAny(waitForClient, Task.Delay(Timeout.Infinite, ct)) == waitForClient)
 						{
-							using (var client = waitForClient.Result)
+							using var client = waitForClient.Result;
+							var clientEndPoint = (IPEndPoint)client.Client.RemoteEndPoint;
+
+							using var stream = client.GetStream();
+
+							SpinWait.SpinUntil(() => stream.DataAvailable || ct.IsCancellationRequested);
+							if (ct.IsCancellationRequested)
 							{
-								var clientEndPoint = (IPEndPoint)client.Client.RemoteEndPoint;
-								var stream = client.GetStream();
+								Console.WriteLine("Server cancel => WaitData");
+								return;
+							}
 
-								SpinWait.SpinUntil(() => stream.DataAvailable || ct.IsCancellationRequested);
-								if (ct.IsCancellationRequested)
-								{
-									Console.WriteLine("Server cancel => WaitData");
-									return;
-								}
+							byte[] buffer = new byte[100];
+							var bytes = new List<byte>();
+							do
+							{
+								int count = await stream.ReadAsync(buffer, 0, buffer.Length, ct);
+								bytes.AddRange(buffer.Take(count));
+							}
+							while (stream.DataAvailable && !ct.IsCancellationRequested);
 
-								byte[] buffer = new byte[100];
-								var bytes = new List<byte>();
-								do
-								{
-									int count = await stream.ReadAsync(buffer, 0, buffer.Length, ct);
-									bytes.AddRange(buffer.Take(count));
-								}
-								while (stream.DataAvailable && !ct.IsCancellationRequested);
+							if (ct.IsCancellationRequested)
+							{
+								Console.WriteLine("Server cancel => DataRead");
+								return;
+							}
 
-								if (ct.IsCancellationRequested)
+							Debug.WriteLine($"Server data read done: {bytes.Count} bytes");
+							if (RequestHandler != null)
+							{
+								Console.WriteLine("Server send RequestHandler");
+								try
 								{
-									Console.WriteLine("Server cancel => DataRead");
-									return;
-								}
-
-								Debug.WriteLine($"Server data read done: {bytes.Count} bytes");
-								if (RequestHandler != null)
-								{
-									Console.WriteLine("Server send RequestHandler");
-									try
+									byte[] response = RequestHandler(bytes.ToArray(), clientEndPoint);
+									Console.WriteLine($"Server response: {response?.Length ?? -1}");
+									if (response != null)
 									{
-										byte[] response = RequestHandler(bytes.ToArray(), clientEndPoint);
-										Console.WriteLine($"Server response: {response?.Length ?? -1}");
-										if (response != null)
-										{
-											await stream.WriteAsync(response, 0, response.Length, ct);
-											Console.WriteLine("Server response written");
-										}
+										await stream.WriteAsync(response, 0, response.Length, ct);
+										Console.WriteLine("Server response written");
 									}
-									catch (Exception ex)
-									{
-										LastError = ex.InnerException?.Message ?? ex.Message;
-									}
+								}
+								catch (Exception ex)
+								{
+									LastError = ex.InnerException?.Message ?? ex.Message;
 								}
 							}
 						}

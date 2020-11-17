@@ -5,10 +5,17 @@ using System.Text;
 namespace AMWD.Modbus.Common.Structures
 {
 	/// <summary>
-	/// Represents a register on a Modbus device.
+	/// Represents an holding register to keep the modbus typical naming.
 	/// </summary>
-	public class Register
+	/// <remarks>
+	/// For programming use the abstract class <see cref="ModbusRegister"/>.
+	/// </remarks>
+	public class HoldingRegister : ModbusRegister
 	{
+		/// <inheritdoc/>
+		public override ValueType Type => ValueType.HoldingRegister;
+
+
 		#region Creates
 
 		#region unsigned
@@ -19,9 +26,9 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="value">The byte value.</param>
 		/// <param name="address">The register address.</param>
 		/// <returns></returns>
-		public static Register Create(byte value, ushort address)
+		public static HoldingRegister Create(byte value, ushort address)
 		{
-			return new Register
+			return new HoldingRegister
 			{
 				Address = address,
 				Value = value
@@ -34,9 +41,9 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="value">The uint16 value.</param>
 		/// <param name="address">The register address.</param>
 		/// <returns></returns>
-		public static Register Create(ushort value, ushort address)
+		public static HoldingRegister Create(ushort value, ushort address)
 		{
-			return new Register
+			return new HoldingRegister
 			{
 				Address = address,
 				Value = value
@@ -49,21 +56,21 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="value">The uint32 value.</param>
 		/// <param name="address">The register address.</param>
 		/// <returns></returns>
-		public static List<Register> Create(uint value, ushort address)
+		public static List<HoldingRegister> Create(uint value, ushort address)
 		{
 			if (address + 1 > Consts.MaxAddress)
 			{
 				throw new ArgumentOutOfRangeException(nameof(address));
 			}
 
-			var list = new List<Register>();
+			var list = new List<HoldingRegister>();
 			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(blob);
 
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
-				list.Add(new Register
+				list.Add(new HoldingRegister
 				{
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[(i * 2)],
@@ -80,19 +87,19 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="value">The uint64 value.</param>
 		/// <param name="address">The register address.</param>
 		/// <returns></returns>
-		public static List<Register> Create(ulong value, ushort address)
+		public static List<HoldingRegister> Create(ulong value, ushort address)
 		{
 			if (address + 3 > Consts.MaxAddress)
 				throw new ArgumentOutOfRangeException(nameof(address));
 
-			var list = new List<Register>();
+			var list = new List<HoldingRegister>();
 			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(blob);
 
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
-				list.Add(new Register
+				list.Add(new HoldingRegister
 				{
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[(i * 2)],
@@ -113,9 +120,9 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="value">The sbyte value.</param>
 		/// <param name="address">The register address.</param>
 		/// <returns></returns>
-		public static Register Create(sbyte value, ushort address)
+		public static HoldingRegister Create(sbyte value, ushort address)
 		{
-			return new Register
+			return new HoldingRegister
 			{
 				Address = address,
 				Value = (ushort)value
@@ -128,13 +135,13 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="value">The int16 value.</param>
 		/// <param name="address">The register address.</param>
 		/// <returns></returns>
-		public static Register Create(short value, ushort address)
+		public static HoldingRegister Create(short value, ushort address)
 		{
 			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(blob);
 
-			return new Register
+			return new HoldingRegister
 			{
 				Address = address,
 				HiByte = blob[0],
@@ -148,19 +155,19 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="value">The int32 value.</param>
 		/// <param name="address">The register address.</param>
 		/// <returns></returns>
-		public static List<Register> Create(int value, ushort address)
+		public static List<HoldingRegister> Create(int value, ushort address)
 		{
 			if (address + 1 > Consts.MaxAddress)
 				throw new ArgumentOutOfRangeException(nameof(address));
 
-			var list = new List<Register>();
+			var list = new List<HoldingRegister>();
 			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(blob);
 
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
-				list.Add(new Register
+				list.Add(new HoldingRegister
 				{
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[(i * 2)],
@@ -177,19 +184,19 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="value">The int64 value.</param>
 		/// <param name="address">The register address.</param>
 		/// <returns></returns>
-		public static List<Register> Create(long value, ushort address)
+		public static List<HoldingRegister> Create(long value, ushort address)
 		{
 			if (address + 3 > Consts.MaxAddress)
 				throw new ArgumentOutOfRangeException(nameof(address));
 
-			var list = new List<Register>();
+			var list = new List<HoldingRegister>();
 			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(blob);
 
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
-				list.Add(new Register
+				list.Add(new HoldingRegister
 				{
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[(i * 2)],
@@ -210,19 +217,19 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="value">The single value.</param>
 		/// <param name="address">The register address.</param>
 		/// <returns></returns>
-		public static List<Register> Create(float value, ushort address)
+		public static List<HoldingRegister> Create(float value, ushort address)
 		{
 			if (address + 1 > Consts.MaxAddress)
 				throw new ArgumentOutOfRangeException(nameof(address));
 
-			var list = new List<Register>();
+			var list = new List<HoldingRegister>();
 			byte[] blob = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(blob);
 
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
-				list.Add(new Register
+				list.Add(new HoldingRegister
 				{
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[(i * 2)],
@@ -239,7 +246,7 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="value">The double value.</param>
 		/// <param name="address">The register address.</param>
 		/// <returns></returns>
-		public static List<Register> Create(double value, ushort address)
+		public static List<HoldingRegister> Create(double value, ushort address)
 		{
 			if (address + 3 > Consts.MaxAddress)
 				throw new ArgumentOutOfRangeException(nameof(address));
@@ -248,10 +255,10 @@ namespace AMWD.Modbus.Common.Structures
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(blob);
 
-			var list = new List<Register>();
+			var list = new List<HoldingRegister>();
 			for (int i = 0; i < blob.Length / 2; i++)
 			{
-				list.Add(new Register
+				list.Add(new HoldingRegister
 				{
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[(i * 2)],
@@ -273,12 +280,12 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="address">The register address.</param>
 		/// <param name="encoding">The encoding of the string. Default: <see cref="Encoding.UTF8"/>.</param>
 		/// <returns></returns>
-		public static List<Register> Create(string str, ushort address, Encoding encoding = null)
+		public static List<HoldingRegister> Create(string str, ushort address, Encoding encoding = null)
 		{
 			if (encoding == null)
 				encoding = Encoding.UTF8;
 
-			var list = new List<Register>();
+			var list = new List<HoldingRegister>();
 			byte[] blob = encoding.GetBytes(str);
 			int numRegister = (int)Math.Ceiling(blob.Length / 2.0);
 
@@ -289,7 +296,7 @@ namespace AMWD.Modbus.Common.Structures
 			{
 				try
 				{
-					list.Add(new Register
+					list.Add(new HoldingRegister
 					{
 						Address = Convert.ToUInt16(address + i),
 						HiByte = blob[(i * 2)],
@@ -298,7 +305,7 @@ namespace AMWD.Modbus.Common.Structures
 				}
 				catch
 				{
-					list.Add(new Register
+					list.Add(new HoldingRegister
 					{
 						Address = Convert.ToUInt16(address + i),
 						HiByte = blob[(i * 2)]
@@ -313,75 +320,12 @@ namespace AMWD.Modbus.Common.Structures
 
 		#endregion Creates
 
-		#region Properties
-
-		/// <summary>
-		/// Gets or sets the address.
-		/// </summary>
-		public ushort Address { get; set; }
-
-		/// <summary>
-		/// Gets or sets the High-Byte of the register.
-		/// </summary>
-		public byte HiByte { get; set; }
-
-		/// <summary>
-		/// Gets or sets the Low-Byte of the register.
-		/// </summary>
-		public byte LoByte { get; set; }
-
-		/// <summary>
-		/// Gets or sets the value of the register as WORD.
-		/// </summary>
-		public ushort Value
-		{
-			get
-			{
-				byte[] blob = new[] { HiByte, LoByte };
-				if (BitConverter.IsLittleEndian)
-					Array.Reverse(blob);
-
-				return BitConverter.ToUInt16(blob, 0);
-			}
-			set
-			{
-				byte[] blob = BitConverter.GetBytes(value);
-				if (BitConverter.IsLittleEndian)
-					Array.Reverse(blob);
-
-				HiByte = blob[0];
-				LoByte = blob[1];
-			}
-		}
-
-		#endregion Properties
-
 		#region Overrides
 
 		/// <inheritdoc/>
 		public override string ToString()
 		{
-			return $"Register#{Address} | Hi: {HiByte.ToString("X2")} Lo: {LoByte.ToString("X2")} | {Value}";
-		}
-
-		/// <inheritdoc/>
-		public override bool Equals(object obj)
-		{
-			if (!(obj is Register reg))
-				return false;
-
-			return reg.Address == Address &&
-				reg.HiByte == HiByte &&
-				reg.LoByte == LoByte;
-		}
-
-		/// <inheritdoc/>
-		public override int GetHashCode()
-		{
-			return base.GetHashCode() ^
-				Address.GetHashCode() ^
-				HiByte.GetHashCode() ^
-				LoByte.GetHashCode();
+			return $"Holding Register #{Address} | Hi: {HiByte:X2} Lo: {LoByte:X2} | {Value}";
 		}
 
 		#endregion Overrides

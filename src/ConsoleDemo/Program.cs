@@ -135,7 +135,7 @@ namespace ConsoleDemo
 									Console.WriteLine();
 
 									Console.Write("Result  : ");
-									List<Register> result = null;
+									List<HoldingRegister> result = null;
 									switch (type.Trim().ToLower())
 									{
 										case "byte":
@@ -236,7 +236,7 @@ namespace ConsoleDemo
 										.Where(i => i % 2 == 0)
 										.Select(i =>
 										{
-											return new Register
+											return new HoldingRegister
 											{
 												Address = address++,
 												HiByte = bytes[i],
@@ -303,7 +303,11 @@ namespace ConsoleDemo
 							Console.Write("Port: ");
 							int port = Convert.ToInt32(Console.ReadLine().Trim());
 
-							server = new TcpServer(port, ip);
+							var tcp = new TcpServer(port, ip);
+							tcp.ClientConnected += (s, e) => Console.WriteLine($"Client connected: {e.EndPoint}");
+							tcp.ClientDisconnected += (s, e) => Console.WriteLine($"Client disconnected: {e.EndPoint}");
+
+							server = tcp;
 						}
 						break;
 					case 2:
@@ -341,6 +345,10 @@ namespace ConsoleDemo
 					default:
 						throw new ArgumentException("Type unknown");
 				}
+
+				server.AddDevice(1);
+				server.AddDevice(5);
+				server.AddDevice(10);
 
 				Console.WriteLine("Server is running... press CTRL+C to exit.");
 				SpinWait.SpinUntil(() => !run);

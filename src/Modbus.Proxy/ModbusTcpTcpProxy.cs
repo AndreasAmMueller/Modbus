@@ -356,7 +356,7 @@ namespace AMWD.Modbus.Proxy
 				}
 				else
 				{
-					var registers = new List<Register>();
+					var registers = new List<HoldingRegister>();
 					using (syncLock.GetReadLock())
 					{
 						if (devices.TryGetValue(request.DeviceId, out var device))
@@ -366,7 +366,7 @@ namespace AMWD.Modbus.Proxy
 								var (timestamp, value) = device.GetHoldingRegister(i);
 								if (timestamp + settings.MinimumRequestWaitTimeOnDestinantion >= requestTime)
 								{
-									registers.Add(new Register
+									registers.Add(new HoldingRegister
 									{
 										Address = i,
 										Value = value
@@ -387,7 +387,7 @@ namespace AMWD.Modbus.Proxy
 									var (timestamp, value) = device.GetHoldingRegister(i);
 									if (timestamp + settings.MinimumRequestWaitTimeOnDestinantion >= requestTime)
 									{
-										registers.Add(new Register
+										registers.Add(new HoldingRegister
 										{
 											Address = i,
 											Value = value
@@ -454,7 +454,7 @@ namespace AMWD.Modbus.Proxy
 				}
 				else
 				{
-					var registers = new List<Register>();
+					var registers = new List<InputRegister>();
 					using (syncLock.GetReadLock())
 					{
 						if (devices.TryGetValue(request.DeviceId, out var device))
@@ -464,7 +464,7 @@ namespace AMWD.Modbus.Proxy
 								var (timestamp, value) = device.GetInputRegister(i);
 								if (timestamp + settings.MinimumRequestWaitTimeOnDestinantion >= requestTime)
 								{
-									registers.Add(new Register
+									registers.Add(new InputRegister
 									{
 										Address = i,
 										Value = value
@@ -485,7 +485,7 @@ namespace AMWD.Modbus.Proxy
 									var (timestamp, value) = device.GetInputRegister(i);
 									if (timestamp + settings.MinimumRequestWaitTimeOnDestinantion >= requestTime)
 									{
-										registers.Add(new Register
+										registers.Add(new InputRegister
 										{
 											Address = i,
 											Value = value
@@ -664,7 +664,7 @@ namespace AMWD.Modbus.Proxy
 				{
 					try
 					{
-						var register = new Register { Address = request.Address, Value = val };
+						var register = new HoldingRegister { Address = request.Address, Value = val };
 						var task = client.WriteSingleRegister(request.DeviceId, register);
 						task.RunSynchronously();
 						if (task.Result) // Success
@@ -786,12 +786,12 @@ namespace AMWD.Modbus.Proxy
 				}
 				else
 				{
-					var list = new List<Register>();
+					var list = new List<HoldingRegister>();
 					for (int i = 0; i < request.Count; i++)
 					{
 						ushort addr = (ushort)(request.Address + i);
 						ushort val = request.Data.GetUInt16(i * 2 + 1);
-						list.Add(new Register { Address = addr, Value = val });
+						list.Add(new HoldingRegister { Address = addr, Value = val });
 					}
 
 					try

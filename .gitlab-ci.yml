@@ -1,18 +1,45 @@
-image: mcr.microsoft.com/dotnet/core/sdk:2.1
+image: mcr.microsoft.com/dotnet/sdk:3.1
 
-stages:
-  - build
-
-release:
-  stage: build
+build:
+  tags:
+    - docker
+  except:
+    - tags
   script:
     - dotnet restore
     - dotnet build -c Release
+  artifacts:
+    path:
+      - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.dll
+      - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.pdb
+      - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.xml
+      - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.dll
+      - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.pdb
+      - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.xml
+      - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.dll
+      - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.pdb
+      - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.xml
+      - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.dll
+      - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.pdb
+      - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.xml
+    expire_in: 1 month
+
+nuget:
   tags:
     - docker
+  only:
+    - tags
+  script:
+    - dotnet restore
+    - dotnet build -c Release
+    - dotnet nuget push -k $NUGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/AMWD.Modbus.Common.nupkg
+    - dotnet nuget push -k $NUGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.nupkg
+    - dotnet nuget push -k $NUGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.nupkg
+#    - dotnet nuget push -k $NUGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.nupkg
   artifacts:
-    paths:
-      - artifacts/bin/AMWD.Modbus.Common/Release/*.nupkg
-      - artifacts/bin/AMWD.Modbus.Serial/Release/*.nupkg
-      - artifacts/bin/AMWD.Modbus.Tcp/Release/*.nupkg
+    path:
+      - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.snupkg
+      - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.snupkg
+      - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.snupkg
+#      - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.snupkg
     expire_in: 1 month

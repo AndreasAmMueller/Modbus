@@ -2,47 +2,35 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Authors>Andreas Müller</Authors>
-    <Company />
-    <Product>Modbus.Common</Product>
-    <Description>Common files for AMWD.Modbus.TCP and AMWD.Modbus.Serial packages.</Description>
-    <Copyright>Copyright (c) 2018 Andreas Müller</Copyright>
-    <RepositoryUrl>https://github.com/AndreasAmMueller/Modbus.git</RepositoryUrl>
-    <PackageTags>Modbus</PackageTags>
-    <PackageId>AMWD.Modbus.Common</PackageId>
+    <LangVersion>8.0</LangVersion>
+
     <AssemblyName>AMWD.Modbus.Common</AssemblyName>
     <RootNamespace>AMWD.Modbus.Common</RootNamespace>
-    <NrtRevisionFormat>{semvertag:master}</NrtRevisionFormat>
+    <NrtRevisionFormat>{semvertag:master+chash}</NrtRevisionFormat>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
+    <PackageId>AMWD.Modbus.Common</PackageId>
+    <Product>Modbus.Common</Product>
+    <Description>Common files for AMWD.Modbus.TCP and AMWD.Modbus.Serial packages.</Description>
+    <Company>AM.WD</Company>
+    <Authors>Andreas Müller</Authors>
+    <Copyright>© {copyright:2018-} AM.WD</Copyright>
+    <PackageProjectUrl>https://github.com/AndreasAmMueller/Modbus.git</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>Modbus</PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>$(SolutionDir)artifacts\bin\$(RootNamespace)\$(Configuration)</OutputPath>
-    <IntermediateOutputPath>$(SolutionDir)artifacts\obj\$(RootNamespace)\$(Configuration)</IntermediateOutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <DocumentationFile>$(OutputPath)\$(AssemblyName).xml</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>$(SolutionDir)artifacts\bin\$(RootNamespace)\$(Configuration)</OutputPath>
-    <IntermediateOutputPath>$(SolutionDir)artifacts\obj\$(RootNamespace)\$(Configuration)</IntermediateOutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DocumentationFile>$(OutputPath)\$(AssemblyName).xml</DocumentationFile>
-  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="2.0.0" />
-    <PackageReference Include="Unclassified.NetRevisionTask" Version="0.3.0" PrivateAssets="all" />
+    <PackageReference Include="Unclassified.NetRevisionTask" Version="0.3.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

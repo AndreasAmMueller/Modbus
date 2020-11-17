@@ -54,7 +54,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <summary>
 		/// Raised when a coil was written.
 		/// </summary>
-		public event EventHandler<WriteEventArgs> CoilWritten;
+		public event EventHandler<WriteEventArgs> InputWritten;
 
 		/// <summary>
 		/// Raised when a register was written.
@@ -353,7 +353,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="registerNumber">The input register address.</param>
 		/// <returns>The input register.</returns>
-		public Register GetInputRegister(byte deviceId, ushort registerNumber)
+		public InputRegister GetInputRegister(byte deviceId, ushort registerNumber)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
@@ -384,7 +384,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="lowByte">The Low-Byte value.</param>
 		public void SetInputRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetInputRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte });
+			SetInputRegister(deviceId, new InputRegister { Address = registerNumber, HiByte = highByte, LoByte = lowByte });
 		}
 
 		/// <summary>
@@ -392,7 +392,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="register">The input register.</param>
-		public void SetInputRegister(byte deviceId, Register register)
+		public void SetInputRegister(byte deviceId, InputRegister register)
 		{
 			SetInputRegister(deviceId, register.Address, register.Value);
 		}
@@ -407,7 +407,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="registerNumber">The holding register address.</param>
 		/// <returns>The holding register.</returns>
-		public Register GetHoldingRegister(byte deviceId, ushort registerNumber)
+		public HoldingRegister GetHoldingRegister(byte deviceId, ushort registerNumber)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
@@ -438,7 +438,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="lowByte">The low byte value.</param>
 		public void SetHoldingRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetHoldingRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte });
+			SetHoldingRegister(deviceId, new HoldingRegister { Address = registerNumber, HiByte = highByte, LoByte = lowByte });
 		}
 
 		/// <summary>
@@ -446,7 +446,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="register">The register.</param>
-		public void SetHoldingRegister(byte deviceId, Register register)
+		public void SetHoldingRegister(byte deviceId, HoldingRegister register)
 		{
 			SetHoldingRegister(deviceId, register.Address, register.Value);
 		}
@@ -788,7 +788,7 @@ namespace AMWD.Modbus.Serial.Server
 						SetCoil(request.DeviceId, coil);
 						response.Data = request.Data;
 
-						CoilWritten?.Invoke(this, new WriteEventArgs(request.DeviceId, coil));
+						InputWritten?.Invoke(this, new WriteEventArgs(request.DeviceId, coil));
 					}
 					catch
 					{
@@ -820,7 +820,7 @@ namespace AMWD.Modbus.Serial.Server
 				{
 					try
 					{
-						var register = new Register { Address = request.Address, Value = val };
+						var register = new HoldingRegister { Address = request.Address, Value = val };
 
 						SetHoldingRegister(request.DeviceId, register);
 						response.Data = request.Data;
@@ -875,7 +875,7 @@ namespace AMWD.Modbus.Serial.Server
 							SetCoil(request.DeviceId, coil);
 							list.Add(coil);
 						}
-						CoilWritten?.Invoke(this, new WriteEventArgs(request.DeviceId, list));
+						InputWritten?.Invoke(this, new WriteEventArgs(request.DeviceId, list));
 					}
 					catch
 					{
@@ -909,13 +909,13 @@ namespace AMWD.Modbus.Serial.Server
 				{
 					try
 					{
-						var list = new List<Register>();
+						var list = new List<HoldingRegister>();
 						for (int i = 0; i < request.Count; i++)
 						{
 							ushort addr = (ushort)(request.Address + i);
 							ushort val = request.Data.GetUInt16(i * 2);
 
-							var register = new Register { Address = addr, Value = val };
+							var register = new HoldingRegister { Address = addr, Value = val };
 							SetHoldingRegister(request.DeviceId, register);
 							list.Add(register);
 						}

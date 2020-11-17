@@ -58,7 +58,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <summary>
 		/// Raised when a coil was written.
 		/// </summary>
-		public event EventHandler<WriteEventArgs> CoilWritten;
+		public event EventHandler<WriteEventArgs> InputWritten;
 
 		/// <summary>
 		/// Raised when a register was written.
@@ -208,7 +208,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="registerNumber">The input register address.</param>
 		/// <returns>The input register.</returns>
-		public Register GetInputRegister(byte deviceId, ushort registerNumber)
+		public InputRegister GetInputRegister(byte deviceId, ushort registerNumber)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
@@ -239,7 +239,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="lowByte">The Low-Byte value.</param>
 		public void SetInputRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetInputRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte });
+			SetInputRegister(deviceId, new InputRegister { Address = registerNumber, HiByte = highByte, LoByte = lowByte });
 		}
 
 		/// <summary>
@@ -247,7 +247,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="register">The input register.</param>
-		public void SetInputRegister(byte deviceId, Register register)
+		public void SetInputRegister(byte deviceId, InputRegister register)
 		{
 			SetInputRegister(deviceId, register.Address, register.Value);
 		}
@@ -262,7 +262,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="registerNumber">The holding register address.</param>
 		/// <returns>The holding register.</returns>
-		public Register GetHoldingRegister(byte deviceId, ushort registerNumber)
+		public HoldingRegister GetHoldingRegister(byte deviceId, ushort registerNumber)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
@@ -293,7 +293,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="lowByte">The low byte value.</param>
 		public void SetHoldingRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetHoldingRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte });
+			SetHoldingRegister(deviceId, new HoldingRegister { Address = registerNumber, HiByte = highByte, LoByte = lowByte });
 		}
 
 		/// <summary>
@@ -301,7 +301,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="register">The register.</param>
-		public void SetHoldingRegister(byte deviceId, Register register)
+		public void SetHoldingRegister(byte deviceId, HoldingRegister register)
 		{
 			SetHoldingRegister(deviceId, register.Address, register.Value);
 		}
@@ -393,20 +393,6 @@ namespace AMWD.Modbus.Tcp.Server
 			HandleClient(client);
 		}
 
-		private static async Task<byte[]> ExpectBytesFromNetwork(NetworkStream stream, int size)
-		{
-			byte[] buffer = new byte[size];
-			for (int offset = 0; offset < buffer.Length;)
-			{
-				int count = await stream.ReadAsync(buffer, offset, buffer.Length - offset); // CancellationToken?
-				if (count < 1)
-					throw new EndOfStreamException($"Expected to read {buffer.Length - offset} more bytes, but end of stream is reached");
-
-				offset += count;
-			}
-			return buffer;
-		}
-
 		private async void HandleClient(TcpClient client)
 		{
 			var ipEp = (IPEndPoint)client.Client.RemoteEndPoint;
@@ -420,7 +406,7 @@ namespace AMWD.Modbus.Tcp.Server
 				{
 					var requestBytes = new MemoryStream();
 
-					byte[] header = await ExpectBytesFromNetwork(stream, 6);
+					byte[] header = await stream.ReadExpectedBytes(6);
 					await requestBytes.WriteAsync(header, 0, header.Length);
 
 					byte[] bytes = header.Skip(4).Take(2).ToArray();
@@ -429,7 +415,7 @@ namespace AMWD.Modbus.Tcp.Server
 
 					int following = BitConverter.ToUInt16(bytes, 0);
 
-					byte[] payload = await ExpectBytesFromNetwork(stream, following);
+					byte[] payload = await stream.ReadExpectedBytes(following);
 					await requestBytes.WriteAsync(payload, 0, payload.Length);
 
 					Response response = null;
@@ -854,7 +840,7 @@ namespace AMWD.Modbus.Tcp.Server
 						SetCoil(request.DeviceId, coil);
 						response.Data = request.Data;
 
-						CoilWritten?.Invoke(this, new WriteEventArgs(request.DeviceId, coil));
+						InputWritten?.Invoke(this, new WriteEventArgs(request.DeviceId, coil));
 					}
 					catch
 					{
@@ -886,7 +872,7 @@ namespace AMWD.Modbus.Tcp.Server
 				{
 					try
 					{
-						var register = new Register { Address = request.Address, Value = val };
+						var register = new HoldingRegister { Address = request.Address, Value = val };
 
 						SetHoldingRegister(request.DeviceId, register);
 						response.Data = request.Data;
@@ -941,7 +927,7 @@ namespace AMWD.Modbus.Tcp.Server
 							SetCoil(request.DeviceId, coil);
 							list.Add(coil);
 						}
-						CoilWritten?.Invoke(this, new WriteEventArgs(request.DeviceId, list));
+						InputWritten?.Invoke(this, new WriteEventArgs(request.DeviceId, list));
 					}
 					catch
 					{
@@ -976,13 +962,13 @@ namespace AMWD.Modbus.Tcp.Server
 				{
 					try
 					{
-						var list = new List<Register>();
+						var list = new List<HoldingRegister>();
 						for (int i = 0; i < request.Count; i++)
 						{
 							ushort addr = (ushort)(request.Address + i);
 							ushort val = request.Data.GetUInt16(i * 2 + 1);
 
-							var register = new Register { Address = addr, Value = val };
+							var register = new HoldingRegister { Address = addr, Value = val };
 							SetHoldingRegister(request.DeviceId, register);
 							list.Add(register);
 						}
