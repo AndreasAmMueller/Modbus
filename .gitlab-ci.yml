@@ -9,7 +9,7 @@ build:
     - dotnet restore
     - dotnet build -c Release
   artifacts:
-    path:
+    paths:
       - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.dll
       - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.pdb
       - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.xml
@@ -37,7 +37,7 @@ nuget:
     - dotnet nuget push -k $NUGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.nupkg
 #    - dotnet nuget push -k $NUGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.nupkg
   artifacts:
-    path:
+    paths:
       - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.snupkg
       - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.snupkg
       - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.snupkg
