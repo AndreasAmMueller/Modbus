@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2010
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30711.63
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0A7CE6D2-374F-4EBC-BFD3-DE2587A6701C}"
 	ProjectSection(SolutionItems) = preProject
@@ -11,6 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitlab-ci.yml = .gitlab-ci.yml
 		CodeMaid.config = CodeMaid.config
 		LICENSE.txt = LICENSE.txt
+		nuget.config = nuget.config
 		README.md = README.md
 	EndProjectSection
 EndProject
@@ -28,7 +29,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Modbus.Tcp", "src\Modbus.Tc
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "test\UnitTests\UnitTests.csproj", "{33EB4212-B2B4-4CFA-A374-1DD9D2675822}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modbus.Proxy", "src\Modbus.Proxy\Modbus.Proxy.csproj", "{F2428E7C-FB89-48F2-8E4B-85F8E44F2319}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Modbus.Proxy", "src\Modbus.Proxy\Modbus.Proxy.csproj", "{F2428E7C-FB89-48F2-8E4B-85F8E44F2319}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
