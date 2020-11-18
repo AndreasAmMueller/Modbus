@@ -8,10 +8,10 @@ build:
   script:
     - dotnet restore
     - dotnet build -c Release
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/AMWD.Modbus.Common.nupkg
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.nupkg
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.nupkg
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.nupkg
+    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/*.nupkg
+    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/*.nupkg
+    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/*.nupkg
+    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/*.nupkg
   artifacts:
     paths:
       - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.dll
@@ -36,18 +36,18 @@ nuget:
   script:
     - dotnet restore
     - dotnet build -c Release
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/AMWD.Modbus.Common.nupkg
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.nupkg
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.nupkg
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.nupkg
-    - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/AMWD.Modbus.Common.nupkg
-    - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.nupkg
-    - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.nupkg
-#    - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.nupkg
+    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/*.nupkg
+    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/*.nupkg
+    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/*.nupkg
+    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/*.nupkg
+    - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/*.nupkg
+    - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/*.nupkg
+    - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/*.nupkg
+#    - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/*.nupkg
   artifacts:
     paths:
-      - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.snupkg
-      - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.snupkg
-      - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.snupkg
-      - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.snupkg
+      - src/Modbus.Common/bin/Release/*.snupkg
+      - src/Modbus.Tcp/bin/Release/*.snupkg
+      - src/Modbus.Serial/bin/Release/*.snupkg
+      - src/Modbus.Proxy/bin/Release/*.snupkg
     expire_in: 1 month
