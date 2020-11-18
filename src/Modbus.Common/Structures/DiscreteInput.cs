@@ -3,16 +3,9 @@
 	/// <summary>
 	/// Represents the contents of a discrete input on a Modbus device.
 	/// </summary>
-	public class DiscreteInput : ModbusDiscrete
+	public class DiscreteInput : ModbusObject
 	{
 		/// <inheritdoc/>
-		public override ValueType Type => ValueType.DiscreteInput;
-
-
-		/// <inheritdoc/>
-		public override string ToString()
-		{
-			return $"Discrete Input #{Address} | {Value}";
-		}
+		public override ObjectType Type => ObjectType.DiscreteInput;
 	}
 }

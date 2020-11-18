@@ -22,9 +22,12 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="register">The register.</param>
 		/// <returns></returns>
-		public static byte GetByte(this ModbusRegister register)
+		public static byte GetByte(this ModbusObject register)
 		{
-			return (byte)register.Value;
+			if (register.Type != ObjectType.HoldingRegister && register.Type != ObjectType.InputRegister)
+				throw new ArgumentException("Invalid register type");
+
+			return (byte)register.RegisterValue;
 		}
 
 		/// <summary>
@@ -32,9 +35,12 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="register">The register.</param>
 		/// <returns></returns>
-		public static ushort GetUInt16(this ModbusRegister register)
+		public static ushort GetUInt16(this ModbusObject register)
 		{
-			return register.Value;
+			if (register.Type != ObjectType.HoldingRegister && register.Type != ObjectType.InputRegister)
+				throw new ArgumentException("Invalid register type");
+
+			return register.RegisterValue;
 		}
 
 		/// <summary>
@@ -43,8 +49,11 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">The list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static uint GetUInt32(this IEnumerable<ModbusRegister> list, int startIndex = 0)
+		public static uint GetUInt32(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (!list.All(r => r.Type == ObjectType.HoldingRegister) && !list.All(r => r.Type == ObjectType.InputRegister))
+				throw new ArgumentException("Invalid register type");
+
 			var registers = list.Skip(startIndex).Take(2).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
 
@@ -66,8 +75,11 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">The list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static ulong GetUInt64(this IEnumerable<ModbusRegister> list, int startIndex = 0)
+		public static ulong GetUInt64(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (!list.All(r => r.Type == ObjectType.HoldingRegister) && !list.All(r => r.Type == ObjectType.InputRegister))
+				throw new ArgumentException("Invalid register type");
+
 			var registers = list.Skip(startIndex).Take(4).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
 
@@ -92,9 +104,12 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="register">The register.</param>
 		/// <returns></returns>
-		public static sbyte GetSByte(this ModbusRegister register)
+		public static sbyte GetSByte(this ModbusObject register)
 		{
-			return (sbyte)register.Value;
+			if (register.Type != ObjectType.HoldingRegister && register.Type != ObjectType.InputRegister)
+				throw new ArgumentException("Invalid register type");
+
+			return (sbyte)register.RegisterValue;
 		}
 
 		/// <summary>
@@ -102,8 +117,11 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="register">The register.</param>
 		/// <returns></returns>
-		public static short GetInt16(this ModbusRegister register)
+		public static short GetInt16(this ModbusObject register)
 		{
+			if (register.Type != ObjectType.HoldingRegister && register.Type != ObjectType.InputRegister)
+				throw new ArgumentException("Invalid register type");
+
 			byte[] blob = new[] { register.HiByte, register.LoByte };
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(blob);
@@ -117,8 +135,11 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static int GetInt32(this IEnumerable<ModbusRegister> list, int startIndex = 0)
+		public static int GetInt32(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (!list.All(r => r.Type == ObjectType.HoldingRegister) && !list.All(r => r.Type == ObjectType.InputRegister))
+				throw new ArgumentException("Invalid register type");
+
 			var registers = list.Skip(startIndex).Take(2).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
 
@@ -140,8 +161,11 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static long GetInt64(this IEnumerable<ModbusRegister> list, int startIndex = 0)
+		public static long GetInt64(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (!list.All(r => r.Type == ObjectType.HoldingRegister) && !list.All(r => r.Type == ObjectType.InputRegister))
+				throw new ArgumentException("Invalid register type");
+
 			var registers = list.Skip(startIndex).Take(4).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
 
@@ -167,8 +191,11 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static float GetSingle(this IEnumerable<ModbusRegister> list, int startIndex = 0)
+		public static float GetSingle(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (!list.All(r => r.Type == ObjectType.HoldingRegister) && !list.All(r => r.Type == ObjectType.InputRegister))
+				throw new ArgumentException("Invalid register type");
+
 			var registers = list.Skip(startIndex).Take(2).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
 
@@ -190,8 +217,11 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <returns></returns>
-		public static double GetDouble(this IEnumerable<ModbusRegister> list, int startIndex = 0)
+		public static double GetDouble(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (!list.All(r => r.Type == ObjectType.HoldingRegister) && !list.All(r => r.Type == ObjectType.InputRegister))
+				throw new ArgumentException("Invalid register type");
+
 			var registers = list.Skip(startIndex).Take(4).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
 
@@ -219,12 +249,13 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="index">The start index. Default: 0.</param>
 		/// <param name="encoding">The encoding to convert the string. Default: <see cref="Encoding.UTF8"/>.</param>
 		/// <returns></returns>
-		public static string GetString(this IEnumerable<ModbusRegister> list, int length, int index = 0, Encoding encoding = null)
+		public static string GetString(this IEnumerable<ModbusObject> list, int length, int index = 0, Encoding encoding = null)
 		{
+			if (!list.All(r => r.Type == ObjectType.HoldingRegister) && !list.All(r => r.Type == ObjectType.InputRegister))
+				throw new ArgumentException("Invalid register type");
+
 			if (encoding == null)
-			{
 				encoding = Encoding.UTF8;
-			}
 
 			var registers = list.Skip(index).Take(length).ToArray();
 			byte[] blob = new byte[registers.Length * 2];

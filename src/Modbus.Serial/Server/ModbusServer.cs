@@ -296,9 +296,12 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="coil">The coil.</param>
-		public void SetCoil(byte deviceId, Coil coil)
+		public void SetCoil(byte deviceId, ModbusObject coil)
 		{
-			SetCoil(deviceId, coil.Address, coil.Value);
+			if (coil.Type != ObjectType.Coil)
+				throw new ArgumentException("Invalid coil type set");
+
+			SetCoil(deviceId, coil.Address, coil.BoolValue);
 		}
 
 		#endregion Coils
@@ -338,9 +341,12 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="discreteInput">The discrete input to set.</param>
-		public void SetDiscreteInput(byte deviceId, DiscreteInput discreteInput)
+		public void SetDiscreteInput(byte deviceId, ModbusObject discreteInput)
 		{
-			SetDiscreteInput(deviceId, discreteInput.Address, discreteInput.Value);
+			if (discreteInput.Type != ObjectType.DiscreteInput)
+				throw new ArgumentException("Invalid input type set");
+
+			SetDiscreteInput(deviceId, discreteInput.Address, discreteInput.BoolValue);
 		}
 
 		#endregion Discrete Inputs
@@ -353,7 +359,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="registerNumber">The input register address.</param>
 		/// <returns>The input register.</returns>
-		public InputRegister GetInputRegister(byte deviceId, ushort registerNumber)
+		public Register GetInputRegister(byte deviceId, ushort registerNumber)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
@@ -384,7 +390,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="lowByte">The Low-Byte value.</param>
 		public void SetInputRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetInputRegister(deviceId, new InputRegister { Address = registerNumber, HiByte = highByte, LoByte = lowByte });
+			SetInputRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ObjectType.InputRegister });
 		}
 
 		/// <summary>
@@ -392,9 +398,12 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="register">The input register.</param>
-		public void SetInputRegister(byte deviceId, InputRegister register)
+		public void SetInputRegister(byte deviceId, ModbusObject register)
 		{
-			SetInputRegister(deviceId, register.Address, register.Value);
+			if (register.Type != ObjectType.InputRegister)
+				throw new ArgumentException("Invalid register type set");
+
+			SetInputRegister(deviceId, register.Address, register.RegisterValue);
 		}
 
 		#endregion Input Registers
@@ -407,7 +416,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="registerNumber">The holding register address.</param>
 		/// <returns>The holding register.</returns>
-		public HoldingRegister GetHoldingRegister(byte deviceId, ushort registerNumber)
+		public Register GetHoldingRegister(byte deviceId, ushort registerNumber)
 		{
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
@@ -438,7 +447,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="lowByte">The low byte value.</param>
 		public void SetHoldingRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetHoldingRegister(deviceId, new HoldingRegister { Address = registerNumber, HiByte = highByte, LoByte = lowByte });
+			SetHoldingRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ObjectType.HoldingRegister });
 		}
 
 		/// <summary>
@@ -446,9 +455,12 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		/// <param name="deviceId">The device id.</param>
 		/// <param name="register">The register.</param>
-		public void SetHoldingRegister(byte deviceId, HoldingRegister register)
+		public void SetHoldingRegister(byte deviceId, ModbusObject register)
 		{
-			SetHoldingRegister(deviceId, register.Address, register.Value);
+			if (register.Type != ObjectType.HoldingRegister)
+				throw new ArgumentException("Invalid register type set");
+
+			SetHoldingRegister(deviceId, register.Address, register.RegisterValue);
 		}
 
 		#endregion Holding Registers
@@ -472,7 +484,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <returns>true on success, otherwise false.</returns>
 		public bool RemoveDevice(byte deviceId)
 		{
-			return modbusDevices.TryRemove(deviceId, out ModbusDevice device);
+			return modbusDevices.TryRemove(deviceId, out ModbusDevice _);
 		}
 
 		#endregion Devices
@@ -544,42 +556,21 @@ namespace AMWD.Modbus.Serial.Server
 			if (!modbusDevices.ContainsKey(request.DeviceId))
 				return null;
 
-			Response response;
-			switch (request.Function)
+			return request.Function switch
 			{
-				case FunctionCode.ReadCoils:
-					response = HandleReadCoils(request);
-					break;
-				case FunctionCode.ReadDiscreteInputs:
-					response = HandleReadDiscreteInputs(request);
-					break;
-				case FunctionCode.ReadHoldingRegisters:
-					response = HandleReadHoldingRegisters(request);
-					break;
-				case FunctionCode.ReadInputRegisters:
-					response = HandleReadInputRegisters(request);
-					break;
-				case FunctionCode.WriteSingleCoil:
-					response = HandleWriteSingleCoil(request);
-					break;
-				case FunctionCode.WriteSingleRegister:
-					response = HandleWritSingleRegister(request);
-					break;
-				case FunctionCode.WriteMultipleCoils:
-					response = HandleWriteMultipleCoils(request);
-					break;
-				case FunctionCode.WriteMultipleRegisters:
-					response = HandleWriteMultipleRegisters(request);
-					break;
-				default:
-					response = new Response(request)
-					{
-						ErrorCode = ErrorCode.IllegalFunction
-					};
-					break;
-			}
-
-			return response;
+				FunctionCode.ReadCoils => HandleReadCoils(request),
+				FunctionCode.ReadDiscreteInputs => HandleReadDiscreteInputs(request),
+				FunctionCode.ReadHoldingRegisters => HandleReadHoldingRegisters(request),
+				FunctionCode.ReadInputRegisters => HandleReadInputRegisters(request),
+				FunctionCode.WriteSingleCoil => HandleWriteSingleCoil(request),
+				FunctionCode.WriteSingleRegister => HandleWritSingleRegister(request),
+				FunctionCode.WriteMultipleCoils => HandleWriteMultipleCoils(request),
+				FunctionCode.WriteMultipleRegisters => HandleWriteMultipleRegisters(request),
+				_ => new Response(request)
+				{
+					ErrorCode = ErrorCode.IllegalFunction
+				},
+			};
 		}
 
 		#endregion Server
@@ -611,7 +602,7 @@ namespace AMWD.Modbus.Serial.Server
 						for (int i = 0; i < request.Count; i++)
 						{
 							ushort addr = (ushort)(request.Address + i);
-							if (GetCoil(request.DeviceId, addr).Value)
+							if (GetCoil(request.DeviceId, addr).BoolValue)
 							{
 								int posByte = i / 8;
 								int posBit = i % 8;
@@ -657,7 +648,7 @@ namespace AMWD.Modbus.Serial.Server
 						for (int i = 0; i < request.Count; i++)
 						{
 							ushort addr = (ushort)(request.Address + i);
-							if (GetDiscreteInput(request.DeviceId, addr).Value)
+							if (GetDiscreteInput(request.DeviceId, addr).BoolValue)
 							{
 								int posByte = i / 8;
 								int posBit = i % 8;
@@ -703,7 +694,7 @@ namespace AMWD.Modbus.Serial.Server
 						{
 							ushort addr = (ushort)(request.Address + i);
 							var reg = GetHoldingRegister(request.DeviceId, addr);
-							response.Data.SetUInt16(i * 2, reg.Value);
+							response.Data.SetUInt16(i * 2, reg.RegisterValue);
 						}
 					}
 					catch
@@ -743,7 +734,7 @@ namespace AMWD.Modbus.Serial.Server
 						{
 							ushort addr = (ushort)(request.Address + i);
 							var reg = GetInputRegister(request.DeviceId, addr);
-							response.Data.SetUInt16(i * 2, reg.Value);
+							response.Data.SetUInt16(i * 2, reg.RegisterValue);
 						}
 					}
 					catch
@@ -783,7 +774,7 @@ namespace AMWD.Modbus.Serial.Server
 				{
 					try
 					{
-						var coil = new Coil { Address = request.Address, Value = (val > 0) };
+						var coil = new Coil { Address = request.Address, BoolValue = (val > 0) };
 
 						SetCoil(request.DeviceId, coil);
 						response.Data = request.Data;
@@ -820,7 +811,7 @@ namespace AMWD.Modbus.Serial.Server
 				{
 					try
 					{
-						var register = new HoldingRegister { Address = request.Address, Value = val };
+						var register = new Register { Address = request.Address, RegisterValue = val, Type = ObjectType.HoldingRegister };
 
 						SetHoldingRegister(request.DeviceId, register);
 						response.Data = request.Data;
@@ -871,7 +862,7 @@ namespace AMWD.Modbus.Serial.Server
 							byte mask = (byte)Math.Pow(2, posBit);
 							int val = request.Data[posByte] & mask;
 
-							var coil = new Coil { Address = addr, Value = (val > 0) };
+							var coil = new Coil { Address = addr, BoolValue = (val > 0) };
 							SetCoil(request.DeviceId, coil);
 							list.Add(coil);
 						}
@@ -909,13 +900,13 @@ namespace AMWD.Modbus.Serial.Server
 				{
 					try
 					{
-						var list = new List<HoldingRegister>();
+						var list = new List<Register>();
 						for (int i = 0; i < request.Count; i++)
 						{
 							ushort addr = (ushort)(request.Address + i);
 							ushort val = request.Data.GetUInt16(i * 2);
 
-							var register = new HoldingRegister { Address = addr, Value = val };
+							var register = new Register { Address = addr, RegisterValue = val, Type = ObjectType.HoldingRegister };
 							SetHoldingRegister(request.DeviceId, register);
 							list.Add(register);
 						}

@@ -44,7 +44,7 @@ namespace AMWD.Modbus.Common.Util
 		{
 			using (coilsLock.GetReadLock())
 			{
-				return new Coil { Address = address, Value = coils.Contains(address) };
+				return new Coil { Address = address, BoolValue = coils.Contains(address) };
 			}
 		}
 
@@ -81,7 +81,7 @@ namespace AMWD.Modbus.Common.Util
 		{
 			using (discreteInputsLock.GetReadLock())
 			{
-				return new DiscreteInput { Address = address, Value = discreteInputs.Contains(address) };
+				return new DiscreteInput { Address = address, BoolValue = discreteInputs.Contains(address) };
 			}
 		}
 
@@ -114,14 +114,14 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="address">The address.</param>
 		/// <returns></returns>
-		public InputRegister GetInputRegister(ushort address)
+		public Register GetInputRegister(ushort address)
 		{
 			using (inputRegistersLock.GetReadLock())
 			{
 				if (inputRegisters.TryGetValue(address, out ushort value))
-					return new InputRegister { Address = address, Value = value };
+					return new Register { Address = address, RegisterValue = value, Type = ObjectType.InputRegister };
 			}
-			return new InputRegister { Address = address };
+			return new Register { Address = address, Type = ObjectType.InputRegister };
 		}
 
 		/// <summary>
@@ -153,14 +153,14 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="address">The address.</param>
 		/// <returns></returns>
-		public HoldingRegister GetHoldingRegister(ushort address)
+		public Register GetHoldingRegister(ushort address)
 		{
 			using (holdingRegistersLock.GetReadLock())
 			{
 				if (holdingRegisters.TryGetValue(address, out ushort value))
-					return new HoldingRegister { Address = address, Value = value };
+					return new Register { Address = address, RegisterValue = value, Type = ObjectType.HoldingRegister };
 			}
-			return new HoldingRegister { Address = address };
+			return new Register { Address = address, Type = ObjectType.HoldingRegister };
 		}
 
 		/// <summary>

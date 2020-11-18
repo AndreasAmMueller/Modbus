@@ -35,7 +35,7 @@ namespace ConsoleDemo
 			}
 		}
 
-		private static async Task ClientMainAsync(string[] args)
+		private static async Task ClientMainAsync(string[] _)
 		{
 			Console.WriteLine("Console Demo Modbus Client");
 			Console.WriteLine();
@@ -135,7 +135,7 @@ namespace ConsoleDemo
 									Console.WriteLine();
 
 									Console.Write("Result  : ");
-									List<HoldingRegister> result = null;
+									List<Register> result = null;
 									switch (type.Trim().ToLower())
 									{
 										case "byte":
@@ -236,8 +236,9 @@ namespace ConsoleDemo
 										.Where(i => i % 2 == 0)
 										.Select(i =>
 										{
-											return new HoldingRegister
+											return new Register
 											{
+												Type = ObjectType.HoldingRegister,
 												Address = address++,
 												HiByte = bytes[i],
 												LoByte = bytes[i + 1]
@@ -275,7 +276,7 @@ namespace ConsoleDemo
 			}
 		}
 
-		private static void ServerMain(string[] args)
+		private static void ServerMain(string[] _)
 		{
 			Console.WriteLine("Demo Modbus Server");
 			Console.WriteLine();

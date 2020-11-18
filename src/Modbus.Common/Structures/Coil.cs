@@ -3,15 +3,9 @@
 	/// <summary>
 	/// Represents the contents of a coil on a Modbus device.
 	/// </summary>
-	public class Coil : ModbusDiscrete
+	public class Coil : ModbusObject
 	{
 		/// <inheritdoc/>
-		public override ValueType Type => ValueType.Coil;
-
-		/// <inheritdoc/>
-		public override string ToString()
-		{
-			return $"Coil #{Address} | {Value}";
-		}
+		public override ObjectType Type => ObjectType.Coil;
 	}
 }

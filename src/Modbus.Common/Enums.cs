@@ -226,9 +226,9 @@ namespace AMWD.Modbus.Common
 	}
 
 	/// <summary>
-	/// Defines the specific type when working with abstract base classes.
+	/// Defines the specific type.
 	/// </summary>
-	public enum ValueType
+	public enum ObjectType
 	{
 		/// <summary>
 		/// The type is unknown (should not happen).

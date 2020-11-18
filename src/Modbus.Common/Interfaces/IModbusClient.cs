@@ -66,7 +66,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="count">The number of coils to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of coils or null on error.</returns>
-		Task<List<Coil>> ReadCoils(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken));
+		Task<List<Coil>> ReadCoils(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default);
 
 		/// <summary>
 		/// Reads one or more discrete inputs of a device. (Modbus function 2).
@@ -76,7 +76,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="count">The number of discrete inputs to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of discrete inputs or null on error.</returns>
-		Task<List<DiscreteInput>> ReadDiscreteInputs(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken));
+		Task<List<DiscreteInput>> ReadDiscreteInputs(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default);
 
 		/// <summary>
 		/// Reads one or more holding registers of a device. (Modbus function 3).
@@ -86,7 +86,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="count">The number of registers to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		Task<List<HoldingRegister>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken));
+		Task<List<Register>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default);
 
 		/// <summary>
 		/// Reads one or more input registers of a device. (Modbus function 4).
@@ -96,7 +96,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="count">The number of registers to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		Task<List<InputRegister>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken));
+		Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default);
 
 		/// <summary>
 		/// Reads device information. (Modbus function 43).
@@ -106,7 +106,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="objectId">The first object id to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A map of device information and their content as string.</returns>
-		Task<Dictionary<DeviceIDObject, string>> ReadDeviceInformation(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default(CancellationToken));
+		Task<Dictionary<DeviceIDObject, string>> ReadDeviceInformation(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default);
 
 		/// <summary>
 		/// Reads device information. (Modbus function 43).
@@ -116,7 +116,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="objectId">The first object id to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A map of device information and their content as raw bytes.</returns>
-		Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default(CancellationToken));
+		Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default);
 
 		#endregion Read methods
 
@@ -129,7 +129,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="coil">The coil to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		Task<bool> WriteSingleCoil(byte deviceId, Coil coil, CancellationToken cancellationToken = default(CancellationToken));
+		Task<bool> WriteSingleCoil(byte deviceId, ModbusObject coil, CancellationToken cancellationToken = default);
 
 		/// <summary>
 		/// Writes a single holding register to the Modbus device. (Modbus function 6)
@@ -138,7 +138,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="register">The register to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		Task<bool> WriteSingleRegister(byte deviceId, HoldingRegister register, CancellationToken cancellationToken = default(CancellationToken));
+		Task<bool> WriteSingleRegister(byte deviceId, ModbusObject register, CancellationToken cancellationToken = default);
 
 		/// <summary>
 		/// Writes multiple coil status to the Modbus device. (Modbus function 15)
@@ -147,7 +147,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="coils">A list of coils to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		Task<bool> WriteCoils(byte deviceId, IEnumerable<Coil> coils, CancellationToken cancellationToken = default(CancellationToken));
+		Task<bool> WriteCoils(byte deviceId, IEnumerable<ModbusObject> coils, CancellationToken cancellationToken = default);
 
 		/// <summary>
 		/// Writes multiple holding registers to the Modbus device. (Modbus function 16)
@@ -156,7 +156,7 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <param name="registers">A list of registers to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		Task<bool> WriteRegisters(byte deviceId, IEnumerable<HoldingRegister> registers, CancellationToken cancellationToken = default(CancellationToken));
+		Task<bool> WriteRegisters(byte deviceId, IEnumerable<ModbusObject> registers, CancellationToken cancellationToken = default);
 
 		#endregion Write methods
 	}

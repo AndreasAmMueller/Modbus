@@ -83,45 +83,22 @@ namespace AMWD.Modbus.Proxy
 		{
 			CheckDisposed();
 
-			Response response = null;
-			switch (request.Function)
+			return request.Function switch
 			{
-				case FunctionCode.ReadCoils:
-					response = HandleReadCoils(request);
-					break;
-				case FunctionCode.ReadDiscreteInputs:
-					response = HandleReadDiscreteInputs(request);
-					break;
-				case FunctionCode.ReadHoldingRegisters:
-					response = HandleReadHoldingRegisters(request);
-					break;
-				case FunctionCode.ReadInputRegisters:
-					response = HandleReadInputRegisters(request);
-					break;
-				case FunctionCode.WriteSingleCoil:
-					response = HandleWriteSingleCoil(request);
-					break;
-				case FunctionCode.WriteSingleRegister:
-					response = HandleWritSingleRegister(request);
-					break;
-				case FunctionCode.WriteMultipleCoils:
-					response = HandleWriteMultipleCoils(request);
-					break;
-				case FunctionCode.WriteMultipleRegisters:
-					response = HandleWriteMultipleRegisters(request);
-					break;
-				case FunctionCode.EncapsulatedInterface:
-					response = HandleEncapsulatedInterface(request);
-					break;
-				default:
-					response = new Response(request)
-					{
-						ErrorCode = ErrorCode.IllegalFunction
-					};
-					break;
-			}
-
-			return response;
+				FunctionCode.ReadCoils => HandleReadCoils(request),
+				FunctionCode.ReadDiscreteInputs => HandleReadDiscreteInputs(request),
+				FunctionCode.ReadHoldingRegisters => HandleReadHoldingRegisters(request),
+				FunctionCode.ReadInputRegisters => HandleReadInputRegisters(request),
+				FunctionCode.WriteSingleCoil => HandleWriteSingleCoil(request),
+				FunctionCode.WriteSingleRegister => HandleWritSingleRegister(request),
+				FunctionCode.WriteMultipleCoils => HandleWriteMultipleCoils(request),
+				FunctionCode.WriteMultipleRegisters => HandleWriteMultipleRegisters(request),
+				FunctionCode.EncapsulatedInterface => HandleEncapsulatedInterface(request),
+				_ => new Response(request)
+				{
+					ErrorCode = ErrorCode.IllegalFunction
+				},
+			};
 		}
 
 		#region Read
@@ -155,7 +132,7 @@ namespace AMWD.Modbus.Proxy
 									coils.Add(new Coil
 									{
 										Address = i,
-										Value = value
+										BoolValue = value
 									});
 								}
 							}
@@ -176,7 +153,7 @@ namespace AMWD.Modbus.Proxy
 										coils.Add(new Coil
 										{
 											Address = i,
-											Value = value
+											BoolValue = value
 										});
 									}
 								}
@@ -196,7 +173,7 @@ namespace AMWD.Modbus.Proxy
 
 									foreach (var coil in coils)
 									{
-										devices[request.DeviceId].SetCoil(coil.Address, coil.Value);
+										devices[request.DeviceId].SetCoil(coil.Address, coil.BoolValue);
 									}
 								}
 								catch (Exception ex)
@@ -214,7 +191,7 @@ namespace AMWD.Modbus.Proxy
 					for (int i = 0; i < coils.Count; i++)
 					{
 						ushort addr = (ushort)(request.Address + i);
-						if (coils[i].Value)
+						if (coils[i].BoolValue)
 						{
 							int posByte = i / 8;
 							int posBit = i % 8;
@@ -262,7 +239,7 @@ namespace AMWD.Modbus.Proxy
 									discreteInputs.Add(new DiscreteInput
 									{
 										Address = i,
-										Value = value
+										BoolValue = value
 									});
 								}
 							}
@@ -283,7 +260,7 @@ namespace AMWD.Modbus.Proxy
 										discreteInputs.Add(new DiscreteInput
 										{
 											Address = i,
-											Value = value
+											BoolValue = value
 										});
 									}
 								}
@@ -303,7 +280,7 @@ namespace AMWD.Modbus.Proxy
 
 									foreach (var discreteInput in discreteInputs)
 									{
-										devices[request.DeviceId].SetDiscreteInput(discreteInput.Address, discreteInput.Value);
+										devices[request.DeviceId].SetDiscreteInput(discreteInput.Address, discreteInput.BoolValue);
 									}
 								}
 								catch (Exception ex)
@@ -321,7 +298,7 @@ namespace AMWD.Modbus.Proxy
 					for (int i = 0; i < discreteInputs.Count; i++)
 					{
 						ushort addr = (ushort)(request.Address + i);
-						if (discreteInputs[i].Value)
+						if (discreteInputs[i].BoolValue)
 						{
 							int posByte = i / 8;
 							int posBit = i % 8;
@@ -356,7 +333,7 @@ namespace AMWD.Modbus.Proxy
 				}
 				else
 				{
-					var registers = new List<HoldingRegister>();
+					var registers = new List<Register>();
 					using (syncLock.GetReadLock())
 					{
 						if (devices.TryGetValue(request.DeviceId, out var device))
@@ -366,10 +343,11 @@ namespace AMWD.Modbus.Proxy
 								var (timestamp, value) = device.GetHoldingRegister(i);
 								if (timestamp + settings.MinimumRequestWaitTimeOnDestinantion >= requestTime)
 								{
-									registers.Add(new HoldingRegister
+									registers.Add(new Register
 									{
+										Type = ObjectType.HoldingRegister,
 										Address = i,
-										Value = value
+										RegisterValue = value
 									});
 								}
 							}
@@ -387,10 +365,11 @@ namespace AMWD.Modbus.Proxy
 									var (timestamp, value) = device.GetHoldingRegister(i);
 									if (timestamp + settings.MinimumRequestWaitTimeOnDestinantion >= requestTime)
 									{
-										registers.Add(new HoldingRegister
+										registers.Add(new Register
 										{
+											Type = ObjectType.HoldingRegister,
 											Address = i,
-											Value = value
+											RegisterValue = value
 										});
 									}
 								}
@@ -410,7 +389,7 @@ namespace AMWD.Modbus.Proxy
 
 									foreach (var register in registers)
 									{
-										devices[request.DeviceId].SetHoldingRegister(register.Address, register.Value);
+										devices[request.DeviceId].SetHoldingRegister(register.Address, register.RegisterValue);
 									}
 								}
 								catch (Exception ex)
@@ -426,7 +405,7 @@ namespace AMWD.Modbus.Proxy
 					response.Data = new DataBuffer(registers.Count * 2);
 					for (int i = 0; i < registers.Count; i++)
 					{
-						response.Data.SetUInt16(i * 2, registers[i].Value);
+						response.Data.SetUInt16(i * 2, registers[i].RegisterValue);
 					}
 				}
 			}
@@ -454,7 +433,7 @@ namespace AMWD.Modbus.Proxy
 				}
 				else
 				{
-					var registers = new List<InputRegister>();
+					var registers = new List<Register>();
 					using (syncLock.GetReadLock())
 					{
 						if (devices.TryGetValue(request.DeviceId, out var device))
@@ -464,10 +443,11 @@ namespace AMWD.Modbus.Proxy
 								var (timestamp, value) = device.GetInputRegister(i);
 								if (timestamp + settings.MinimumRequestWaitTimeOnDestinantion >= requestTime)
 								{
-									registers.Add(new InputRegister
+									registers.Add(new Register
 									{
+										Type = ObjectType.InputRegister,
 										Address = i,
-										Value = value
+										RegisterValue = value
 									});
 								}
 							}
@@ -485,10 +465,11 @@ namespace AMWD.Modbus.Proxy
 									var (timestamp, value) = device.GetInputRegister(i);
 									if (timestamp + settings.MinimumRequestWaitTimeOnDestinantion >= requestTime)
 									{
-										registers.Add(new InputRegister
+										registers.Add(new Register
 										{
+											Type = ObjectType.InputRegister,
 											Address = i,
-											Value = value
+											RegisterValue = value
 										});
 									}
 								}
@@ -508,7 +489,7 @@ namespace AMWD.Modbus.Proxy
 
 									foreach (var register in registers)
 									{
-										devices[request.DeviceId].SetHoldingRegister(register.Address, register.Value);
+										devices[request.DeviceId].SetHoldingRegister(register.Address, register.RegisterValue);
 									}
 								}
 								catch (Exception ex)
@@ -524,7 +505,7 @@ namespace AMWD.Modbus.Proxy
 					response.Data = new DataBuffer(registers.Count * 2);
 					for (int i = 0; i < registers.Count; i++)
 					{
-						response.Data.SetUInt16(i * 2, registers[i].Value);
+						response.Data.SetUInt16(i * 2, registers[i].RegisterValue);
 					}
 				}
 			}
@@ -613,7 +594,7 @@ namespace AMWD.Modbus.Proxy
 				{
 					try
 					{
-						var coil = new Coil { Address = request.Address, Value = (val > 0) };
+						var coil = new Coil { Address = request.Address, BoolValue = (val > 0) };
 						var task = client.WriteSingleCoil(request.DeviceId, coil);
 						task.RunSynchronously();
 						if (task.Result) // Success
@@ -626,7 +607,7 @@ namespace AMWD.Modbus.Proxy
 									devices.Add(request.DeviceId, device);
 								}
 
-								device.SetCoil(coil.Address, coil.Value);
+								device.SetCoil(coil.Address, coil.BoolValue);
 							}
 							response.Data = request.Data;
 						}
@@ -664,7 +645,7 @@ namespace AMWD.Modbus.Proxy
 				{
 					try
 					{
-						var register = new HoldingRegister { Address = request.Address, Value = val };
+						var register = new ModbusObject { Address = request.Address, RegisterValue = val };
 						var task = client.WriteSingleRegister(request.DeviceId, register);
 						task.RunSynchronously();
 						if (task.Result) // Success
@@ -677,7 +658,7 @@ namespace AMWD.Modbus.Proxy
 									devices.Add(request.DeviceId, device);
 								}
 
-								device.SetInputRegister(register.Address, register.Value);
+								device.SetInputRegister(register.Address, register.RegisterValue);
 							}
 							response.Data = request.Data;
 						}
@@ -728,7 +709,7 @@ namespace AMWD.Modbus.Proxy
 						byte mask = (byte)Math.Pow(2, posBit);
 						int val = request.Data[posByte] & mask;
 
-						list.Add(new Coil { Address = addr, Value = (val > 0) });
+						list.Add(new Coil { Address = addr, BoolValue = (val > 0) });
 					}
 
 					try
@@ -746,7 +727,7 @@ namespace AMWD.Modbus.Proxy
 								}
 								foreach (var coil in list)
 								{
-									device.SetCoil(coil.Address, coil.Value);
+									device.SetCoil(coil.Address, coil.BoolValue);
 								}
 							}
 						}
@@ -786,12 +767,12 @@ namespace AMWD.Modbus.Proxy
 				}
 				else
 				{
-					var list = new List<HoldingRegister>();
+					var list = new List<Register>();
 					for (int i = 0; i < request.Count; i++)
 					{
 						ushort addr = (ushort)(request.Address + i);
 						ushort val = request.Data.GetUInt16(i * 2 + 1);
-						list.Add(new HoldingRegister { Address = addr, Value = val });
+						list.Add(new Register { Address = addr, RegisterValue = val, Type = ObjectType.HoldingRegister });
 					}
 
 					try
@@ -809,7 +790,7 @@ namespace AMWD.Modbus.Proxy
 								}
 								foreach (var register in list)
 								{
-									device.SetHoldingRegister(register.Address, register.Value);
+									device.SetHoldingRegister(register.Address, register.RegisterValue);
 								}
 							}
 						}

@@ -5,12 +5,12 @@ namespace AMWD.Modbus.Common.Structures
 	/// <summary>
 	/// The abstract basis class for all types of modbus register.
 	/// </summary>
-	public abstract class ModbusRegister
+	public class ModbusObject
 	{
 		/// <summary>
 		/// Gets the explicit type.
 		/// </summary>
-		public abstract ValueType Type { get; }
+		public virtual ObjectType Type { get; set; }
 
 		#region Properties
 
@@ -32,7 +32,7 @@ namespace AMWD.Modbus.Common.Structures
 		/// <summary>
 		/// Gets or sets the value of the register as WORD.
 		/// </summary>
-		public ushort Value
+		public ushort RegisterValue
 		{
 			get
 			{
@@ -53,14 +53,43 @@ namespace AMWD.Modbus.Common.Structures
 			}
 		}
 
+		/// <summary>
+		/// Gets or sets a value indicating whether the discrete value is set.
+		/// </summary>
+		public bool BoolValue
+		{
+			get
+			{
+				return HiByte > 0 || LoByte > 0;
+			}
+			set
+			{
+				HiByte = 0;
+				LoByte = (byte)(value ? 1 : 0);
+			}
+		}
+
 		#endregion Properties
 
 		#region Overrides
 
 		/// <inheritdoc/>
+		public override string ToString()
+		{
+			return Type switch
+			{
+				ObjectType.Coil => $"Coil #{Address} | {BoolValue}",
+				ObjectType.DiscreteInput => $"Discrete Input #{Address} | {BoolValue}",
+				ObjectType.HoldingRegister => $"Holding Register #{Address} | Hi: {HiByte:X2} Lo: {LoByte:X2} | {RegisterValue}",
+				ObjectType.InputRegister => $"Input Register #{Address} | Hi: {HiByte:X2} Lo: {LoByte:X2} | {RegisterValue}",
+				_ => base.ToString(),
+			};
+		}
+
+		/// <inheritdoc/>
 		public override bool Equals(object obj)
 		{
-			if (!(obj is ModbusRegister register))
+			if (!(obj is ModbusObject register))
 				return false;
 
 			return Type == register.Type

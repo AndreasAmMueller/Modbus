@@ -349,7 +349,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="count">The number of coils to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of coils or null on error.</returns>
-		public async Task<List<Coil>> ReadCoils(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<List<Coil>> ReadCoils(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default)
 		{
 			logger?.LogTrace($"ModbusClient.ReadCoils({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -389,7 +389,7 @@ namespace AMWD.Modbus.Serial.Client
 					list.Add(new Coil
 					{
 						Address = (ushort)(startAddress + i),
-						Value = val > 0
+						BoolValue = val > 0
 					});
 				}
 			}
@@ -411,7 +411,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="count">The number of discrete inputs to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of discrete inputs or null on error.</returns>
-		public async Task<List<DiscreteInput>> ReadDiscreteInputs(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<List<DiscreteInput>> ReadDiscreteInputs(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default)
 		{
 			logger?.LogTrace($"ModbusClient.ReadDiscreteInputs({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -451,7 +451,7 @@ namespace AMWD.Modbus.Serial.Client
 					list.Add(new DiscreteInput
 					{
 						Address = (ushort)(startAddress + i),
-						Value = val > 0
+						BoolValue = val > 0
 					});
 				}
 			}
@@ -473,7 +473,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="count">The number of registers to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		public async Task<List<HoldingRegister>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<List<Register>> ReadHoldingRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default)
 		{
 			logger?.LogTrace($"ModbusClient.ReadHoldingRegisters({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -485,7 +485,7 @@ namespace AMWD.Modbus.Serial.Client
 			if (count < Consts.MinCount || Consts.MaxRegisterCountRead < count)
 				throw new ArgumentOutOfRangeException(nameof(count));
 
-			List<HoldingRegister> list = null;
+			List<Register> list = null;
 			try
 			{
 				var request = new Request
@@ -502,11 +502,12 @@ namespace AMWD.Modbus.Serial.Client
 				if (response.IsError)
 					throw new ModbusException(response.ErrorMessage);
 
-				list = new List<HoldingRegister>();
+				list = new List<Register>();
 				for (int i = 0; i < count; i++)
 				{
-					list.Add(new HoldingRegister
+					list.Add(new Register
 					{
+						Type = ObjectType.HoldingRegister,
 						Address = (ushort)(startAddress + i),
 						HiByte = response.Data[i * 2],
 						LoByte = response.Data[i * 2 + 1]
@@ -531,7 +532,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="count">The number of registers to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A list of registers or null on error.</returns>
-		public async Task<List<InputRegister>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<List<Register>> ReadInputRegisters(byte deviceId, ushort startAddress, ushort count, CancellationToken cancellationToken = default)
 		{
 			logger?.LogTrace($"ModbusClient.ReadInputRegisters({deviceId}, {startAddress}, {count})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -543,7 +544,7 @@ namespace AMWD.Modbus.Serial.Client
 			if (count < Consts.MinCount || Consts.MaxRegisterCountRead < count)
 				throw new ArgumentOutOfRangeException(nameof(count));
 
-			List<InputRegister> list = null;
+			List<Register> list = null;
 			try
 			{
 				var request = new Request
@@ -560,11 +561,12 @@ namespace AMWD.Modbus.Serial.Client
 				if (response.IsError)
 					throw new ModbusException(response.ErrorMessage);
 
-				list = new List<InputRegister>();
+				list = new List<Register>();
 				for (int i = 0; i < count; i++)
 				{
-					list.Add(new InputRegister
+					list.Add(new Register
 					{
+						Type = ObjectType.InputRegister,
 						Address = (ushort)(startAddress + i),
 						HiByte = response.Data[i * 2],
 						LoByte = response.Data[i * 2 + 1]
@@ -589,7 +591,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="objectId">The first object id to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A map of device information and their content as string.</returns>
-		public async Task<Dictionary<DeviceIDObject, string>> ReadDeviceInformation(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<Dictionary<DeviceIDObject, string>> ReadDeviceInformation(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default)
 		{
 			var raw = await ReadDeviceInformationRaw(deviceId, categoryId, objectId, cancellationToken);
 			if (raw == null)
@@ -611,7 +613,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="objectId">The first object id to read.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>A map of device information and their content as raw bytes.</returns>>
-		public async Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<Dictionary<byte, byte[]>> ReadDeviceInformationRaw(byte deviceId, DeviceIDCategory categoryId, DeviceIDObject objectId = DeviceIDObject.VendorName, CancellationToken cancellationToken = default)
 		{
 			logger?.LogTrace($"ModbusClient.ReadDeviceInformation({deviceId}, {categoryId}, {objectId})");
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
@@ -680,11 +682,13 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="coil">The coil to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteSingleCoil(byte deviceId, Coil coil, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<bool> WriteSingleCoil(byte deviceId, ModbusObject coil, CancellationToken cancellationToken = default)
 		{
 			logger?.LogTrace($"ModbusClient.WriteSingleRegister({deviceId}, {coil})");
 			if (coil == null)
 				throw new ArgumentNullException(nameof(coil));
+			if (coil.Type != ObjectType.Coil)
+				throw new ArgumentException("Invalid coil type set");
 
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
@@ -701,7 +705,7 @@ namespace AMWD.Modbus.Serial.Client
 					Address = coil.Address,
 					Data = new DataBuffer(2)
 				};
-				ushort value = (ushort)(coil.Value ? 0xFF00 : 0x0000);
+				ushort value = (ushort)(coil.BoolValue ? 0xFF00 : 0x0000);
 				request.Data.SetUInt16(0, value);
 				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
@@ -732,11 +736,13 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="register">The register to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteSingleRegister(byte deviceId, HoldingRegister register, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<bool> WriteSingleRegister(byte deviceId, ModbusObject register, CancellationToken cancellationToken = default)
 		{
 			logger?.LogTrace($"ModbusClient.WriteSingleRegister({deviceId}, {register})");
 			if (register == null)
 				throw new ArgumentNullException(nameof(register));
+			if (register.Type != ObjectType.HoldingRegister)
+				throw new ArgumentException("Invalid register type set");
 
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
@@ -782,11 +788,13 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="coils">A list of coils to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteCoils(byte deviceId, IEnumerable<Coil> coils, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<bool> WriteCoils(byte deviceId, IEnumerable<ModbusObject> coils, CancellationToken cancellationToken = default)
 		{
 			logger?.LogTrace($"ModbusClient.WriteCoils({deviceId}, Length: {coils.Count()})");
 			if (coils == null || !coils.Any())
 				throw new ArgumentNullException(nameof(coils));
+			if (coils.Any(c => c.Type != ObjectType.Coil))
+				throw new ArgumentException("Invalid coil type set");
 
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
@@ -808,7 +816,7 @@ namespace AMWD.Modbus.Serial.Client
 			byte[] coilBytes = new byte[numBytes];
 			for (int i = 0; i < orderedList.Count; i++)
 			{
-				if (orderedList[i].Value)
+				if (orderedList[i].BoolValue)
 				{
 					int posByte = i / 8;
 					int posBit = i % 8;
@@ -855,11 +863,13 @@ namespace AMWD.Modbus.Serial.Client
 		/// <param name="registers">A list of registers to write.</param>
 		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>true on success, otherwise false.</returns>
-		public async Task<bool> WriteRegisters(byte deviceId, IEnumerable<HoldingRegister> registers, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<bool> WriteRegisters(byte deviceId, IEnumerable<ModbusObject> registers, CancellationToken cancellationToken = default)
 		{
 			logger?.LogTrace($"ModbusClient.WriteRegisters({deviceId}, Length: {registers.Count()})");
 			if (registers == null || !registers.Any())
 				throw new ArgumentNullException(nameof(registers));
+			if (registers.Any(r => r.Type != ObjectType.HoldingRegister))
+				throw new ArgumentException("Invalid register type set");
 
 			if (deviceId < Consts.MinDeviceIdRtu || Consts.MaxDeviceId < deviceId)
 				throw new ArgumentOutOfRangeException(nameof(deviceId));
@@ -891,7 +901,7 @@ namespace AMWD.Modbus.Serial.Client
 				request.Data.SetByte(0, (byte)(orderedList.Count * 2));
 				for (int i = 0; i < orderedList.Count; i++)
 				{
-					request.Data.SetUInt16(i * 2 + 1, orderedList[i].Value);
+					request.Data.SetUInt16(i * 2 + 1, orderedList[i].RegisterValue);
 				}
 				var response = await SendRequest(request, cancellationToken);
 				if (response.IsTimeout)
@@ -1036,9 +1046,9 @@ namespace AMWD.Modbus.Serial.Client
 			return new Response(new byte[] { 0, 0, 0, 0, 0, 0 });
 		}
 
-		private async void Reconnect(CancellationToken ct)
+		private async void Reconnect(CancellationToken cancellationToken)
 		{
-			if (isReconnecting || ct.IsCancellationRequested)
+			if (isReconnecting || cancellationToken.IsCancellationRequested)
 				return;
 
 			isReconnecting = true;
@@ -1047,16 +1057,16 @@ namespace AMWD.Modbus.Serial.Client
 			if (wasConnected)
 				Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
 
-			ConnectingTask = GetWaitTask(ct);
+			ConnectingTask = GetWaitTask(cancellationToken);
 			int timeout = 2;
 			int maxTimeout = 30;
 			var startTime = DateTime.UtcNow;
 
-			using (ct.Register(() => reconnectTcs.TrySetCanceled()))
+			using (cancellationToken.Register(() => reconnectTcs.TrySetCanceled()))
 			{
 				try
 				{
-					while (!ct.IsCancellationRequested)
+					while (!cancellationToken.IsCancellationRequested)
 					{
 						try
 						{
@@ -1080,7 +1090,7 @@ namespace AMWD.Modbus.Serial.Client
 							}
 
 							var task = Task.Run(() => serialPort.Open());
-							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task)
+							if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), cancellationToken)) == task)
 							{
 								if (serialPort.IsOpen)
 								{
@@ -1098,7 +1108,7 @@ namespace AMWD.Modbus.Serial.Client
 									return;
 								}
 							}
-							else if (ct.IsCancellationRequested)
+							else if (cancellationToken.IsCancellationRequested)
 							{
 								logger?.LogWarning("ModbusClient.Reconnect was cancelled");
 								return;
@@ -1117,7 +1127,7 @@ namespace AMWD.Modbus.Serial.Client
 						{
 							try
 							{
-								await Task.Delay(1000, ct);
+								await Task.Delay(1000, cancellationToken);
 							}
 							catch (OperationCanceledException)
 							{ /* Keep it quiet */ }
@@ -1261,24 +1271,20 @@ namespace AMWD.Modbus.Serial.Client
 
 		#region IDisposable implementation
 
+		private bool isDisposed;
+
 		/// <summary>
 		/// Releases all managed and unmanaged resources used by the <see cref="ModbusClient"/>.
 		/// </summary>
 		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
-
-		private bool isDisposed;
-
-		private void Dispose(bool disposing)
 		{
 			if (isDisposed)
 				return;
 
 			isDisposed = true;
 			DisconnectInternal(true);
+
+			GC.SuppressFinalize(this);
 		}
 
 		#endregion IDisposable implementation

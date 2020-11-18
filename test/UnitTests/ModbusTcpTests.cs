@@ -151,16 +151,16 @@ namespace UnitTests
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 12, 1, 0, 20, 0, 10 };
 			var expectedResponse = new List<Coil>
 					{
-						new Coil { Address = 20, Value = true },
-						new Coil { Address = 21, Value = false },
-						new Coil { Address = 22, Value = true },
-						new Coil { Address = 23, Value = true },
-						new Coil { Address = 24, Value = false },
-						new Coil { Address = 25, Value = false },
-						new Coil { Address = 26, Value = true },
-						new Coil { Address = 27, Value = true },
-						new Coil { Address = 28, Value = true },
-						new Coil { Address = 29, Value = false },
+						new Coil { Address = 20, BoolValue = true },
+						new Coil { Address = 21, BoolValue = false },
+						new Coil { Address = 22, BoolValue = true },
+						new Coil { Address = 23, BoolValue = true },
+						new Coil { Address = 24, BoolValue = false },
+						new Coil { Address = 25, BoolValue = false },
+						new Coil { Address = 26, BoolValue = true },
+						new Coil { Address = 27, BoolValue = true },
+						new Coil { Address = 28, BoolValue = true },
+						new Coil { Address = 29, BoolValue = false },
 					};
 
 			using var server = new MiniTestServer
@@ -191,8 +191,8 @@ namespace UnitTests
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 1, 2, 0, 12, 0, 2 };
 			var expectedResponse = new List<DiscreteInput>
 			{
-				new DiscreteInput { Address = 12, Value = true },
-				new DiscreteInput { Address = 13, Value = true }
+				new DiscreteInput { Address = 12, BoolValue = true },
+				new DiscreteInput { Address = 13, BoolValue = true }
 			};
 
 			using var server = new MiniTestServer
@@ -221,10 +221,10 @@ namespace UnitTests
 			// Function Code 0x03
 
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 5, 3, 0, 10, 0, 2 };
-			var expectedResponse = new List<HoldingRegister>
+			var expectedResponse = new List<Register>
 			{
-				new HoldingRegister { Address = 10, Value = 3 },
-				new HoldingRegister { Address = 11, Value = 7 }
+				new Register { Address = 10, RegisterValue = 3, Type = ObjectType.HoldingRegister },
+				new Register { Address = 11, RegisterValue = 7, Type = ObjectType.HoldingRegister }
 			};
 
 			using var server = new MiniTestServer
@@ -253,11 +253,11 @@ namespace UnitTests
 			// Function Code 0x04
 
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 3, 4, 0, 6, 0, 3 };
-			var expectedResponse = new List<InputRegister>
+			var expectedResponse = new List<Register>
 			{
-				new InputRegister { Address = 6, Value = 123 },
-				new InputRegister { Address = 7, Value = 0 },
-				new InputRegister { Address = 8, Value = 12345 }
+				new Register { Address = 6, RegisterValue = 123, Type = ObjectType.InputRegister },
+				new Register { Address = 7, RegisterValue = 0, Type = ObjectType.InputRegister },
+				new Register { Address = 8, RegisterValue = 12345, Type = ObjectType.InputRegister }
 			};
 
 			using var server = new MiniTestServer
@@ -403,7 +403,7 @@ namespace UnitTests
 			var coil = new Coil
 			{
 				Address = 173,
-				Value = true
+				BoolValue = true
 			};
 			bool success = await client.WriteSingleCoil(1, coil);
 			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
@@ -432,10 +432,11 @@ namespace UnitTests
 			await client.Connect();
 			Assert.IsTrue(client.IsConnected);
 
-			var register = new HoldingRegister
+			var register = new Register
 			{
+				Type = ObjectType.HoldingRegister,
 				Address = 5,
-				Value = 12345
+				RegisterValue = 12345
 			};
 			bool success = await client.WriteSingleRegister(2, register);
 			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
@@ -466,16 +467,16 @@ namespace UnitTests
 
 			var coils = new List<Coil>
 					{
-						new Coil { Address = 20, Value = true },
-						new Coil { Address = 21, Value = false },
-						new Coil { Address = 22, Value = true },
-						new Coil { Address = 23, Value = true },
-						new Coil { Address = 24, Value = false },
-						new Coil { Address = 25, Value = false },
-						new Coil { Address = 26, Value = true },
-						new Coil { Address = 27, Value = true },
-						new Coil { Address = 28, Value = true },
-						new Coil { Address = 29, Value = false },
+						new Coil { Address = 20, BoolValue = true },
+						new Coil { Address = 21, BoolValue = false },
+						new Coil { Address = 22, BoolValue = true },
+						new Coil { Address = 23, BoolValue = true },
+						new Coil { Address = 24, BoolValue = false },
+						new Coil { Address = 25, BoolValue = false },
+						new Coil { Address = 26, BoolValue = true },
+						new Coil { Address = 27, BoolValue = true },
+						new Coil { Address = 28, BoolValue = true },
+						new Coil { Address = 29, BoolValue = false },
 					};
 			bool success = await client.WriteCoils(4, coils);
 			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
@@ -504,10 +505,10 @@ namespace UnitTests
 			await client.Connect();
 			Assert.IsTrue(client.IsConnected);
 
-			var registers = new List<HoldingRegister>
+			var registers = new List<Register>
 			{
-				new HoldingRegister { Address = 2, Value = 10 },
-				new HoldingRegister { Address = 3, Value = 258 }
+				new Register { Address = 2, RegisterValue = 10, Type = ObjectType.HoldingRegister },
+				new Register { Address = 3, RegisterValue = 258, Type = ObjectType.HoldingRegister }
 			};
 			bool success = await client.WriteRegisters(10, registers);
 			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);
