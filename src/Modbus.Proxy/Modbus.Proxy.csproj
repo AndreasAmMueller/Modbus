@@ -6,7 +6,7 @@
 
     <AssemblyName>AMWD.Modbus.Proxy</AssemblyName>
     <RootNamespace>AMWD.Modbus.Proxy</RootNamespace>
-    <NrtRevisionFormat>{semvertag:master+chash}</NrtRevisionFormat>
+    <NrtRevisionFormat>{semvertag:master}</NrtRevisionFormat>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

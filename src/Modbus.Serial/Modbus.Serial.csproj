@@ -6,7 +6,7 @@
 
     <AssemblyName>AMWD.Modbus.Serial</AssemblyName>
     <RootNamespace>AMWD.Modbus.Serial</RootNamespace>
-    <NrtRevisionFormat>{semvertag:master+chash}</NrtRevisionFormat>
+    <NrtRevisionFormat>{semvertag:master}</NrtRevisionFormat>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
