@@ -185,8 +185,16 @@ namespace AMWD.Modbus.Tcp.Protocol
 				throw new ArgumentException("Protocol ident not valid");
 
 			ushort length = buffer.GetUInt16(4);
-			if (length + 6 != bytes.Count())
-				throw new ArgumentException("Data incomplete");
+			if (buffer.Length < length + 6)
+				throw new ArgumentException("Too less data");
+
+			if (buffer.Length > length + 6)
+			{
+				if (buffer.Buffer.Skip(length + 6).Any(b => b != 0))
+					throw new ArgumentException("Too many data");
+
+				buffer = new DataBuffer(bytes.Take(length + 6));
+			}
 
 			DeviceId = buffer.GetByte(6);
 			Function = (FunctionCode)buffer.GetByte(7);

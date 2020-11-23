@@ -64,7 +64,7 @@ namespace AMWD.Modbus.Tcp.Util
 
 		#region Stream
 
-		internal static async Task<byte[]> ReadExpectedBytes(this Stream stream, int expectedBytes, CancellationToken cancellationToken = default(CancellationToken))
+		internal static async Task<byte[]> ReadExpectedBytes(this Stream stream, int expectedBytes, CancellationToken cancellationToken = default)
 		{
 			byte[] buffer = new byte[expectedBytes];
 			int offset = 0;
@@ -76,8 +76,9 @@ namespace AMWD.Modbus.Tcp.Util
 
 				offset += count;
 			}
-			while (expectedBytes - offset > 0);
+			while (expectedBytes - offset > 0 && !cancellationToken.IsCancellationRequested);
 
+			cancellationToken.ThrowIfCancellationRequested();
 			return buffer;
 		}
 

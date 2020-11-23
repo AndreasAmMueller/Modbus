@@ -119,9 +119,9 @@ namespace AMWD.Modbus.Common.Util
 			using (inputRegistersLock.GetReadLock())
 			{
 				if (inputRegisters.TryGetValue(address, out ushort value))
-					return new Register { Address = address, RegisterValue = value, Type = ObjectType.InputRegister };
+					return new Register { Address = address, RegisterValue = value, Type = ModbusObjectType.InputRegister };
 			}
-			return new Register { Address = address, Type = ObjectType.InputRegister };
+			return new Register { Address = address, Type = ModbusObjectType.InputRegister };
 		}
 
 		/// <summary>
@@ -158,9 +158,9 @@ namespace AMWD.Modbus.Common.Util
 			using (holdingRegistersLock.GetReadLock())
 			{
 				if (holdingRegisters.TryGetValue(address, out ushort value))
-					return new Register { Address = address, RegisterValue = value, Type = ObjectType.HoldingRegister };
+					return new Register { Address = address, RegisterValue = value, Type = ModbusObjectType.HoldingRegister };
 			}
-			return new Register { Address = address, Type = ObjectType.HoldingRegister };
+			return new Register { Address = address, Type = ModbusObjectType.HoldingRegister };
 		}
 
 		/// <summary>

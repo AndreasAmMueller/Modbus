@@ -223,8 +223,8 @@ namespace UnitTests
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 5, 3, 0, 10, 0, 2 };
 			var expectedResponse = new List<Register>
 			{
-				new Register { Address = 10, RegisterValue = 3, Type = ObjectType.HoldingRegister },
-				new Register { Address = 11, RegisterValue = 7, Type = ObjectType.HoldingRegister }
+				new Register { Address = 10, RegisterValue = 3, Type = ModbusObjectType.HoldingRegister },
+				new Register { Address = 11, RegisterValue = 7, Type = ModbusObjectType.HoldingRegister }
 			};
 
 			using var server = new MiniTestServer
@@ -255,9 +255,9 @@ namespace UnitTests
 			byte[] expectedRequest = new byte[] { 0, 0, 0, 6, 3, 4, 0, 6, 0, 3 };
 			var expectedResponse = new List<Register>
 			{
-				new Register { Address = 6, RegisterValue = 123, Type = ObjectType.InputRegister },
-				new Register { Address = 7, RegisterValue = 0, Type = ObjectType.InputRegister },
-				new Register { Address = 8, RegisterValue = 12345, Type = ObjectType.InputRegister }
+				new Register { Address = 6, RegisterValue = 123, Type = ModbusObjectType.InputRegister },
+				new Register { Address = 7, RegisterValue = 0, Type = ModbusObjectType.InputRegister },
+				new Register { Address = 8, RegisterValue = 12345, Type = ModbusObjectType.InputRegister }
 			};
 
 			using var server = new MiniTestServer
@@ -434,7 +434,7 @@ namespace UnitTests
 
 			var register = new Register
 			{
-				Type = ObjectType.HoldingRegister,
+				Type = ModbusObjectType.HoldingRegister,
 				Address = 5,
 				RegisterValue = 12345
 			};
@@ -507,8 +507,8 @@ namespace UnitTests
 
 			var registers = new List<Register>
 			{
-				new Register { Address = 2, RegisterValue = 10, Type = ObjectType.HoldingRegister },
-				new Register { Address = 3, RegisterValue = 258, Type = ObjectType.HoldingRegister }
+				new Register { Address = 2, RegisterValue = 10, Type = ModbusObjectType.HoldingRegister },
+				new Register { Address = 3, RegisterValue = 258, Type = ModbusObjectType.HoldingRegister }
 			};
 			bool success = await client.WriteRegisters(10, registers);
 			Assert.IsTrue(string.IsNullOrWhiteSpace(server.LastError), server.LastError);

@@ -6,6 +6,6 @@
 	public class Coil : ModbusObject
 	{
 		/// <inheritdoc/>
-		public override ObjectType Type => ObjectType.Coil;
+		public override ModbusObjectType Type => ModbusObjectType.Coil;
 	}
 }

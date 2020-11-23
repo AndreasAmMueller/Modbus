@@ -6,6 +6,6 @@
 	public class DiscreteInput : ModbusObject
 	{
 		/// <inheritdoc/>
-		public override ObjectType Type => ObjectType.DiscreteInput;
+		public override ModbusObjectType Type => ModbusObjectType.DiscreteInput;
 	}
 }

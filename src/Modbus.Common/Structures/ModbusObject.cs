@@ -10,7 +10,7 @@ namespace AMWD.Modbus.Common.Structures
 		/// <summary>
 		/// Gets the explicit type.
 		/// </summary>
-		public virtual ObjectType Type { get; set; }
+		public virtual ModbusObjectType Type { get; set; }
 
 		#region Properties
 
@@ -78,10 +78,10 @@ namespace AMWD.Modbus.Common.Structures
 		{
 			return Type switch
 			{
-				ObjectType.Coil => $"Coil #{Address} | {BoolValue}",
-				ObjectType.DiscreteInput => $"Discrete Input #{Address} | {BoolValue}",
-				ObjectType.HoldingRegister => $"Holding Register #{Address} | Hi: {HiByte:X2} Lo: {LoByte:X2} | {RegisterValue}",
-				ObjectType.InputRegister => $"Input Register #{Address} | Hi: {HiByte:X2} Lo: {LoByte:X2} | {RegisterValue}",
+				ModbusObjectType.Coil => $"Coil #{Address} | {BoolValue}",
+				ModbusObjectType.DiscreteInput => $"Discrete Input #{Address} | {BoolValue}",
+				ModbusObjectType.HoldingRegister => $"Holding Register #{Address} | Hi: {HiByte:X2} Lo: {LoByte:X2} | {RegisterValue}",
+				ModbusObjectType.InputRegister => $"Input Register #{Address} | Hi: {HiByte:X2} Lo: {LoByte:X2} | {RegisterValue}",
 				_ => base.ToString(),
 			};
 		}

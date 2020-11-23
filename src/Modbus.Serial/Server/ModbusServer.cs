@@ -298,7 +298,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="coil">The coil.</param>
 		public void SetCoil(byte deviceId, ModbusObject coil)
 		{
-			if (coil.Type != ObjectType.Coil)
+			if (coil.Type != ModbusObjectType.Coil)
 				throw new ArgumentException("Invalid coil type set");
 
 			SetCoil(deviceId, coil.Address, coil.BoolValue);
@@ -343,7 +343,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="discreteInput">The discrete input to set.</param>
 		public void SetDiscreteInput(byte deviceId, ModbusObject discreteInput)
 		{
-			if (discreteInput.Type != ObjectType.DiscreteInput)
+			if (discreteInput.Type != ModbusObjectType.DiscreteInput)
 				throw new ArgumentException("Invalid input type set");
 
 			SetDiscreteInput(deviceId, discreteInput.Address, discreteInput.BoolValue);
@@ -390,7 +390,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="lowByte">The Low-Byte value.</param>
 		public void SetInputRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetInputRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ObjectType.InputRegister });
+			SetInputRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ModbusObjectType.InputRegister });
 		}
 
 		/// <summary>
@@ -400,7 +400,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="register">The input register.</param>
 		public void SetInputRegister(byte deviceId, ModbusObject register)
 		{
-			if (register.Type != ObjectType.InputRegister)
+			if (register.Type != ModbusObjectType.InputRegister)
 				throw new ArgumentException("Invalid register type set");
 
 			SetInputRegister(deviceId, register.Address, register.RegisterValue);
@@ -447,7 +447,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="lowByte">The low byte value.</param>
 		public void SetHoldingRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetHoldingRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ObjectType.HoldingRegister });
+			SetHoldingRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ModbusObjectType.HoldingRegister });
 		}
 
 		/// <summary>
@@ -457,7 +457,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="register">The register.</param>
 		public void SetHoldingRegister(byte deviceId, ModbusObject register)
 		{
-			if (register.Type != ObjectType.HoldingRegister)
+			if (register.Type != ModbusObjectType.HoldingRegister)
 				throw new ArgumentException("Invalid register type set");
 
 			SetHoldingRegister(deviceId, register.Address, register.RegisterValue);
@@ -811,7 +811,7 @@ namespace AMWD.Modbus.Serial.Server
 				{
 					try
 					{
-						var register = new Register { Address = request.Address, RegisterValue = val, Type = ObjectType.HoldingRegister };
+						var register = new Register { Address = request.Address, RegisterValue = val, Type = ModbusObjectType.HoldingRegister };
 
 						SetHoldingRegister(request.DeviceId, register);
 						response.Data = request.Data;
@@ -906,7 +906,7 @@ namespace AMWD.Modbus.Serial.Server
 							ushort addr = (ushort)(request.Address + i);
 							ushort val = request.Data.GetUInt16(i * 2);
 
-							var register = new Register { Address = addr, RegisterValue = val, Type = ObjectType.HoldingRegister };
+							var register = new Register { Address = addr, RegisterValue = val, Type = ModbusObjectType.HoldingRegister };
 							SetHoldingRegister(request.DeviceId, register);
 							list.Add(register);
 						}

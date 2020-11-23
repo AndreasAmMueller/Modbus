@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using AMWD.Modbus.Common;
 using AMWD.Modbus.Common.Interfaces;
@@ -22,8 +23,9 @@ namespace AMWD.Modbus.Tcp.Server
 	/// A handler to process the modbus requests.
 	/// </summary>
 	/// <param name="request">The request to process.</param>
+	/// <param name="cancellationToken">The cancellation token fired on <see cref="ModbusServer.Dispose"/>.</param>
 	/// <returns>The response.</returns>
-	public delegate Response ModbusTcpRequestHandler(Request request);
+	public delegate Response ModbusTcpRequestHandler(Request request, CancellationToken cancellationToken);
 
 	/// <summary>
 	/// A server to communicate via Modbus TCP.
@@ -34,14 +36,20 @@ namespace AMWD.Modbus.Tcp.Server
 
 		private readonly ILogger logger;
 
+		private readonly CancellationTokenSource stopCts = new CancellationTokenSource();
 		private TcpListener tcpListener;
-		private List<TcpClient> tcpClients = new List<TcpClient>();
+		private readonly ConcurrentDictionary<byte, ModbusDevice> modbusDevices = new ConcurrentDictionary<byte, ModbusDevice>();
 
+		private Task clientConnect;
+		private readonly ConcurrentDictionary<TcpClient, bool> tcpClients = new ConcurrentDictionary<TcpClient, bool>();
+		private readonly List<Task> clientTasks = new List<Task>();
 		private readonly ModbusTcpRequestHandler requestHandler;
 
-		private ConcurrentDictionary<byte, ModbusDevice> modbusDevices = new ConcurrentDictionary<byte, ModbusDevice>();
-
 		#endregion Fields
+
+		#region Constructors
+
+		#endregion Constructors
 
 		#region Events
 
@@ -67,29 +75,6 @@ namespace AMWD.Modbus.Tcp.Server
 
 		#endregion Events
 
-		#region Constructors
-
-		/// <summary>
-		/// Initializes a new instance of the <see cref="ModbusServer"/> class.
-		/// </summary>
-		/// <param name="port">The port to listen. (Default: 502)</param>
-		/// <param name="listenAddress">The ip address to bind on. (Default: <see cref="IPAddress.IPv6Any"/>)</param>
-		/// <param name="logger"><see cref="ILogger"/> instance to write log entries. (Default: no logger)</param>
-		/// <param name="requestHandler">Set this request handler to override the default implemented handling. (Default: serving the data provided by Set* methods)</param>
-		public ModbusServer(int port = 502, IPAddress listenAddress = null, ILogger logger = null, ModbusTcpRequestHandler requestHandler = null)
-		{
-			this.logger = logger;
-
-			this.requestHandler = requestHandler ?? HandleRequest;
-
-			if (listenAddress == null)
-				listenAddress = IPAddress.IPv6Any;
-
-			Initialization = Task.Run(() => Initialize(listenAddress, port));
-		}
-
-		#endregion Constructors
-
 		#region Properties
 
 		/// <summary>
@@ -100,7 +85,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <summary>
 		/// Gets the UTC timestamp of the server start.
 		/// </summary>
-		public DateTime StartTime { get; private set; }
+		public DateTime StartTime { get; private set; } = DateTime.MinValue;
 
 		/// <summary>
 		/// Gets a value indicating whether the server is running.
@@ -108,11 +93,64 @@ namespace AMWD.Modbus.Tcp.Server
 		public bool IsRunning { get; private set; }
 
 		/// <summary>
+		/// Gets the binding address.
+		/// </summary>
+		public IPAddress ListenAddress { get; }
+
+		/// <summary>
+		/// Gets the port listening on.
+		/// </summary>
+		public int Port { get; }
+
+		/// <summary>
+		/// Gets or sets read/write timeout. (Default: 1 second)
+		/// </summary>
+		public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(1);
+
+		/// <summary>
 		/// Gets a list of device ids the server handles.
 		/// </summary>
 		public List<byte> DeviceIds => modbusDevices.Keys.ToList();
 
 		#endregion Properties
+
+		#region Constructos
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ModbusServer"/> class.
+		/// </summary>
+		/// <param name="port">The port to listen. (Default: 502)</param>
+		/// <param name="listenAddress">The ip address to bind on. (Default: <see cref="IPAddress.IPv6Any"/>)</param>
+		/// <param name="logger"><see cref="ILogger"/> instance to write log entries. (Default: no logger)</param>
+		/// <param name="requestHandler">Set this request handler to override the default implemented handling. (Default: serving the data provided by Set* methods)</param>
+		public ModbusServer(int port = 502, IPAddress listenAddress = null, ILogger logger = null, ModbusTcpRequestHandler requestHandler = null)
+		{
+			ListenAddress = listenAddress;
+			if (ListenAddress == null)
+				ListenAddress = IPAddress.IPv6Any;
+
+			if (port < 0 || port > 65535)
+				throw new ArgumentOutOfRangeException(nameof(port));
+
+			try
+			{
+				var listener = new TcpListener(ListenAddress, port);
+				listener.Start();
+				Port = ((IPEndPoint)listener.LocalEndpoint).Port;
+				listener.Stop();
+			}
+			catch (Exception ex)
+			{
+				throw new ArgumentException(nameof(port), ex);
+			}
+
+			this.logger = logger;
+			this.requestHandler = requestHandler ?? HandleRequest;
+
+			Initialization = Task.Run(() => Initialize());
+		}
+
+		#endregion Constructos
 
 		#region Public methods
 
@@ -126,6 +164,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <returns>The coil.</returns>
 		public Coil GetCoil(byte deviceId, ushort coilNumber)
 		{
+			CheckDisposed();
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
 
@@ -140,6 +179,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="value">The status of the coil.</param>
 		public void SetCoil(byte deviceId, ushort coilNumber, bool value)
 		{
+			CheckDisposed();
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
 
@@ -153,7 +193,8 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="coil">The coil.</param>
 		public void SetCoil(byte deviceId, ModbusObject coil)
 		{
-			if (coil.Type != ObjectType.Coil)
+			CheckDisposed();
+			if (coil.Type != ModbusObjectType.Coil)
 				throw new ArgumentException("Invalid coil type set");
 
 			SetCoil(deviceId, coil.Address, coil.BoolValue);
@@ -171,6 +212,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <returns>The discrete input.</returns>
 		public DiscreteInput GetDiscreteInput(byte deviceId, ushort inputNumber)
 		{
+			CheckDisposed();
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
 
@@ -185,6 +227,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="value">A value inidcating whether the input is set.</param>
 		public void SetDiscreteInput(byte deviceId, ushort inputNumber, bool value)
 		{
+			CheckDisposed();
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
 
@@ -198,7 +241,8 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="discreteInput">The discrete input to set.</param>
 		public void SetDiscreteInput(byte deviceId, ModbusObject discreteInput)
 		{
-			if (discreteInput.Type != ObjectType.DiscreteInput)
+			CheckDisposed();
+			if (discreteInput.Type != ModbusObjectType.DiscreteInput)
 				throw new ArgumentException("Invalid input type set");
 
 			SetDiscreteInput(deviceId, discreteInput.Address, discreteInput.BoolValue);
@@ -216,6 +260,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <returns>The input register.</returns>
 		public Register GetInputRegister(byte deviceId, ushort registerNumber)
 		{
+			CheckDisposed();
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
 
@@ -230,6 +275,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="value">The register value.</param>
 		public void SetInputRegister(byte deviceId, ushort registerNumber, ushort value)
 		{
+			CheckDisposed();
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
 
@@ -245,7 +291,8 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="lowByte">The Low-Byte value.</param>
 		public void SetInputRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetInputRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ObjectType.InputRegister });
+			CheckDisposed();
+			SetInputRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ModbusObjectType.InputRegister });
 		}
 
 		/// <summary>
@@ -255,7 +302,8 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="register">The input register.</param>
 		public void SetInputRegister(byte deviceId, ModbusObject register)
 		{
-			if (register.Type != ObjectType.InputRegister)
+			CheckDisposed();
+			if (register.Type != ModbusObjectType.InputRegister)
 				throw new ArgumentException("Invalid register type set");
 
 			SetInputRegister(deviceId, register.Address, register.RegisterValue);
@@ -273,6 +321,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <returns>The holding register.</returns>
 		public Register GetHoldingRegister(byte deviceId, ushort registerNumber)
 		{
+			CheckDisposed();
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
 
@@ -287,6 +336,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="value">The register value.</param>
 		public void SetHoldingRegister(byte deviceId, ushort registerNumber, ushort value)
 		{
+			CheckDisposed();
 			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
 				throw new ArgumentException($"Device #{deviceId} does not exist");
 
@@ -302,7 +352,8 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="lowByte">The low byte value.</param>
 		public void SetHoldingRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetHoldingRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ObjectType.HoldingRegister });
+			CheckDisposed();
+			SetHoldingRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ModbusObjectType.HoldingRegister });
 		}
 
 		/// <summary>
@@ -312,7 +363,8 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <param name="register">The register.</param>
 		public void SetHoldingRegister(byte deviceId, ModbusObject register)
 		{
-			if (register.Type != ObjectType.HoldingRegister)
+			CheckDisposed();
+			if (register.Type != ModbusObjectType.HoldingRegister)
 				throw new ArgumentException("Invalid register type set");
 
 			SetHoldingRegister(deviceId, register.Address, register.RegisterValue);
@@ -329,6 +381,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <returns>true on success, otherwise false.</returns>
 		public bool AddDevice(byte deviceId)
 		{
+			CheckDisposed();
 			return modbusDevices.TryAdd(deviceId, new ModbusDevice(deviceId));
 		}
 
@@ -339,6 +392,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <returns>true on success, otherwise false.</returns>
 		public bool RemoveDevice(byte deviceId)
 		{
+			CheckDisposed();
 			return modbusDevices.TryRemove(deviceId, out ModbusDevice _);
 		}
 
@@ -350,141 +404,123 @@ namespace AMWD.Modbus.Tcp.Server
 
 		#region Server
 
-		private void Initialize(IPAddress listenAddress, int port)
+		private Task Initialize()
 		{
-			if (isDisposed)
-				throw new ObjectDisposedException(GetType().FullName);
+			CheckDisposed();
 
-			if (port < 1 || port > 65535)
-				throw new ArgumentOutOfRangeException(nameof(port));
+			tcpListener?.Stop();
+			tcpListener = null;
+			tcpListener = new TcpListener(ListenAddress, Port);
 
-			tcpListener = new TcpListener(listenAddress, port);
-
-			if (listenAddress.AddressFamily == AddressFamily.InterNetworkV6)
+			if (ListenAddress.AddressFamily == AddressFamily.InterNetworkV6)
 				tcpListener.Server.DualMode = true;
 
 			tcpListener.Start();
-
 			StartTime = DateTime.UtcNow;
 			IsRunning = true;
 
-			logger?.LogInformation($"Modbus server started to listen on {port}/tcp.");
+			clientConnect = Task.Run(async () => await WaitForClient());
+			logger?.LogInformation($"Modbus server started. Listening on {ListenAddress}:{Port}/tcp.");
 
-			Task.Run((Action)WaitForClient);
+			return Task.CompletedTask;
 		}
 
-		private async void WaitForClient()
+		private async Task WaitForClient()
 		{
-			TcpClient client = null;
-			try
+			while (!stopCts.IsCancellationRequested)
 			{
-				client = await tcpListener.AcceptTcpClientAsync();
-				Task.Run((Action)WaitForClient).Forget();
-			}
-			catch (NullReferenceException)
-			{
-				// Server stopping
-				return;
-			}
-			catch (AggregateException)
-			{
-				// Server stopping
-				return;
-			}
-			catch (ObjectDisposedException)
-			{
-				// Server stopping
-				return;
-			}
-
-			lock (tcpClients)
-			{
-				tcpClients.Add(client);
-			}
-
-			HandleClient(client);
-		}
-
-		private async void HandleClient(TcpClient client)
-		{
-			var ipEp = (IPEndPoint)client.Client.RemoteEndPoint;
-			ClientConnected?.Invoke(this, new ClientEventArgs(ipEp));
-			logger?.LogInformation($"Client connected: {ipEp.Address}.");
-
-			try
-			{
-				var stream = client.GetStream();
-				while (true)
+				try
 				{
-					var requestBytes = new MemoryStream();
-
-					byte[] header = await stream.ReadExpectedBytes(6);
-					await requestBytes.WriteAsync(header, 0, header.Length);
-
-					byte[] bytes = header.Skip(4).Take(2).ToArray();
-					if (BitConverter.IsLittleEndian)
-						Array.Reverse(bytes);
-
-					int following = BitConverter.ToUInt16(bytes, 0);
-
-					byte[] payload = await stream.ReadExpectedBytes(following);
-					await requestBytes.WriteAsync(payload, 0, payload.Length);
-
-					Response response = null;
-					try
+					var client = await tcpListener.AcceptTcpClientAsync();
+					if (tcpClients.TryAdd(client, true))
 					{
-						var request = new Request(requestBytes.GetBuffer());
-						response = requestHandler(request);
+						var clientTask = Task.Run(async () => await HandleClient(client));
+						clientTasks.Add(clientTask);
 					}
-					catch (ArgumentException ae)
-					{
-						logger?.LogWarning(ae, $"Parsing request from {ipEp.Address} failed: {ae.Message}.");
-					}
-					catch (NotImplementedException nie)
-					{
-						logger?.LogWarning(nie, $"Request from {ipEp.Address} has an invalid function part.");
-					}
+				}
+				catch
+				{
+					// keep things quiet
+				}
+			}
+		}
 
-					if (response != null)
+		private async Task HandleClient(TcpClient client)
+		{
+			var endpoint = (IPEndPoint)client.Client.RemoteEndPoint;
+			ClientConnected?.Invoke(this, new ClientEventArgs(endpoint));
+			logger?.LogInformation($"Client connected: {endpoint.Address}.");
+
+			try
+			{
+				while (!stopCts.IsCancellationRequested)
+				{
+					var stream = client.GetStream();
+					var requestStream = new MemoryStream();
+
+					using (var cts = new CancellationTokenSource(Timeout))
+					using (stopCts.Token.Register(() => cts.Cancel()))
 					{
 						try
 						{
-							bytes = response.Serialize();
-							await stream.WriteAsync(bytes, 0, bytes.Length);
+							byte[] header = await stream.ReadExpectedBytes(6, cts.Token);
+							await requestStream.WriteAsync(header, 0, header.Length, cts.Token);
+
+							byte[] bytes = header.Skip(4).Take(2).ToArray();
+							if (BitConverter.IsLittleEndian)
+								Array.Reverse(bytes);
+
+							int following = BitConverter.ToUInt16(bytes, 0);
+							byte[] payload = await stream.ReadExpectedBytes(following, cts.Token);
+							await requestStream.WriteAsync(payload, 0, payload.Length, cts.Token);
 						}
-						catch (NotImplementedException nie)
+						catch (OperationCanceledException) when (cts.IsCancellationRequested)
 						{
-							logger?.LogError(nie, $"Response for {ipEp.Address} has an invalid function part. Sending Message failed.");
+							await stream.FlushAsync(stopCts.Token);
+						}
+					}
+
+					var request = new Request(requestStream.GetBuffer());
+					Console.WriteLine(request);
+					var response = requestHandler?.Invoke(request, stopCts.Token);
+					if (response != null)
+					{
+						Console.WriteLine(response);
+
+						using var cts = new CancellationTokenSource(Timeout);
+						using var reg = stopCts.Token.Register(() => cts.Cancel());
+						try
+						{
+							byte[] bytes = response.Serialize();
+							await stream.WriteAsync(bytes, 0, bytes.Length, cts.Token);
+						}
+						catch (OperationCanceledException) when (cts.IsCancellationRequested)
+						{
+							await stream.FlushAsync(stopCts.Token);
 						}
 					}
 				}
 			}
-			catch (EndOfStreamException)
-			{
-				// client closed connection (connecting)
-			}
 			catch (ArgumentOutOfRangeException)
 			{
-				// client closed connection (request parsing)
+				// Client closed connection
+				return;
 			}
-			catch (IOException)
+			catch (Exception ex)
 			{
-				// server stopped
+				Console.Error.WriteLine($"{ex.GetType()}: {ex.Message}");
 			}
+			finally
+			{
+				ClientDisconnected?.Invoke(this, new ClientEventArgs(endpoint));
+				logger?.LogInformation($"Client disconnected: {endpoint.Address}");
 
-			if (!isDisposed)
-			{
-				ClientDisconnected?.Invoke(this, new ClientEventArgs(ipEp));
-				logger?.LogInformation($"Client disconnected: {ipEp.Address}.");
-			}
-
-			lock (tcpClients)
-			{
-				tcpClients.Remove(client);
+				client.Dispose();
+				tcpClients.TryRemove(client, out _);
 			}
 		}
 
-		private Response HandleRequest(Request request)
+		private Response HandleRequest(Request request, CancellationToken cancellationToken)
 		{
 			// The device is not known => no response to send.
 			if (!modbusDevices.ContainsKey(request.DeviceId))
@@ -504,13 +540,13 @@ namespace AMWD.Modbus.Tcp.Server
 				_ => new Response(request)
 				{
 					ErrorCode = ErrorCode.IllegalFunction
-				},
+				}
 			};
 		}
 
 		#endregion Server
 
-		#region Function Implementations
+		#region Function implementation
 
 		#region Read requests
 
@@ -861,7 +897,7 @@ namespace AMWD.Modbus.Tcp.Server
 				{
 					try
 					{
-						var register = new Register { Address = request.Address, RegisterValue = val, Type = ObjectType.HoldingRegister };
+						var register = new Register { Address = request.Address, RegisterValue = val, Type = ModbusObjectType.HoldingRegister };
 
 						SetHoldingRegister(request.DeviceId, register);
 						response.Data = request.Data;
@@ -957,7 +993,7 @@ namespace AMWD.Modbus.Tcp.Server
 							ushort addr = (ushort)(request.Address + i);
 							ushort val = request.Data.GetUInt16(i * 2 + 1);
 
-							var register = new Register { Address = addr, RegisterValue = val, Type = ObjectType.HoldingRegister };
+							var register = new Register { Address = addr, RegisterValue = val, Type = ModbusObjectType.HoldingRegister };
 							SetHoldingRegister(request.DeviceId, register);
 							list.Add(register);
 						}
@@ -979,43 +1015,42 @@ namespace AMWD.Modbus.Tcp.Server
 
 		#endregion Write requests
 
-		#endregion Function Implementations
+		#endregion Function implementation
 
 		#endregion Private methods
 
 		#region IDisposable implementation
 
-		/// <summary>
-		/// Releases all managed and unmanaged resources used by the <see cref="ModbusServer"/>.
-		/// </summary>
-		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
-
 		private bool isDisposed;
 
-		private void Dispose(bool disposing)
+		/// <inheritdoc/>
+		public void Dispose()
 		{
-			if (disposing)
-			{
-				tcpListener?.Stop();
-
-				lock (tcpClients)
-				{
-					foreach (var client in tcpClients)
-					{
-						client?.GetStream()?.Dispose();
-						client?.Dispose();
-					}
-					tcpClients.Clear();
-				}
-
-				tcpListener = null;
-			}
+			if (isDisposed)
+				return;
 
 			isDisposed = true;
+			stopCts.Cancel();
+
+			tcpListener.Stop();
+			foreach (var client in tcpClients.Keys)
+			{
+				client.Dispose();
+			}
+
+			Task.WaitAll(clientTasks.ToArray());
+			Task.WaitAll(clientConnect);
+
+			IsRunning = false;
+		}
+
+		/// <summary>
+		/// Checks whether the object is already disposed.
+		/// </summary>
+		protected void CheckDisposed()
+		{
+			if (isDisposed)
+				throw new ObjectDisposedException(GetType().FullName);
 		}
 
 		#endregion IDisposable implementation
@@ -1029,15 +1064,15 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ClientEventArgs"/> class.
 		/// </summary>
-		/// <param name="ep">The client end point.</param>
-		public ClientEventArgs(IPEndPoint ep)
+		/// <param name="endpoint">The client end point.</param>
+		public ClientEventArgs(IPEndPoint endpoint)
 		{
-			EndPoint = ep;
+			EndPoint = endpoint;
 		}
 
 		/// <summary>
 		/// Gets the endpoint information of the client.
 		/// </summary>
-		public IPEndPoint EndPoint { get; private set; }
+		public IPEndPoint EndPoint { get; }
 	}
 }

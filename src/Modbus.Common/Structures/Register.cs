@@ -27,7 +27,7 @@ namespace AMWD.Modbus.Common.Structures
 		{
 			return new Register
 			{
-				Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+				Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 				Address = address,
 				RegisterValue = value
 			};
@@ -44,7 +44,7 @@ namespace AMWD.Modbus.Common.Structures
 		{
 			return new Register
 			{
-				Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+				Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 				Address = address,
 				RegisterValue = value
 			};
@@ -74,7 +74,7 @@ namespace AMWD.Modbus.Common.Structures
 				int bytePos = i * 2;
 				list.Add(new Register
 				{
-					Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+					Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[bytePos],
 					LoByte = blob[bytePos + 1]
@@ -106,7 +106,7 @@ namespace AMWD.Modbus.Common.Structures
 				int bytePos = i * 2;
 				list.Add(new Register
 				{
-					Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+					Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[bytePos],
 					LoByte = blob[bytePos + 1]
@@ -131,7 +131,7 @@ namespace AMWD.Modbus.Common.Structures
 		{
 			return new Register
 			{
-				Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+				Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 				Address = address,
 				RegisterValue = (ushort)value
 			};
@@ -152,7 +152,7 @@ namespace AMWD.Modbus.Common.Structures
 
 			return new Register
 			{
-				Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+				Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 				Address = address,
 				HiByte = blob[0],
 				LoByte = blob[1]
@@ -181,7 +181,7 @@ namespace AMWD.Modbus.Common.Structures
 				int bytePos = i * 2;
 				list.Add(new Register
 				{
-					Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+					Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[bytePos],
 					LoByte = blob[bytePos + 1]
@@ -213,7 +213,7 @@ namespace AMWD.Modbus.Common.Structures
 				int bytePos = i * 2;
 				list.Add(new Register
 				{
-					Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+					Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[bytePos],
 					LoByte = blob[bytePos + 1]
@@ -249,7 +249,7 @@ namespace AMWD.Modbus.Common.Structures
 				int bytePos = i * 2;
 				list.Add(new Register
 				{
-					Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+					Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[bytePos],
 					LoByte = blob[bytePos + 1]
@@ -281,7 +281,7 @@ namespace AMWD.Modbus.Common.Structures
 				int bytePos = i * 2;
 				list.Add(new Register
 				{
-					Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+					Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 					Address = Convert.ToUInt16(address + i),
 					HiByte = blob[bytePos],
 					LoByte = blob[bytePos + 1]
@@ -322,7 +322,7 @@ namespace AMWD.Modbus.Common.Structures
 				{
 					list.Add(new Register
 					{
-						Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+						Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 						Address = Convert.ToUInt16(address + i),
 						HiByte = blob[bytePos],
 						LoByte = blob[bytePos + 1]
@@ -332,7 +332,7 @@ namespace AMWD.Modbus.Common.Structures
 				{
 					list.Add(new Register
 					{
-						Type = isInput ? ObjectType.InputRegister : ObjectType.HoldingRegister,
+						Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 						Address = Convert.ToUInt16(address + i),
 						HiByte = blob[bytePos]
 					});

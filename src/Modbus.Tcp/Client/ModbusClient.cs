@@ -405,7 +405,7 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					list.Add(new Register
 					{
-						Type = ObjectType.HoldingRegister,
+						Type = ModbusObjectType.HoldingRegister,
 						Address = (ushort)(startAddress + i),
 						HiByte = response.Data[i * 2],
 						LoByte = response.Data[i * 2 + 1]
@@ -478,7 +478,7 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					list.Add(new Register
 					{
-						Type = ObjectType.InputRegister,
+						Type = ModbusObjectType.InputRegister,
 						Address = (ushort)(startAddress + i),
 						HiByte = response.Data[i * 2],
 						LoByte = response.Data[i * 2 + 1]
@@ -620,7 +620,7 @@ namespace AMWD.Modbus.Tcp.Client
 			if (coil == null)
 				throw new ArgumentNullException(nameof(coil));
 
-			if (coil.Type != ObjectType.Coil)
+			if (coil.Type != ModbusObjectType.Coil)
 				throw new ArgumentException("Invalid coil type set");
 
 			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
@@ -692,7 +692,7 @@ namespace AMWD.Modbus.Tcp.Client
 			if (register == null)
 				throw new ArgumentNullException(nameof(register));
 
-			if (register.Type != ObjectType.HoldingRegister)
+			if (register.Type != ModbusObjectType.HoldingRegister)
 				throw new ArgumentException("Invalid register type set");
 
 			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
@@ -760,7 +760,7 @@ namespace AMWD.Modbus.Tcp.Client
 			if (coils == null || !coils.Any())
 				throw new ArgumentNullException(nameof(coils));
 
-			if (coils.Any(c => c.Type != ObjectType.Coil))
+			if (coils.Any(c => c.Type != ModbusObjectType.Coil))
 				throw new ArgumentException("Invalid coil type set");
 
 			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
@@ -853,7 +853,7 @@ namespace AMWD.Modbus.Tcp.Client
 			if (registers == null || !registers.Any())
 				throw new ArgumentNullException(nameof(registers));
 
-			if (registers.Any(r => r.Type != ObjectType.HoldingRegister))
+			if (registers.Any(r => r.Type != ModbusObjectType.HoldingRegister))
 				throw new ArgumentException("Invalid register type set");
 
 			if (deviceId < Consts.MinDeviceIdTcp || Consts.MaxDeviceId < deviceId)
@@ -1117,6 +1117,7 @@ namespace AMWD.Modbus.Tcp.Client
 						tcpClient?.Dispose();
 						tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
 						tcpClient.Client.DualMode = true;
+
 						var task = tcpClient.ConnectAsync(Host, Port);
 						if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout), ct)) == task && tcpClient.Connected)
 						{

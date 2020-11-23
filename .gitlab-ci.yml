@@ -1,13 +1,16 @@
 image: mcr.microsoft.com/dotnet/sdk:3.1
 
+stages:
+  - build
+  - deploy
+
 build:
+  stage: build
   tags:
     - docker
-  except:
-    - tags
   script:
     - dotnet restore
-    - dotnet build -c Release
+    - dotnet build --no-restore -c Release
     - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/*.nupkg
     - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/*.nupkg
     - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/*.nupkg
@@ -28,18 +31,15 @@ build:
       - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.xml
     expire_in: 1 month
 
-nuget:
+deploy:
+  stage: deploy
   tags:
     - docker
   only:
     - tags
   script:
     - dotnet restore
-    - dotnet build -c Release
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/*.nupkg
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/*.nupkg
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/*.nupkg
-    - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/*.nupkg
+    - dotnet build --no-restore -c Release
     - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/*.nupkg
     - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/*.nupkg
     - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/*.nupkg
@@ -49,5 +49,5 @@ nuget:
       - src/Modbus.Common/bin/Release/*.snupkg
       - src/Modbus.Tcp/bin/Release/*.snupkg
       - src/Modbus.Serial/bin/Release/*.snupkg
-      - src/Modbus.Proxy/bin/Release/*.snupkg
+#      - src/Modbus.Proxy/bin/Release/*.snupkg
     expire_in: 1 month

@@ -79,7 +79,7 @@ namespace AMWD.Modbus.Proxy
 			client = null;
 		}
 
-		private Response HandleRequest(Request request)
+		private Response HandleRequest(Request request, CancellationToken cancellationToken)
 		{
 			CheckDisposed();
 
@@ -345,7 +345,7 @@ namespace AMWD.Modbus.Proxy
 								{
 									registers.Add(new Register
 									{
-										Type = ObjectType.HoldingRegister,
+										Type = ModbusObjectType.HoldingRegister,
 										Address = i,
 										RegisterValue = value
 									});
@@ -367,7 +367,7 @@ namespace AMWD.Modbus.Proxy
 									{
 										registers.Add(new Register
 										{
-											Type = ObjectType.HoldingRegister,
+											Type = ModbusObjectType.HoldingRegister,
 											Address = i,
 											RegisterValue = value
 										});
@@ -445,7 +445,7 @@ namespace AMWD.Modbus.Proxy
 								{
 									registers.Add(new Register
 									{
-										Type = ObjectType.InputRegister,
+										Type = ModbusObjectType.InputRegister,
 										Address = i,
 										RegisterValue = value
 									});
@@ -467,7 +467,7 @@ namespace AMWD.Modbus.Proxy
 									{
 										registers.Add(new Register
 										{
-											Type = ObjectType.InputRegister,
+											Type = ModbusObjectType.InputRegister,
 											Address = i,
 											RegisterValue = value
 										});
@@ -772,7 +772,7 @@ namespace AMWD.Modbus.Proxy
 					{
 						ushort addr = (ushort)(request.Address + i);
 						ushort val = request.Data.GetUInt16(i * 2 + 1);
-						list.Add(new Register { Address = addr, RegisterValue = val, Type = ObjectType.HoldingRegister });
+						list.Add(new Register { Address = addr, RegisterValue = val, Type = ModbusObjectType.HoldingRegister });
 					}
 
 					try

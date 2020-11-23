@@ -15,6 +15,7 @@ using SerialServer = AMWD.Modbus.Serial.Server.ModbusServer;
 using TcpServer = AMWD.Modbus.Tcp.Server.ModbusServer;
 using System.Threading;
 using System.Net;
+using System.Net.Sockets;
 
 namespace ConsoleDemo
 {
@@ -24,14 +25,41 @@ namespace ConsoleDemo
 
 		private static void Main(string[] args)
 		{
+			bool run = true;
+			Console.CancelKeyPress += (s, e) =>
+			{
+				run = false;
+				e.Cancel = true;
+			};
+
 			try
 			{
-				ClientMainAsync(args).GetAwaiter().GetResult();
+				var client = new TcpClient("am-pi-dev", 502);
+				client.Connected += (s, e) =>
+				{
+					Console.WriteLine("Connected");
+				};
+				client.Disconnected += (s, e) =>
+				{
+					Console.WriteLine("Disconnected");
+				};
+
+				client.Connect().Wait();
+
+				while (run)
+				{
+					Console.WriteLine(client);
+					Thread.Sleep(1000);
+				}
+
+				client.Disconnect().Wait();
+
+				//ClientMainAsync(args).GetAwaiter().GetResult();
 				//ServerMain(args);
 			}
 			catch (Exception ex)
 			{
-				Console.Error.WriteLine(ex.Message);
+				Console.Error.WriteLine($"MAIN | {ex.GetType().FullName}: {ex.Message}");
 			}
 		}
 
@@ -238,7 +266,7 @@ namespace ConsoleDemo
 										{
 											return new Register
 											{
-												Type = ObjectType.HoldingRegister,
+												Type = ModbusObjectType.HoldingRegister,
 												Address = address++,
 												HiByte = bytes[i],
 												LoByte = bytes[i + 1]
@@ -304,7 +332,10 @@ namespace ConsoleDemo
 							Console.Write("Port: ");
 							int port = Convert.ToInt32(Console.ReadLine().Trim());
 
-							var tcp = new TcpServer(port, ip);
+							var tcp = new TcpServer(port, ip)
+							{
+								Timeout = TimeSpan.FromSeconds(3)
+							};
 							tcp.ClientConnected += (s, e) => Console.WriteLine($"Client connected: {e.EndPoint}");
 							tcp.ClientDisconnected += (s, e) => Console.WriteLine($"Client disconnected: {e.EndPoint}");
 
@@ -350,6 +381,8 @@ namespace ConsoleDemo
 				server.AddDevice(1);
 				server.AddDevice(5);
 				server.AddDevice(10);
+
+				Register.Create(123.45f, 100, false).ForEach(r => server.SetHoldingRegister(1, r));
 
 				Console.WriteLine("Server is running... press CTRL+C to exit.");
 				SpinWait.SpinUntil(() => !run);

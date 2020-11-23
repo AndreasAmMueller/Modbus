@@ -228,7 +228,7 @@ namespace AMWD.Modbus.Common
 	/// <summary>
 	/// Defines the specific type.
 	/// </summary>
-	public enum ObjectType
+	public enum ModbusObjectType
 	{
 		/// <summary>
 		/// The type is unknown (should not happen).

@@ -25,6 +25,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 			Function = request.Function;
 			Address = request.Address;
 			Count = request.Count;
+			Data = new DataBuffer();
 		}
 
 		/// <summary>
