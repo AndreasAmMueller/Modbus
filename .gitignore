@@ -1,6 +1,3 @@
-# Project-specific files
-setup/bin/
-
 # User-specific files
 *.suo
 *.user

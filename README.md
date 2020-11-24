@@ -32,7 +32,7 @@ float voltage = registers.GetSingle();
 Console.WriteLine($"The voltage between L1 and N is: {voltage:N2}V");
 ```
 
-For the people who have seen some devices; yes, it is a request to a Janitza device ;-).
+For the people who have seen some devices: yes, it's a request to a Janitza device ;-).
 
 ## License
 

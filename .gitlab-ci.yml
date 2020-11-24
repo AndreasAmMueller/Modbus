@@ -9,6 +9,7 @@ build:
   tags:
     - docker
   script:
+    - cat $NUGET_CONFIG > nuget.config
     - dotnet restore
     - dotnet build --no-restore -c Release
     - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/*.nupkg
@@ -38,6 +39,7 @@ deploy:
   only:
     - tags
   script:
+    - cat $NUGET_CONFIG > nuget.config
     - dotnet restore
     - dotnet build --no-restore -c Release
     - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/*.nupkg

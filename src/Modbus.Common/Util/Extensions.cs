@@ -13,7 +13,7 @@ namespace AMWD.Modbus.Common.Util
 	/// </summary>
 	public static class Extensions
 	{
-		#region Register handling
+		#region Public extensions
 
 		#region To unsigned data types
 
@@ -277,16 +277,10 @@ namespace AMWD.Modbus.Common.Util
 
 		#endregion To string
 
-		#endregion Register handling
+		#endregion Public extensions
 
-		#region Enums
+		#region Internal extensions
 
-		/// <summary>
-		/// Tries to return an attribute of an enum value.
-		/// </summary>
-		/// <typeparam name="T">The attribute type.</typeparam>
-		/// <param name="enumValue">The enum value.</param>
-		/// <returns>The first attribute of the type present or null.</returns>
 		internal static T GetAttribute<T>(this Enum enumValue)
 			where T : Attribute
 		{
@@ -299,19 +293,10 @@ namespace AMWD.Modbus.Common.Util
 			return default;
 		}
 
-		/// <summary>
-		/// Tries to read the description of an enum value.
-		/// </summary>
-		/// <param name="enumValue">The enum value.</param>
-		/// <returns>The description or the <see cref="Enum.ToString()"/></returns>
 		internal static string GetDescription(this Enum enumValue)
 		{
 			return enumValue.GetAttribute<DescriptionAttribute>()?.Description ?? enumValue.ToString();
 		}
-
-		#endregion Enums
-
-		#region ReaderWriterLockSlim
 
 		internal static IDisposable GetReadLock(this ReaderWriterLockSlim rwLock, int millisecondsTimeout = -1)
 		{
@@ -401,6 +386,6 @@ namespace AMWD.Modbus.Common.Util
 			}
 		}
 
-		#endregion ReaderWriterLockSlim
+		#endregion Internal extensions
 	}
 }

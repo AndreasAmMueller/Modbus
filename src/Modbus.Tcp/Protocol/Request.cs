@@ -182,16 +182,16 @@ namespace AMWD.Modbus.Tcp.Protocol
 			TransactionId = buffer.GetUInt16(0);
 			ushort ident = buffer.GetUInt16(2);
 			if (ident != 0)
-				throw new ArgumentException("Protocol ident not valid");
+				throw new ArgumentException("Protocol identifier not valid.");
 
 			ushort length = buffer.GetUInt16(4);
 			if (buffer.Length < length + 6)
-				throw new ArgumentException("Too less data");
+				throw new ArgumentException("Too less data.");
 
 			if (buffer.Length > length + 6)
 			{
 				if (buffer.Buffer.Skip(length + 6).Any(b => b != 0))
-					throw new ArgumentException("Too many data");
+					throw new ArgumentException("Too many data.");
 
 				buffer = new DataBuffer(bytes.Take(length + 6));
 			}
@@ -231,11 +231,11 @@ namespace AMWD.Modbus.Tcp.Protocol
 							MEIObject = (DeviceIDObject)buffer.GetByte(10);
 							break;
 						default:
-							throw new NotImplementedException();
+							throw new NotImplementedException($"Unknown MEI type: {MEIType}.");
 					}
 					break;
 				default:
-					throw new NotImplementedException();
+					throw new NotImplementedException($"Unknown function code: {Function}.");
 			}
 		}
 

@@ -35,8 +35,8 @@ namespace AMWD.Modbus.Serial.Client
 		private Parity parity = Parity.None;
 		private StopBits stopBits = StopBits.None;
 		private Handshake handshake = Handshake.None;
-		private int sendTimeout = 1000;
-		private int receiveTimeout = 1000;
+		private TimeSpan sendTimeout = TimeSpan.FromSeconds(1);
+		private TimeSpan receiveTimeout = TimeSpan.FromSeconds(1);
 		private int bufferSize = 0;
 
 		// driver switch
@@ -207,7 +207,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <summary>
 		/// Gets or sets the send timeout in milliseconds. Default 1000 (recommended).
 		/// </summary>
-		public int SendTimeout
+		public TimeSpan SendTimeout
 		{
 			get
 			{
@@ -218,14 +218,14 @@ namespace AMWD.Modbus.Serial.Client
 				sendTimeout = value;
 
 				if (serialPort != null)
-					serialPort.WriteTimeout = value;
+					serialPort.WriteTimeout = (int)value.TotalMilliseconds;
 			}
 		}
 
 		/// <summary>
 		/// Gets or sets the receive timeout in milliseconds. Default 1000 (recommended).
 		/// </summary>
-		public int ReceiveTimeout
+		public TimeSpan ReceiveTimeout
 		{
 			get
 			{
@@ -236,7 +236,7 @@ namespace AMWD.Modbus.Serial.Client
 				receiveTimeout = value;
 
 				if (serialPort != null)
-					serialPort.ReadTimeout = value;
+					serialPort.ReadTimeout = (int)value.TotalMilliseconds;
 			}
 		}
 
@@ -1079,8 +1079,8 @@ namespace AMWD.Modbus.Serial.Client
 								Parity = Parity,
 								StopBits = StopBits,
 								Handshake = Handshake,
-								ReadTimeout = ReceiveTimeout,
-								WriteTimeout = SendTimeout
+								ReadTimeout = (int)ReceiveTimeout.TotalMilliseconds,
+								WriteTimeout = (int)SendTimeout.TotalMilliseconds
 							};
 
 							if (bufferSize > 0)

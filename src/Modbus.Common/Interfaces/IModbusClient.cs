@@ -31,12 +31,12 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <summary>
 		/// Gets or sets the send timeout in milliseconds. Default: 1000.
 		/// </summary>
-		int SendTimeout { get; set; }
+		TimeSpan SendTimeout { get; set; }
 
 		/// <summary>
 		/// Gets ors sets the receive timeout in milliseconds. Default: 1000;
 		/// </summary>
-		int ReceiveTimeout { get; set; }
+		TimeSpan ReceiveTimeout { get; set; }
 
 		#endregion Properties
 

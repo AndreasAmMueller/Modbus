@@ -7,19 +7,10 @@ using System.Threading.Tasks;
 
 namespace AMWD.Modbus.Tcp.Util
 {
-	/// <summary>
-	/// Contains some extensions to handle some features more easily.
-	/// </summary>
 	internal static class Extensions
 	{
 		#region Enums
 
-		/// <summary>
-		/// Tries to return an attribute of an enum value.
-		/// </summary>
-		/// <typeparam name="T">The attribute type.</typeparam>
-		/// <param name="enumValue">The enum value.</param>
-		/// <returns>The first attribute of the type present or null.</returns>
 		public static T GetAttribute<T>(this Enum enumValue)
 			where T : Attribute
 		{
@@ -32,11 +23,6 @@ namespace AMWD.Modbus.Tcp.Util
 			return default(T);
 		}
 
-		/// <summary>
-		/// Tries to read the description of an enum value.
-		/// </summary>
-		/// <param name="enumValue">The enum value.</param>
-		/// <returns>The description or the <see cref="Enum.ToString()"/></returns>
 		public static string GetDescription(this Enum enumValue)
 		{
 			return enumValue.GetAttribute<DescriptionAttribute>()?.Description ?? enumValue.ToString();
@@ -46,11 +32,7 @@ namespace AMWD.Modbus.Tcp.Util
 
 		#region Task handling
 
-		/// <summary>
-		/// Forgets about the result of the task. (Prevent compiler warning).
-		/// </summary>
-		/// <param name="task">The task to forget.</param>
-		internal static async void Forget(this Task task)
+		public static async void Forget(this Task task)
 		{
 			try
 			{
@@ -64,15 +46,15 @@ namespace AMWD.Modbus.Tcp.Util
 
 		#region Stream
 
-		internal static async Task<byte[]> ReadExpectedBytes(this Stream stream, int expectedBytes, CancellationToken cancellationToken = default)
+		public static async Task<byte[]> ReadExpectedBytes(this Stream stream, int expectedBytes, CancellationToken cancellationToken = default)
 		{
 			byte[] buffer = new byte[expectedBytes];
 			int offset = 0;
 			do
 			{
 				int count = await stream.ReadAsync(buffer, offset, expectedBytes - offset, cancellationToken);
-				//if (count < 1)
-				//	throw new EndOfStreamException($"Expected to read {buffer.Length - offset} more bytes, but end of stream is reached");
+				if (count < 1)
+					throw new EndOfStreamException($"Expected to read {buffer.Length - offset} more bytes, but end of stream is reached");
 
 				offset += count;
 			}
@@ -82,6 +64,15 @@ namespace AMWD.Modbus.Tcp.Util
 			return buffer;
 		}
 
-		#endregion
+		#endregion Stream
+
+		#region Exception
+
+		public static string GetMessage(this Exception exception)
+		{
+			return exception.InnerException?.Message ?? exception.Message;
+		}
+
+		#endregion Exception
 	}
 }

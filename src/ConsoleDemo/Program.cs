@@ -2,59 +2,34 @@
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
+using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using AMWD.Modbus.Common;
 using AMWD.Modbus.Common.Interfaces;
 using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
 using AMWD.Modbus.Serial;
+using ConsoleDemo.Logger;
+using Microsoft.Extensions.Logging;
 using SerialClient = AMWD.Modbus.Serial.Client.ModbusClient;
-using TcpClient = AMWD.Modbus.Tcp.Client.ModbusClient;
 using SerialServer = AMWD.Modbus.Serial.Server.ModbusServer;
+using TcpClient = AMWD.Modbus.Tcp.Client.ModbusClient;
 using TcpServer = AMWD.Modbus.Tcp.Server.ModbusServer;
-using System.Threading;
-using System.Net;
-using System.Net.Sockets;
 
 namespace ConsoleDemo
 {
 	internal class Program
 	{
-		private static bool run = true;
-
 		private static void Main(string[] args)
 		{
-			bool run = true;
-			Console.CancelKeyPress += (s, e) =>
-			{
-				run = false;
-				e.Cancel = true;
-			};
-
 			try
 			{
-				var client = new TcpClient("am-pi-dev", 502);
-				client.Connected += (s, e) =>
-				{
-					Console.WriteLine("Connected");
-				};
-				client.Disconnected += (s, e) =>
-				{
-					Console.WriteLine("Disconnected");
-				};
-
-				client.Connect().Wait();
-
-				while (run)
-				{
-					Console.WriteLine(client);
-					Thread.Sleep(1000);
-				}
-
-				client.Disconnect().Wait();
-
-				//ClientMainAsync(args).GetAwaiter().GetResult();
+				ClientMainAsync(args)
+					.ConfigureAwait(false)
+					.GetAwaiter()
+					.GetResult();
 				//ServerMain(args);
 			}
 			catch (Exception ex)
@@ -65,6 +40,19 @@ namespace ConsoleDemo
 
 		private static async Task ClientMainAsync(string[] _)
 		{
+			bool run = true;
+			Console.CancelKeyPress += (object _, ConsoleCancelEventArgs evArgs) =>
+			{
+				evArgs.Cancel = true;
+				run = false;
+			};
+
+			var logger = new ConsoleLogger()
+			{
+				MinLevel = LogLevel.Trace,
+				TimestampFormat = "HH:mm:ss.fff"
+			};
+
 			Console.WriteLine("Console Demo Modbus Client");
 			Console.WriteLine();
 
@@ -83,7 +71,7 @@ namespace ConsoleDemo
 							Console.Write("Port: ");
 							int port = Convert.ToInt32(Console.ReadLine().Trim());
 
-							client = new TcpClient(host, port);
+							client = new TcpClient(host, port, logger);
 						}
 						break;
 					case 2:
@@ -103,7 +91,7 @@ namespace ConsoleDemo
 							Console.Write("Handshake [0] None [1] X-On/Off [2] RTS [3] RTS+X-On/Off: ");
 							int handshake = Convert.ToInt32(Console.ReadLine().Trim());
 
-							Console.Write("Timeout: ");
+							Console.Write("Timeout (ms): ");
 							int timeout = Convert.ToInt32(Console.ReadLine().Trim());
 
 							Console.Write("Set Driver to RS485 [0] No [1] Yes: ");
@@ -116,8 +104,8 @@ namespace ConsoleDemo
 								StopBits = (StopBits)stopBits,
 								Parity = (Parity)parity,
 								Handshake = (Handshake)handshake,
-								SendTimeout = timeout,
-								ReceiveTimeout = timeout
+								SendTimeout = TimeSpan.FromMilliseconds(timeout),
+								ReceiveTimeout = TimeSpan.FromMilliseconds(timeout)
 							};
 
 							if (setDriver == 1)
@@ -306,6 +294,19 @@ namespace ConsoleDemo
 
 		private static void ServerMain(string[] _)
 		{
+			bool run = true;
+			Console.CancelKeyPress += (object _, ConsoleCancelEventArgs evArgs) =>
+			{
+				evArgs.Cancel = true;
+				run = false;
+			};
+
+			var logger = new ConsoleLogger()
+			{
+				MinLevel = LogLevel.Trace,
+				TimestampFormat = "HH:mm:ss.fff"
+			};
+
 			Console.WriteLine("Demo Modbus Server");
 			Console.WriteLine();
 
@@ -315,14 +316,7 @@ namespace ConsoleDemo
 			IModbusServer server = null;
 			try
 			{
-				bool run = true;
-				Console.CancelKeyPress += (object _, ConsoleCancelEventArgs evArgs) =>
-				{
-					evArgs.Cancel = true;
-					run = false;
-				};
-
-				switch(cType)
+				switch (cType)
 				{
 					case 1:
 						{
@@ -332,7 +326,7 @@ namespace ConsoleDemo
 							Console.Write("Port: ");
 							int port = Convert.ToInt32(Console.ReadLine().Trim());
 
-							var tcp = new TcpServer(port, ip)
+							var tcp = new TcpServer(port, ip, logger)
 							{
 								Timeout = TimeSpan.FromSeconds(3)
 							};

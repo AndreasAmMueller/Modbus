@@ -226,11 +226,19 @@ namespace AMWD.Modbus.Tcp.Protocol
 			var buffer = new DataBuffer(bytes);
 			ushort ident = buffer.GetUInt16(2);
 			if (ident != 0)
-				throw new ArgumentException("Response not valid Modbus TCP protocol");
+				throw new ArgumentException("Protocol identifier not valid.");
 
-			ushort len = buffer.GetUInt16(4);
-			if (buffer.Length != len + 6)
-				throw new ArgumentException("Response incomplete");
+			ushort length = buffer.GetUInt16(4);
+			if (buffer.Length < length + 6)
+				throw new ArgumentException("Too less data.");
+
+			if (buffer.Length > length + 6)
+			{
+				if (buffer.Buffer.Skip(length + 6).Any(b => b != 0))
+					throw new ArgumentException("Too many data.");
+
+				buffer = new DataBuffer(bytes.Take(length + 6));
+			}
 
 			TransactionId = buffer.GetUInt16(0);
 			DeviceId = buffer.GetByte(6);
@@ -251,9 +259,9 @@ namespace AMWD.Modbus.Tcp.Protocol
 					case FunctionCode.ReadDiscreteInputs:
 					case FunctionCode.ReadHoldingRegisters:
 					case FunctionCode.ReadInputRegisters:
-						len = buffer.GetByte(8);
-						if (buffer.Length != len + 9)
-							throw new ArgumentException("Response incomplete");
+						length = buffer.GetByte(8);
+						if (buffer.Length != length + 9)
+							throw new ArgumentException("Payload missing.");
 
 						Data = new DataBuffer(buffer.Buffer.Skip(9).ToArray());
 						break;
@@ -283,11 +291,11 @@ namespace AMWD.Modbus.Tcp.Protocol
 								Data = new DataBuffer(buffer.Buffer.Skip(14).ToArray());
 								break;
 							default:
-								throw new NotImplementedException();
+								throw new NotImplementedException($"Unknown MEI type: {MEIType}.");
 						}
 						break;
 					default:
-						throw new NotImplementedException();
+						throw new NotImplementedException($"Unknown function code: {Function}.");
 				}
 			}
 		}

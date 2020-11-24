@@ -30,10 +30,10 @@ namespace UnitTests
 
 			using var client = new ModbusClient(IPAddress.Loopback, server.Port);
 			await client.Connect();
-			Assert.IsTrue(client.IsConnected);
+			Assert.IsTrue(client.IsConnected, "Client shoud be connected");
 
 			await client.Disconnect();
-			Assert.IsFalse(client.IsConnected);
+			Assert.IsFalse(client.IsConnected, "Client should not be connected");
 		}
 
 		[TestMethod]
@@ -44,17 +44,15 @@ namespace UnitTests
 
 			using var client = new ModbusClient(IPAddress.Loopback, server.Port, new ConsoleLogger());
 			await client.Connect();
-			Assert.IsTrue(client.IsConnected);
+			Assert.IsTrue(client.IsConnected, "Client should be connected");
 
 			await server.Stop();
-
-			await client.ReadHoldingRegisters(0, 0, 1);
-			await EnsureWait();  // time to set all information
-			Assert.IsFalse(client.IsConnected);
+			await EnsureWait();  // time to start reconnect
+			Assert.IsFalse(client.IsConnected, "Client should not be connected");
 
 			server.Start();
 			await client.ConnectingTask;
-			Assert.IsTrue(client.IsConnected);
+			Assert.IsTrue(client.IsConnected, "Client should be connected again");
 		}
 
 		[TestMethod]
@@ -76,34 +74,35 @@ namespace UnitTests
 					disconnectEvents++;
 				};
 
-				Assert.AreEqual(0, connectEvents);
-				Assert.AreEqual(0, disconnectEvents);
+				Assert.AreEqual(0, connectEvents, "No connet events");
+				Assert.AreEqual(0, disconnectEvents, "No disconnect events");
 
 				await client.Connect();
-				Assert.IsTrue(client.IsConnected);
+				Assert.IsTrue(client.IsConnected, "Client should be connected");
 
 				await EnsureWait(); // get events raised
-				Assert.AreEqual(1, connectEvents);
-				Assert.AreEqual(0, disconnectEvents);
+				Assert.AreEqual(1, connectEvents, "One connect event");
+				Assert.AreEqual(0, disconnectEvents, "No disconnect events");
 
 				await server.Stop();
 
-				await client.ReadHoldingRegisters(0, 0, 1);
 				await EnsureWait();  // time to set all information
-				Assert.IsFalse(client.IsConnected);
+				Assert.IsFalse(client.IsConnected, "Client should not be connected");
 
 				await EnsureWait(); // get events raised
-				Assert.AreEqual(1, connectEvents);
-				Assert.AreEqual(1, disconnectEvents);
+				Assert.AreEqual(1, connectEvents, "One connect event");
+				Assert.AreEqual(1, disconnectEvents, "One disconnect event");
 
 				server.Start();
 				await client.ConnectingTask;
-				Assert.IsTrue(client.IsConnected);
+				Assert.IsTrue(client.IsConnected, "Client should be connected");
+
+				await EnsureWait(); // get events raised
+				Assert.AreEqual(2, connectEvents, "Two connect events");
 			}
 
 			await EnsureWait(); // get events raised
-			Assert.AreEqual(2, connectEvents);
-			Assert.AreEqual(2, disconnectEvents);
+			Assert.AreEqual(2, disconnectEvents, "Two disconnect events");
 		}
 
 		#endregion Control
@@ -597,10 +596,9 @@ namespace UnitTests
 				{
 					try
 					{
-						var waitForClient = listener.AcceptTcpClientAsync();
-						if (await Task.WhenAny(waitForClient, Task.Delay(Timeout.Infinite, ct)) == waitForClient)
+						var client = await listener.AcceptTcpClientAsync();
+						try
 						{
-							using var client = waitForClient.Result;
 							var clientEndPoint = (IPEndPoint)client.Client.RemoteEndPoint;
 
 							using var stream = client.GetStream();
@@ -643,14 +641,18 @@ namespace UnitTests
 								}
 								catch (Exception ex)
 								{
-									LastError = ex.InnerException?.Message ?? ex.Message;
+									LastError = ex.GetMessage();
 								}
 							}
+						}
+						finally
+						{
+							client?.Dispose();
 						}
 					}
 					catch (Exception ex)
 					{
-						string msg = ex.InnerException?.Message ?? ex.Message;
+						string msg = ex.GetMessage();
 						Console.WriteLine($"Server exception: " + msg);
 					}
 				}
@@ -662,7 +664,7 @@ namespace UnitTests
 		// Time for the scheduler to launch a thread to start the reconnect
 		private async Task EnsureWait()
 		{
-			await Task.Delay(1);
+			await Task.Delay(10);
 		}
 	}
 }

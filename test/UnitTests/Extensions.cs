@@ -12,12 +12,6 @@ namespace UnitTests
 	{
 		#region Enums
 
-		/// <summary>
-		/// Tries to return an attribute of an enum value.
-		/// </summary>
-		/// <typeparam name="T">The attribute type.</typeparam>
-		/// <param name="enumValue">The enum value.</param>
-		/// <returns>The first attribute of the type present or null.</returns>
 		public static T GetAttribute<T>(this Enum enumValue)
 			where T : Attribute
 		{
@@ -30,11 +24,6 @@ namespace UnitTests
 			return default(T);
 		}
 
-		/// <summary>
-		/// Tries to read the description of an enum value.
-		/// </summary>
-		/// <param name="enumValue">The enum value.</param>
-		/// <returns>The description or the <see cref="Enum.ToString()"/></returns>
 		public static string GetDescription(this Enum enumValue)
 		{
 			return enumValue.GetAttribute<DescriptionAttribute>()?.Description ?? enumValue.ToString();
@@ -44,10 +33,6 @@ namespace UnitTests
 
 		#region Task handling
 
-		/// <summary>
-		/// Forgets about the result of the task. (Prevent compiler warning).
-		/// </summary>
-		/// <param name="task">The task to forget.</param>
 		internal static async void Forget(this Task task)
 		{
 			try
@@ -59,5 +44,14 @@ namespace UnitTests
 		}
 
 		#endregion Task handling
+
+		#region Exception
+
+		public static string GetMessage(this Exception exception)
+		{
+			return exception.InnerException?.Message ?? exception.Message;
+		}
+
+		#endregion Exception
 	}
 }
