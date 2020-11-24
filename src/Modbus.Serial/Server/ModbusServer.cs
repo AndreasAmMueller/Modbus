@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +10,8 @@ using AMWD.Modbus.Common.Interfaces;
 using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
 using AMWD.Modbus.Serial.Protocol;
+using AMWD.Modbus.Serial.Util;
+using Microsoft.Extensions.Logging;
 
 namespace AMWD.Modbus.Serial.Server
 {
@@ -26,6 +29,8 @@ namespace AMWD.Modbus.Serial.Server
 	{
 		#region Fields
 
+		private readonly ILogger logger;
+
 		private SerialPort serialPort;
 
 		private BaudRate baudRate = BaudRate.Baud38400;
@@ -34,18 +39,11 @@ namespace AMWD.Modbus.Serial.Server
 		private StopBits stopBits = StopBits.None;
 		private Handshake handshake = Handshake.None;
 		private int bufferSize = 4096;
-		private int sendTimeout = 1000;
-		private int receiveTimeout = 1000;
-
-		// private Task receivingTask;
+		private TimeSpan timeout = TimeSpan.FromSeconds(1);
 
 		private readonly ModbusSerialRequestHandler requestHandler;
 
-		private readonly FunctionCode[] availableFunctionCodes = Enum.GetValues(typeof(FunctionCode))
-			.Cast<FunctionCode>()
-			.ToArray();
-
-		private ConcurrentDictionary<byte, ModbusDevice> modbusDevices = new ConcurrentDictionary<byte, ModbusDevice>();
+		private readonly ConcurrentDictionary<byte, ModbusDevice> modbusDevices = new ConcurrentDictionary<byte, ModbusDevice>();
 
 		#endregion Fields
 
@@ -69,9 +67,12 @@ namespace AMWD.Modbus.Serial.Server
 		/// Initializes a new instance of the <see cref="ModbusServer"/> class.
 		/// </summary>
 		/// <param name="portName">The serial port name.</param>
+		/// <param name="logger">A logger.</param>
 		/// <param name="requestHandler">Set this request handler to override the default implemented handling. (Default: serving the data provided by Set* methods)</param>
-		public ModbusServer(string portName, ModbusSerialRequestHandler requestHandler = null)
+		public ModbusServer(string portName, ILogger logger = null, ModbusSerialRequestHandler requestHandler = null)
 		{
+			this.logger = logger;
+
 			if (string.IsNullOrWhiteSpace(portName))
 				throw new ArgumentNullException(nameof(portName));
 
@@ -79,8 +80,17 @@ namespace AMWD.Modbus.Serial.Server
 
 			PortName = portName;
 
-			Initialization = Task.Run((Action)Initialize);
+			Initialization = Task.Run(Initialize);
 		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ModbusServer"/> class.
+		/// </summary>
+		/// <param name="portName">The serial port name.</param>
+		/// <param name="requestHandler">Set this request handler to override the default implemented handling. (Default: serving the data provided by Set* methods)</param>
+		public ModbusServer(string portName, ModbusSerialRequestHandler requestHandler)
+			: this(portName, null, requestHandler)
+		{ }
 
 		#endregion Constructors
 
@@ -101,14 +111,10 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		public BaudRate BaudRate
 		{
-			get
-			{
-				return baudRate;
-			}
+			get => baudRate;
 			set
 			{
 				baudRate = value;
-
 				if (serialPort != null)
 					serialPort.BaudRate = (int)value;
 			}
@@ -119,14 +125,10 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		public int DataBits
 		{
-			get
-			{
-				return dataBits;
-			}
+			get => dataBits;
 			set
 			{
 				dataBits = value;
-
 				if (serialPort != null)
 					serialPort.DataBits = value;
 			}
@@ -137,14 +139,10 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		public Parity Parity
 		{
-			get
-			{
-				return parity;
-			}
+			get => parity;
 			set
 			{
 				parity = value;
-
 				if (serialPort != null)
 					serialPort.Parity = value;
 			}
@@ -155,14 +153,10 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		public StopBits StopBits
 		{
-			get
-			{
-				return stopBits;
-			}
+			get => stopBits;
 			set
 			{
 				stopBits = value;
-
 				if (serialPort != null)
 					serialPort.StopBits = value;
 			}
@@ -173,10 +167,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		public Handshake Handshake
 		{
-			get
-			{
-				return handshake;
-			}
+			get => handshake;
 			set
 			{
 				handshake = value;
@@ -191,10 +182,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// </summary>
 		public int BufferSize
 		{
-			get
-			{
-				return bufferSize;
-			}
+			get => bufferSize;
 			set
 			{
 				bufferSize = value;
@@ -207,38 +195,19 @@ namespace AMWD.Modbus.Serial.Server
 		}
 
 		/// <summary>
-		/// Gets or sets the send timeout in milliseconds. Default 1000 (recommended).
+		/// Gets or sets the send/receive timeout. Default: 1 second (recommended).
 		/// </summary>
-		public int SendTimeout
+		public TimeSpan Timeout
 		{
-			get
-			{
-				return sendTimeout;
-			}
+			get => timeout;
 			set
 			{
-				sendTimeout = value;
-
+				timeout = value;
 				if (serialPort != null)
-					serialPort.WriteTimeout = value;
-			}
-		}
-
-		/// <summary>
-		/// Gets or sets the receive timeout in milliseconds. Default 1000 (recommended).
-		/// </summary>
-		public int ReceiveTimeout
-		{
-			get
-			{
-				return receiveTimeout;
-			}
-			set
-			{
-				receiveTimeout = value;
-
-				if (serialPort != null)
-					serialPort.ReadTimeout = value;
+				{
+					serialPort.ReadTimeout = (int)value.TotalMilliseconds;
+					serialPort.WriteTimeout = (int)value.TotalMilliseconds;
+				}
 			}
 		}
 
@@ -271,10 +240,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <returns>The coil.</returns>
 		public Coil GetCoil(byte deviceId, ushort coilNumber)
 		{
-			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-				throw new ArgumentException($"Device #{deviceId} does not exist");
+			try
+			{
+				logger?.LogTrace("ModbusServer.GetCoil enter");
+				CheckDisposed();
 
-			return device.GetCoil(coilNumber);
+				if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
+					throw new ArgumentException($"Device #{deviceId} does not exist");
+
+				return device.GetCoil(coilNumber);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.GetCoil leave");
+			}
 		}
 
 		/// <summary>
@@ -285,10 +264,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="value">The status of the coil.</param>
 		public void SetCoil(byte deviceId, ushort coilNumber, bool value)
 		{
-			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-				throw new ArgumentException($"Device #{deviceId} does not exist");
+			try
+			{
+				logger?.LogTrace("ModbusServer.SetCoil(byte, ushort, bool) enter");
+				CheckDisposed();
 
-			device.SetCoil(coilNumber, value);
+				if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
+					throw new ArgumentException($"Device #{deviceId} does not exist");
+
+				device.SetCoil(coilNumber, value);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.SetCoil(byte, ushort, bool) leave");
+			}
 		}
 
 		/// <summary>
@@ -298,10 +287,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="coil">The coil.</param>
 		public void SetCoil(byte deviceId, ModbusObject coil)
 		{
-			if (coil.Type != ModbusObjectType.Coil)
-				throw new ArgumentException("Invalid coil type set");
+			try
+			{
+				logger?.LogTrace("ModbusServer.SetCoil(byte, ModbusObject) enter");
+				CheckDisposed();
 
-			SetCoil(deviceId, coil.Address, coil.BoolValue);
+				if (coil.Type != ModbusObjectType.Coil)
+					throw new ArgumentException("Invalid coil type set");
+
+				SetCoil(deviceId, coil.Address, coil.BoolValue);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.SetCoil(byte, ModbusObject) leave");
+			}
 		}
 
 		#endregion Coils
@@ -316,10 +315,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <returns>The discrete input.</returns>
 		public DiscreteInput GetDiscreteInput(byte deviceId, ushort inputNumber)
 		{
-			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-				throw new ArgumentException($"Device #{deviceId} does not exist");
+			try
+			{
+				logger?.LogTrace("ModbusServer.GetDiscreteInput enter");
+				CheckDisposed();
 
-			return device.GetInput(inputNumber);
+				if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
+					throw new ArgumentException($"Device #{deviceId} does not exist");
+
+				return device.GetInput(inputNumber);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.GetDiscreteInput leave");
+			}
 		}
 
 		/// <summary>
@@ -330,10 +339,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="value">A value inidcating whether the input is set.</param>
 		public void SetDiscreteInput(byte deviceId, ushort inputNumber, bool value)
 		{
-			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-				throw new ArgumentException($"Device #{deviceId} does not exist");
+			try
+			{
+				logger?.LogTrace("ModbusServer.SetDiscreteInput(byte, ushort, bool) enter");
+				CheckDisposed();
 
-			device.SetInput(inputNumber, value);
+				if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
+					throw new ArgumentException($"Device #{deviceId} does not exist");
+
+				device.SetInput(inputNumber, value);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.SetDiscreteInput(byte, ushort, bool) leave");
+			}
 		}
 
 		/// <summary>
@@ -343,10 +362,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="discreteInput">The discrete input to set.</param>
 		public void SetDiscreteInput(byte deviceId, ModbusObject discreteInput)
 		{
-			if (discreteInput.Type != ModbusObjectType.DiscreteInput)
-				throw new ArgumentException("Invalid input type set");
+			try
+			{
+				logger?.LogTrace("ModbusServer.SetDiscreteInput(byte, ModbusObject) enter");
+				CheckDisposed();
 
-			SetDiscreteInput(deviceId, discreteInput.Address, discreteInput.BoolValue);
+				if (discreteInput.Type != ModbusObjectType.DiscreteInput)
+					throw new ArgumentException("Invalid input type set");
+
+				SetDiscreteInput(deviceId, discreteInput.Address, discreteInput.BoolValue);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.SetDiscreteInput(byte, ModbusObject) leave");
+			}
 		}
 
 		#endregion Discrete Inputs
@@ -361,10 +390,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <returns>The input register.</returns>
 		public Register GetInputRegister(byte deviceId, ushort registerNumber)
 		{
-			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-				throw new ArgumentException($"Device #{deviceId} does not exist");
+			try
+			{
+				logger?.LogTrace("ModbusServer.GetInputRegister enter");
+				CheckDisposed();
 
-			return device.GetInputRegister(registerNumber);
+				if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
+					throw new ArgumentException($"Device #{deviceId} does not exist");
+
+				return device.GetInputRegister(registerNumber);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.GetInputRegister leave");
+			}
 		}
 
 		/// <summary>
@@ -375,10 +414,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="value">The register value.</param>
 		public void SetInputRegister(byte deviceId, ushort registerNumber, ushort value)
 		{
-			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-				throw new ArgumentException($"Device #{deviceId} does not exist");
+			try
+			{
+				logger?.LogTrace("ModbusServer.SetInputRegister(byte, ushort, ushort) enter");
+				CheckDisposed();
 
-			device.SetInputRegister(registerNumber, value);
+				if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
+					throw new ArgumentException($"Device #{deviceId} does not exist");
+
+				device.SetInputRegister(registerNumber, value);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.SetInputRegister(byte, ushort, ushort) leave");
+			}
 		}
 
 		/// <summary>
@@ -390,7 +439,17 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="lowByte">The Low-Byte value.</param>
 		public void SetInputRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetInputRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ModbusObjectType.InputRegister });
+			try
+			{
+				logger?.LogTrace("ModbusServer.SetInputRegister(byte, ushort, byte, byte) enter");
+				CheckDisposed();
+
+				SetInputRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ModbusObjectType.InputRegister });
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.SetInputRegister(byte, ushort, byte, byte) leave");
+			}
 		}
 
 		/// <summary>
@@ -400,10 +459,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="register">The input register.</param>
 		public void SetInputRegister(byte deviceId, ModbusObject register)
 		{
-			if (register.Type != ModbusObjectType.InputRegister)
-				throw new ArgumentException("Invalid register type set");
+			try
+			{
+				logger?.LogTrace("ModbusServer.SetInputRegister(byte, ModbusObject) enter");
+				CheckDisposed();
 
-			SetInputRegister(deviceId, register.Address, register.RegisterValue);
+				if (register.Type != ModbusObjectType.InputRegister)
+					throw new ArgumentException("Invalid register type set");
+
+				SetInputRegister(deviceId, register.Address, register.RegisterValue);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.SetInputRegister(byte, ModbusObject) leave");
+			}
 		}
 
 		#endregion Input Registers
@@ -418,10 +487,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <returns>The holding register.</returns>
 		public Register GetHoldingRegister(byte deviceId, ushort registerNumber)
 		{
-			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-				throw new ArgumentException($"Device #{deviceId} does not exist");
+			try
+			{
+				logger?.LogTrace("ModbusServer.GetHoldingRegister enter");
+				CheckDisposed();
 
-			return device.GetHoldingRegister(registerNumber);
+				if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
+					throw new ArgumentException($"Device #{deviceId} does not exist");
+
+				return device.GetHoldingRegister(registerNumber);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.GetHoldingRegister leave");
+			}
 		}
 
 		/// <summary>
@@ -432,10 +511,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="value">The register value.</param>
 		public void SetHoldingRegister(byte deviceId, ushort registerNumber, ushort value)
 		{
-			if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
-				throw new ArgumentException($"Device #{deviceId} does not exist");
+			try
+			{
+				logger?.LogTrace("ModbusServer.SetHoldingRegister(byte, ushort, ushort) enter");
+				CheckDisposed();
 
-			device.SetHoldingRegister(registerNumber, value);
+				if (!modbusDevices.TryGetValue(deviceId, out ModbusDevice device))
+					throw new ArgumentException($"Device #{deviceId} does not exist");
+
+				device.SetHoldingRegister(registerNumber, value);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.SetHoldingRegister(byte, ushort, ushort) leave");
+			}
 		}
 
 		/// <summary>
@@ -447,7 +536,17 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="lowByte">The low byte value.</param>
 		public void SetHoldingRegister(byte deviceId, ushort registerNumber, byte highByte, byte lowByte)
 		{
-			SetHoldingRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ModbusObjectType.HoldingRegister });
+			try
+			{
+				logger?.LogTrace("ModbusServer.SetHoldingRegister(byte, ushort, byte, byte) enter");
+				CheckDisposed();
+
+				SetHoldingRegister(deviceId, new Register { Address = registerNumber, HiByte = highByte, LoByte = lowByte, Type = ModbusObjectType.HoldingRegister });
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.SetHoldingRegister(byte, ushort, byte, byte) leave");
+			}
 		}
 
 		/// <summary>
@@ -457,10 +556,20 @@ namespace AMWD.Modbus.Serial.Server
 		/// <param name="register">The register.</param>
 		public void SetHoldingRegister(byte deviceId, ModbusObject register)
 		{
-			if (register.Type != ModbusObjectType.HoldingRegister)
-				throw new ArgumentException("Invalid register type set");
+			try
+			{
+				logger?.LogTrace("ModbusServer.SetHoldingRegister(byte, ModbusObject) enter");
+				CheckDisposed();
 
-			SetHoldingRegister(deviceId, register.Address, register.RegisterValue);
+				if (register.Type != ModbusObjectType.HoldingRegister)
+					throw new ArgumentException("Invalid register type set");
+
+				SetHoldingRegister(deviceId, register.Address, register.RegisterValue);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.SetHoldingRegister(byte, ModbusObject) leave");
+			}
 		}
 
 		#endregion Holding Registers
@@ -474,7 +583,17 @@ namespace AMWD.Modbus.Serial.Server
 		/// <returns>true on success, otherwise false.</returns>
 		public bool AddDevice(byte deviceId)
 		{
-			return modbusDevices.TryAdd(deviceId, new ModbusDevice(deviceId));
+			try
+			{
+				logger?.LogTrace("ModbusServer.AddDevice enter");
+				CheckDisposed();
+
+				return modbusDevices.TryAdd(deviceId, new ModbusDevice(deviceId));
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.AddDevice leave");
+			}
 		}
 
 		/// <summary>
@@ -484,7 +603,17 @@ namespace AMWD.Modbus.Serial.Server
 		/// <returns>true on success, otherwise false.</returns>
 		public bool RemoveDevice(byte deviceId)
 		{
-			return modbusDevices.TryRemove(deviceId, out ModbusDevice _);
+			try
+			{
+				logger?.LogTrace("ModbusServer.RemoveDevice enter");
+				CheckDisposed();
+
+				return modbusDevices.TryRemove(deviceId, out ModbusDevice _);
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.RemoveDevice leave");
+			}
 		}
 
 		#endregion Devices
@@ -497,56 +626,86 @@ namespace AMWD.Modbus.Serial.Server
 
 		private void Initialize()
 		{
-			if (isDisposed)
-				throw new ObjectDisposedException(GetType().FullName);
-
 			try
 			{
-				serialPort = new SerialPort
+				logger?.LogTrace("ModbusServer.Initialize enter");
+				CheckDisposed();
+
+				try
 				{
-					PortName = PortName,
-					BaudRate = (int)BaudRate,
-					DataBits = DataBits,
-					Parity = Parity,
-					StopBits = StopBits,
-					Handshake = Handshake,
-					ReadBufferSize = BufferSize,
-					WriteBufferSize = BufferSize,
-					ReadTimeout = ReceiveTimeout,
-					WriteTimeout = SendTimeout
-				};
+					serialPort = new SerialPort
+					{
+						PortName = PortName,
+						BaudRate = (int)BaudRate,
+						DataBits = DataBits,
+						Parity = Parity,
+						StopBits = StopBits,
+						Handshake = Handshake,
+						ReadBufferSize = BufferSize,
+						WriteBufferSize = BufferSize,
+						ReadTimeout = (int)timeout.TotalMilliseconds,
+						WriteTimeout = (int)timeout.TotalMilliseconds
+					};
 
-				serialPort.DataReceived += OnDataReceived;
-				serialPort.Open();
+					serialPort.DataReceived += OnDataReceived;
+					serialPort.Open();
 
-				StartTime = DateTime.UtcNow;
+					StartTime = DateTime.UtcNow;
+				}
+				catch
+				{
+					serialPort?.Dispose();
+					serialPort = null;
+					throw;
+				}
 			}
-			catch
+			finally
 			{
-				serialPort?.Dispose();
-				serialPort = null;
-				throw;
+				logger?.LogTrace("ModbusServer.Initialize leave");
 			}
 		}
 
 		private void OnDataReceived(object sender, SerialDataReceivedEventArgs args)
 		{
-			var requestBytes = new List<byte>();
-			do
+			try
 			{
-				byte[] buffer = new byte[BufferSize];
-				int count = serialPort.Read(buffer, 0, buffer.Length);
-				requestBytes.AddRange(buffer.Take(count));
+				logger?.LogTrace("ModbusServer.OnDataReceived enter");
+
+				using var requestStream = new MemoryStream();
+				do
+				{
+					byte[] buffer = new byte[BufferSize];
+					int count = serialPort.Read(buffer, 0, buffer.Length);
+					requestStream.Write(buffer, 0, count);
+				}
+				while (serialPort.BytesToRead > 0);
+
+				try
+				{
+					var request = new Request(requestStream.GetBuffer());
+					var response = requestHandler?.Invoke(request);
+					if (response != null)
+					{
+						byte[] bytes = response.Serialize();
+						serialPort.Write(bytes, 0, bytes.Length);
+					}
+				}
+				catch (InvalidOperationException ex)
+				{
+					logger?.LogWarning(ex, $"Invalid data received: {ex.Message}");
+				}
+				catch (NotImplementedException ex)
+				{
+					logger?.LogWarning(ex, $"Invalid data received: {ex.Message}");
+				}
 			}
-			while (serialPort.BytesToRead > 0);
-
-			var request = new Request(requestBytes.ToArray());
-			var response = requestHandler(request);
-
-			if (response != null)
+			catch (Exception ex)
 			{
-				byte[] bytes = response.Serialize();
-				serialPort.Write(bytes, 0, bytes.Length);
+				logger?.LogError(ex, $"Unexpected error ({ex.GetType().Name}) on receive: {ex.GetMessage()}");
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusServer.OnDataReceived leave");
 			}
 		}
 
@@ -934,27 +1093,25 @@ namespace AMWD.Modbus.Serial.Server
 
 		#region IDisposable implementation
 
-		/// <summary>
-		/// Releases all managed and unmanaged resources used by the <see cref="ModbusServer"/>.
-		/// </summary>
-		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
-
 		private bool isDisposed;
 
-		private void Dispose(bool disposing)
+		/// <inheritdoc/>
+		public void Dispose()
 		{
-			if (disposing)
-			{
-				serialPort?.Close();
-				serialPort?.Dispose();
-				serialPort = null;
-			}
+			if (isDisposed)
+				return;
 
 			isDisposed = true;
+
+			serialPort?.Close();
+			serialPort?.Dispose();
+			serialPort = null;
+		}
+
+		private void CheckDisposed()
+		{
+			if (isDisposed)
+				throw new ObjectDisposedException(GetType().FullName);
 		}
 
 		#endregion IDisposable implementation

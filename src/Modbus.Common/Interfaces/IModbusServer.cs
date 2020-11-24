@@ -42,6 +42,11 @@ namespace AMWD.Modbus.Common.Interfaces
 		bool IsRunning { get; }
 
 		/// <summary>
+		/// Gets or sets read/write timeout.
+		/// </summary>
+		TimeSpan Timeout { get; set; }
+
+		/// <summary>
 		/// Gets a list of device ids the server handles.
 		/// </summary>
 		List<byte> DeviceIds { get; }

@@ -205,12 +205,14 @@ namespace AMWD.Modbus.Tcp.Client
 				stopCts?.Cancel();
 				receiveCts?.Cancel();
 
+				bool wasConnected = IsConnected;
+				IsConnected = false;
+
 				await ConnectingTask;
 
 				stream?.Dispose();
 				tcpClient?.Dispose();
 
-				IsConnected = false;
 				if (wasConnected)
 					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
 			}
@@ -332,7 +334,7 @@ namespace AMWD.Modbus.Tcp.Client
 				if (count < Consts.MinCount || Consts.MaxCoilCountRead < count)
 					throw new ArgumentOutOfRangeException(nameof(count));
 
-				logger.LogDebug($"Reading discrete inputs from device #{deviceId} starting on {startAddress} for {count} inputs.");
+				logger?.LogDebug($"Reading discrete inputs from device #{deviceId} starting on {startAddress} for {count} inputs.");
 
 				List<DiscreteInput> list = null;
 				try

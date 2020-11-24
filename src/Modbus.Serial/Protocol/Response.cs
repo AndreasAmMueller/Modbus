@@ -28,10 +28,13 @@ namespace AMWD.Modbus.Serial.Protocol
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Response"/> class.
 		/// </summary>
-		/// <param name="response">The serialized response.</param>
-		public Response(byte[] response)
+		/// <param name="bytes">The serialized response.</param>
+		public Response(byte[] bytes)
 		{
-			Deserialize(response);
+			if (bytes?.Any() != true)
+				throw new ArgumentNullException(nameof(bytes));
+
+			Deserialize(bytes);
 		}
 
 		#endregion Constructors
@@ -239,10 +242,16 @@ namespace AMWD.Modbus.Serial.Protocol
 					case FunctionCode.ReadDiscreteInputs:
 					case FunctionCode.ReadHoldingRegisters:
 					case FunctionCode.ReadInputRegisters:
-						byte len = buffer.GetByte(2);
-						if (buffer.Length != len + 3 + 2)   // following bytes + 3 byte head + 2 byte CRC
+						byte length = buffer.GetByte(2);
+						// following bytes + 3 byte head + 2 byte CRC
+						if (buffer.Length < length + 5)
+							throw new ArgumentException("Too less data.");
+						if (buffer.Length > length + 5)
 						{
-							throw new ArgumentException("Response incomplete");
+							if (buffer.Buffer.Skip(length + 5).Any(b => b != 0))
+								throw new ArgumentException("Too many data.");
+
+							buffer = new DataBuffer(bytes.Take(length + 5));
 						}
 						Data = new DataBuffer(buffer.GetBytes(3, buffer.Length - 5));
 						break;
@@ -272,11 +281,11 @@ namespace AMWD.Modbus.Serial.Protocol
 								Data = new DataBuffer(buffer.Buffer.Skip(8).ToArray());
 								break;
 							default:
-								throw new NotImplementedException();
+								throw new NotImplementedException($"Unknown MEI type: {MEIType}");
 						}
 						break;
 					default:
-						throw new NotImplementedException();
+						throw new NotImplementedException($"Unknown function code: {Function}");
 				}
 			}
 		}

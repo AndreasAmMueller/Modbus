@@ -27,6 +27,9 @@ namespace AMWD.Modbus.Serial.Protocol
 		/// <param name="bytes">The serialized request from the client.</param>
 		public Request(byte[] bytes)
 		{
+			if (bytes?.Any() != true)
+				throw new ArgumentNullException(nameof(bytes));
+
 			Deserialize(bytes);
 		}
 
@@ -165,6 +168,7 @@ namespace AMWD.Modbus.Serial.Protocol
 		private void Deserialize(byte[] bytes)
 		{
 			var buffer = new DataBuffer(bytes);
+
 			DeviceId = buffer.GetByte(0);
 			Function = (FunctionCode)buffer.GetByte(1);
 
@@ -206,11 +210,11 @@ namespace AMWD.Modbus.Serial.Protocol
 							MEIObject = (DeviceIDObject)buffer.GetByte(10);
 							break;
 						default:
-							throw new NotImplementedException();
+							throw new NotImplementedException($"Unknown MEI type: {MEIType}");
 					}
 					break;
 				default:
-					throw new NotImplementedException();
+					throw new NotImplementedException($"Unknown function code: {Function}");
 			}
 		}
 

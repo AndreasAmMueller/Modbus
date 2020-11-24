@@ -353,7 +353,7 @@ namespace ConsoleDemo
 							Console.Write("Handshake [0] None [1] X-On/Off [2] RTS [3] RTS+X-On/Off: ");
 							int handshake = Convert.ToInt32(Console.ReadLine().Trim());
 
-							Console.Write("Timeout: ");
+							Console.Write("Timeout (ms): ");
 							int timeout = Convert.ToInt32(Console.ReadLine().Trim());
 
 							server = new SerialServer(port)
@@ -363,8 +363,7 @@ namespace ConsoleDemo
 								StopBits = (StopBits)stopBits,
 								Parity = (Parity)parity,
 								Handshake = (Handshake)handshake,
-								SendTimeout = timeout,
-								ReceiveTimeout = timeout
+								Timeout = TimeSpan.FromMilliseconds(timeout)
 							};
 						}
 						break;

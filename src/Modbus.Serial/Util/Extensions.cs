@@ -52,7 +52,7 @@ namespace AMWD.Modbus.Serial.Util
 		/// Forgets about the result of the task. (Prevent compiler warning).
 		/// </summary>
 		/// <param name="task">The task to forget.</param>
-		internal static async void Forget(this Task task)
+		public static async void Forget(this Task task)
 		{
 			try
 			{
@@ -66,8 +66,8 @@ namespace AMWD.Modbus.Serial.Util
 
 		#region Async fixes
 
-		// idea found on: https://stackoverflow.com/a/54610437/11906695
-		internal static async Task<int> ReadAsync(this SerialPort serialPort, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+		// Inspired by: https://stackoverflow.com/a/54610437/11906695
+		public static async Task<int> ReadAsync(this SerialPort serialPort, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
 		{
 			// serial port read/write timeouts seem to be ignored, so ensure the timeouts.
 			using (var cts = new CancellationTokenSource(serialPort.ReadTimeout))
@@ -105,7 +105,7 @@ namespace AMWD.Modbus.Serial.Util
 			}
 		}
 
-		internal static async Task WriteAsync(this SerialPort serialPort, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+		public static async Task WriteAsync(this SerialPort serialPort, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
 		{
 			// serial port read/write timeouts seem to be ignored, so ensure the timeouts.
 			using (var cts = new CancellationTokenSource(serialPort.WriteTimeout))
@@ -143,5 +143,14 @@ namespace AMWD.Modbus.Serial.Util
 		}
 
 		#endregion Async fixes
+
+		#region Exception
+
+		public static string GetMessage(this Exception exception)
+		{
+			return exception.InnerException?.Message ?? exception.Message;
+		}
+
+		#endregion Exception
 	}
 }
