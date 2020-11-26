@@ -1,4 +1,4 @@
-image: mcr.microsoft.com/dotnet/sdk:3.1
+image: mcr.microsoft.com/dotnet/sdk:latest
 
 stages:
   - build
@@ -45,11 +45,11 @@ deploy:
     - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Common/bin/Release/*.nupkg
     - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/*.nupkg
     - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/*.nupkg
-#    - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/*.nupkg
+    - dotnet nuget push -s nuget -k $NUGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/*.nupkg
   artifacts:
     paths:
       - src/Modbus.Common/bin/Release/*.snupkg
       - src/Modbus.Tcp/bin/Release/*.snupkg
       - src/Modbus.Serial/bin/Release/*.snupkg
-#      - src/Modbus.Proxy/bin/Release/*.snupkg
+      - src/Modbus.Proxy/bin/Release/*.snupkg
     expire_in: 1 month

@@ -68,7 +68,7 @@ namespace AMWD.Modbus.Tcp.Server
 			try
 			{
 				var listener = new TcpListener(ListenAddress, port);
-				listener.Start();
+				listener.Start(10);
 				Port = ((IPEndPoint)listener.LocalEndpoint).Port;
 				listener.Stop();
 			}

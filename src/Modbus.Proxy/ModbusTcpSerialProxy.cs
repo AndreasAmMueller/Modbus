@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO.Ports;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -7,20 +8,21 @@ using System.Threading.Tasks;
 using AMWD.Modbus.Common;
 using AMWD.Modbus.Common.Structures;
 using AMWD.Modbus.Common.Util;
-using AMWD.Modbus.Tcp.Client;
+using AMWD.Modbus.Serial;
 using AMWD.Modbus.Tcp.Protocol;
-using AMWD.Modbus.Tcp.Server;
 using Microsoft.Extensions.Logging;
+using ModbusClient = AMWD.Modbus.Serial.Client.ModbusClient;
+using ModbusServer = AMWD.Modbus.Tcp.Server.ModbusServer;
 
 namespace AMWD.Modbus.Proxy
 {
 	/// <summary>
 	/// This proxy acceppts incoming TCP requests and forwards them to a TCP device.
 	/// </summary>
-	public class ModbusTcpTcpProxy : IDisposable
+	public class ModbusTcpSerialProxy : IDisposable
 	{
 		private readonly ILogger logger;
-		private readonly ModbusTcpTcpSettings settings;
+		private readonly ModbusTcpSerialSettings settings;
 		private readonly ReaderWriterLockSlim syncLock = new ReaderWriterLockSlim();
 
 		private bool isStarted;
@@ -30,11 +32,11 @@ namespace AMWD.Modbus.Proxy
 		private readonly Dictionary<byte, ProxyDevice> devices = new Dictionary<byte, ProxyDevice>();
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="ModbusTcpTcpProxy"/> class.
+		/// Initializes a new instance of the <see cref="ModbusTcpSerialProxy"/> class.
 		/// </summary>
 		/// <param name="settings">The settings to configure this proxy.</param>
 		/// <param name="logger">An <see cref="ILogger"/> implementation.</param>
-		public ModbusTcpTcpProxy(ModbusTcpTcpSettings settings, ILogger logger = null)
+		public ModbusTcpSerialProxy(ModbusTcpSerialSettings settings, ILogger logger = null)
 		{
 			this.logger = logger;
 			this.settings = settings;
@@ -48,7 +50,7 @@ namespace AMWD.Modbus.Proxy
 		{
 			try
 			{
-				logger?.LogTrace("ModbusTcpTcpProxy.StartAsync enter");
+				logger?.LogTrace("ModbusTcpSerialProxy.StartAsync enter");
 
 				CheckDisposed();
 				if (isStarted)
@@ -56,7 +58,14 @@ namespace AMWD.Modbus.Proxy
 
 				isStarted = true;
 
-				client = new ModbusClient(settings.DestinationHost, settings.DestinationPort, logger);
+				client = new ModbusClient(settings.PortName, logger)
+				{
+					BaudRate = settings.BaudRate,
+					DataBits = settings.DataBits,
+					Handshake = settings.Handshake,
+					Parity = settings.Parity,
+					StopBits = settings.StopBits
+				};
 				await client.Connect();
 
 				server = new ModbusServer(settings.ListenPort, settings.ListenAddress, logger, HandleRequest);
@@ -64,7 +73,7 @@ namespace AMWD.Modbus.Proxy
 			}
 			finally
 			{
-				logger?.LogTrace("ModbusTcpTcpProxy.StartAsync leave");
+				logger?.LogTrace("ModbusTcpSerialProxy.StartAsync leave");
 			}
 		}
 
@@ -76,7 +85,7 @@ namespace AMWD.Modbus.Proxy
 		{
 			try
 			{
-				logger?.LogTrace("ModbusTcpTcpProxy.StopAsync enter");
+				logger?.LogTrace("ModbusTcpSerialProxy.StopAsync enter");
 				CheckDisposed();
 				if (!isStarted)
 					return Task.CompletedTask;
@@ -93,7 +102,7 @@ namespace AMWD.Modbus.Proxy
 			}
 			finally
 			{
-				logger?.LogTrace("ModbusTcpTcpProxy.StopAsync leave");
+				logger?.LogTrace("ModbusTcpSerialProxy.StopAsync leave");
 			}
 		}
 
@@ -862,7 +871,7 @@ namespace AMWD.Modbus.Proxy
 	/// <summary>
 	/// Represents the settings for the TCP to TCP proxy.
 	/// </summary>
-	public class ModbusTcpTcpSettings
+	public class ModbusTcpSerialSettings
 	{
 		private TimeSpan minimumRequestTime = TimeSpan.FromMilliseconds(200);
 
@@ -877,14 +886,34 @@ namespace AMWD.Modbus.Proxy
 		public int ListenPort { get; set; }
 
 		/// <summary>
-		/// Gets or sets the host that the proxy connects to.
+		/// Gets or sets the serial port name.
 		/// </summary>
-		public string DestinationHost { get; set; }
+		public string PortName { get; set; }
 
 		/// <summary>
-		/// Gets or sets the port the proxy connects to.
+		/// Gets or sets the baud rate. Default: 38400.
 		/// </summary>
-		public int DestinationPort { get; set; }
+		public BaudRate BaudRate { get; set; } = BaudRate.Baud38400;
+
+		/// <summary>
+		/// Gets or sets the number of data bits. Default: 8.
+		/// </summary>
+		public int DataBits { get; set; } = 8;
+
+		/// <summary>
+		/// Gets or sets the parity. Default: None.
+		/// </summary>
+		public Parity Parity { get; set; } = Parity.None;
+
+		/// <summary>
+		/// Gets or sets the number of stop bits. Default: One.
+		/// </summary>
+		public StopBits StopBits { get; set; } = StopBits.One;
+
+		/// <summary>
+		/// Gets or sets the handshake. Default: None.
+		/// </summary>
+		public Handshake Handshake { get; set; } = Handshake.None;
 
 		/// <summary>
 		/// Gets or sets the minimum age of a read value before the proxy requests it again.
