@@ -3,7 +3,7 @@
 
 **Note:** I'll try to keep the changelog up-to-date, but please be patient, I might forget it.
 
-## 0.9.x-y (pre-release of 1.0.0) (2020-11-25)
+## 1.0.0 (2020-11-28)
 
 ### Fixed (3 changes)
 
