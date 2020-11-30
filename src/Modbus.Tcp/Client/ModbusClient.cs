@@ -1286,7 +1286,7 @@ namespace AMWD.Modbus.Tcp.Client
 						// Receive loop stopping
 						throw;
 					}
-					catch (EndOfStreamException)
+					catch (IOException)
 					{
 						if (!isReconnecting)
 							ConnectingTask = Task.Run(async () => await Reconnect());

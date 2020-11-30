@@ -650,7 +650,7 @@ namespace AMWD.Modbus.Tcp.Server
 					}
 				}
 			}
-			catch (EndOfStreamException)
+			catch (IOException)
 			{
 				// client connection closed
 				return;

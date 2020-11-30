@@ -1,7 +1,16 @@
 # CHANGELOG
------------
 
 **Note:** I'll try to keep the changelog up-to-date, but please be patient, I might forget it.
+
+----
+
+## 1.0.1 (2020-11-30)
+
+### Fixed (1 change)
+
+- The Modbus TCP client on unix systems creates an `IOException` on connection loss - catch that exception instead of the `EndOfStreamException`.
+
+
 
 ## 1.0.0 (2020-11-28)
 
