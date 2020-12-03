@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 
 namespace ConsoleDemo.Logger
 {
-	// Inspired by https://github.com/aspnet/Logging/blob/master/src/Microsoft.Extensions.Logging.Console/ConsoleLogger.cs
 	internal class ConsoleLogger : ILogger
 	{
 		private readonly object syncObj = new object();
@@ -33,9 +32,10 @@ namespace ConsoleDemo.Logger
 
 		public LogLevel MinLevel { get; set; }
 
-		internal IExternalScopeProvider ScopeProvider { get; }
-
-		public IDisposable BeginScope<TState>(TState state) => ScopeProvider?.Push(state) ?? NullScope.Instance;
+		public IDisposable BeginScope<TState>(TState state)
+		{
+			throw new NotImplementedException();
+		}
 
 		public bool IsEnabled(LogLevel logLevel)
 		{
@@ -45,13 +45,10 @@ namespace ConsoleDemo.Logger
 		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
 		{
 			if (!IsEnabled(logLevel))
-			{
 				return;
-			}
+
 			if (formatter == null)
-			{
 				throw new ArgumentNullException(nameof(formatter));
-			}
 
 			string message = formatter(state, exception);
 
@@ -68,7 +65,7 @@ namespace ConsoleDemo.Logger
 			}
 		}
 
-		private void WriteMessage(string name, LogLevel logLevel, int _, string message, Exception exception)
+		private void WriteMessage(string name, LogLevel logLevel, int eventId, string message, Exception exception)
 		{
 			if (exception != null)
 			{
@@ -102,10 +99,9 @@ namespace ConsoleDemo.Logger
 					string timestamp = DateTime.Now.ToString(TimestampFormat) + " ";
 					Console.Write(timestamp);
 					timestampPadding = new string(' ', timestamp.Length);
+
 					if (changedColor)
-					{
 						Console.ResetColor();
-					}
 				}
 
 				changedColor = false;
@@ -138,10 +134,9 @@ namespace ConsoleDemo.Logger
 					}
 				}
 				Console.Write(GetLogLevelString(logLevel));
+
 				if (changedColor)
-				{
 					Console.ResetColor();
-				}
 
 				changedColor = false;
 				if (!DisableColors)
@@ -155,76 +150,31 @@ namespace ConsoleDemo.Logger
 					}
 				}
 				Console.WriteLine(": " + (!string.IsNullOrEmpty(name) ? "[" + name + "] " : "") + message.Replace("\n", "\n      " + timestampPadding));
+
 				if (changedColor)
-				{
 					Console.ResetColor();
-				}
 			}
 		}
 
 		private static string GetLogLevelString(LogLevel logLevel)
 		{
-			return logLevel switch
+			switch (logLevel)
 			{
-				LogLevel.Trace => "trce",
-				LogLevel.Debug => "dbug",
-				LogLevel.Information => "info",
-				LogLevel.Warning => "warn",
-				LogLevel.Error => "fail",
-				LogLevel.Critical => "crit",
-				_ => throw new ArgumentOutOfRangeException(nameof(logLevel)),
-			};
-		}
-	}
-
-	public class ConsoleLoggerOptions
-	{
-		public bool DisableColors { get; set; } = false;
-
-		public string TimestampFormat { get; set; } = "yyyy-MM-dd HH:mm:ss.fff";
-
-		public LogLevel MinLevel { get; set; } = LogLevel.Information;
-	}
-
-	public class ConsoleLoggerProvider : ILoggerProvider
-	{
-		private readonly ConsoleLoggerOptions consoleLoggerOptions;
-
-		public ConsoleLoggerProvider(Action<ConsoleLoggerOptions> configure = null)
-		{
-			var options = new ConsoleLoggerOptions();
-			configure?.Invoke(options);
-			consoleLoggerOptions = options;
-		}
-
-		public ILogger CreateLogger(string categoryName)
-		{
-			return new ConsoleLogger(categoryName)
-			{
-				DisableColors = consoleLoggerOptions.DisableColors,
-				MinLevel = consoleLoggerOptions.MinLevel,
-				TimestampFormat = consoleLoggerOptions.TimestampFormat
-			};
-		}
-
-		public void Dispose()
-		{ }
-	}
-
-	/// <summary>
-	/// An empty scope without any logic
-	/// </summary>
-	public class NullScope : IDisposable
-	{
-		public static NullScope Instance { get; } = new NullScope();
-
-		private NullScope()
-		{
-		}
-
-		/// <inheritdoc />
-		public void Dispose()
-		{
+				case LogLevel.Trace:
+					return "trce";
+				case LogLevel.Debug:
+					return "dbug";
+				case LogLevel.Information:
+					return "info";
+				case LogLevel.Warning:
+					return "warn";
+				case LogLevel.Error:
+					return "fail";
+				case LogLevel.Critical:
+					return "crit";
+				default:
+					throw new ArgumentOutOfRangeException(nameof(logLevel));
+			}
 		}
 	}
 }

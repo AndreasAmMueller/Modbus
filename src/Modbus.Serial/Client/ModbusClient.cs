@@ -263,8 +263,9 @@ namespace AMWD.Modbus.Serial.Client
 		/// <summary>
 		/// Connects the client to the device.
 		/// </summary>
+		/// <param name="cancellationToken"></param>
 		/// <returns>An awaitable task.</returns>
-		public Task Connect()
+		public async Task Connect(CancellationToken cancellationToken = default)
 		{
 			try
 			{
@@ -272,7 +273,10 @@ namespace AMWD.Modbus.Serial.Client
 				CheckDisposed();
 
 				if (isStarted)
-					return ConnectingTask;
+				{
+					await Task.WhenAny(ConnectingTask, Task.Delay(Timeout.Infinite, cancellationToken));
+					return;
+				}
 
 				isStarted = true;
 				logger?.LogInformation("ModbusClient starting.");
@@ -301,7 +305,7 @@ namespace AMWD.Modbus.Serial.Client
 				Task.Run(() => Reconnect(stopCts.Token)).Forget();
 				ConnectingTask = GetWaitTask(stopCts.Token);
 
-				return ConnectingTask;
+				await Task.WhenAny(ConnectingTask, Task.Delay(Timeout.Infinite, cancellationToken));
 			}
 			finally
 			{
@@ -312,8 +316,9 @@ namespace AMWD.Modbus.Serial.Client
 		/// <summary>
 		/// Disconnects the client.
 		/// </summary>
+		/// <param name="cancellationToken"></param>
 		/// <returns>An awaitable task.</returns>
-		public Task Disconnect()
+		public Task Disconnect(CancellationToken cancellationToken = default)
 		{
 			try
 			{

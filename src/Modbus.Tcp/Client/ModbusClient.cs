@@ -25,21 +25,24 @@ namespace AMWD.Modbus.Tcp.Client
 	{
 		#region Fields
 
-		private readonly SemaphoreSlim connectLock = new SemaphoreSlim(1, 1);
-
-
-		private readonly object sendLock = new object();
 		private readonly ILogger logger;
-
-		private TcpClient tcpClient;
-		private NetworkStream stream;
-		private bool isReconnecting;
-		private bool wasConnected;
-		private ushort transactionId = 0;
+		private readonly object reconnectLock = new object();
+		private readonly SemaphoreSlim sendLock = new SemaphoreSlim(1, 1);
 		private readonly ConcurrentDictionary<ushort, TaskCompletionSource<Response>> awaitingResponses = new ConcurrentDictionary<ushort, TaskCompletionSource<Response>>();
 
 		private CancellationTokenSource stopCts;
 		private CancellationTokenSource receiveCts;
+		private TaskCompletionSource<object> reconnectTcs;
+
+		private Task receiveTask = Task.CompletedTask;
+
+		private TcpClient tcpClient;
+		private NetworkStream stream;
+
+		private bool isReconnecting;
+		private bool wasConnected;
+
+		private ushort transactionId;
 
 		#endregion Fields
 
@@ -113,12 +116,12 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <summary>
 		/// Gets or sets the host name.
 		/// </summary>
-		public string Host { get; private set; }
+		public string Host { get; }
 
 		/// <summary>
 		/// Gets or sets the port.
 		/// </summary>
-		public int Port { get; private set; }
+		public int Port { get; }
 
 		/// <summary>
 		/// Gets the result of the asynchronous initialization of this instance.
@@ -164,7 +167,7 @@ namespace AMWD.Modbus.Tcp.Client
 		/// Connects the client to the remote host.
 		/// </summary>
 		/// <returns>An awaitable task.</returns>
-		public Task Connect()
+		public async Task Connect(CancellationToken cancellationToken = default)
 		{
 			try
 			{
@@ -172,19 +175,25 @@ namespace AMWD.Modbus.Tcp.Client
 				CheckDisposed();
 
 				if (stopCts != null)
-					return ConnectingTask;
-
+				{
+					await Task.WhenAny(ConnectingTask, Task.Delay(Timeout.Infinite, cancellationToken));
+					return;
+				}
 				stopCts = new CancellationTokenSource();
 
 				logger?.LogInformation("Modbus client starting.");
 
+				transactionId = 0;
+				IsConnected = false;
 				wasConnected = false;
-				ConnectingTask = Task.Run(async () => await Reconnect());
+				ConnectingTask = GetReconnectTask();
 
 				logger?.LogInformation("Modbus client started.");
 
-				return ConnectingTask;
+				await Task.WhenAny(ConnectingTask, Task.Delay(Timeout.Infinite, cancellationToken));
 			}
+			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+			{ }
 			finally
 			{
 				logger?.LogTrace("ModbusClient.Connect leave");
@@ -195,12 +204,17 @@ namespace AMWD.Modbus.Tcp.Client
 		/// Disconnects the client.
 		/// </summary>
 		/// <returns>An awaitable task.</returns>
-		public async Task Disconnect()
+		public async Task Disconnect(CancellationToken cancellationToken = default)
 		{
 			try
 			{
 				logger?.LogTrace("ModbusClient.Disconnect enter");
 				CheckDisposed();
+
+				if (stopCts == null)
+					return;
+
+				logger?.LogInformation("Modbus client stopping.");
 
 				stopCts?.Cancel();
 				receiveCts?.Cancel();
@@ -208,14 +222,19 @@ namespace AMWD.Modbus.Tcp.Client
 				bool wasConnected = IsConnected;
 				IsConnected = false;
 
-				await ConnectingTask;
+				await Task.WhenAny(Task.WhenAll(ConnectingTask, receiveTask), Task.Delay(Timeout.Infinite, cancellationToken));
 
 				stream?.Dispose();
 				tcpClient?.Dispose();
+				stopCts = null;
+
+				logger?.LogInformation("Modbus client stopped.");
 
 				if (wasConnected)
 					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
 			}
+			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+			{ }
 			finally
 			{
 				logger?.LogTrace("ModbusClient.Disconnect leave");
@@ -294,13 +313,13 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					logger?.LogWarning(ex, $"Reading coils failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 				catch (IOException ex)
 				{
 					logger?.LogWarning(ex, $"Reading coils failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 
 				return list;
@@ -379,13 +398,13 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					logger?.LogWarning(ex, $"Reading discrete inputs failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 				catch (IOException ex)
 				{
 					logger?.LogWarning(ex, $"Reading discrete inputs failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 
 				return list;
@@ -461,13 +480,13 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					logger?.LogWarning(ex, $"Reading holding registers failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 				catch (IOException ex)
 				{
 					logger?.LogWarning(ex, $"Reading holding registers failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 
 				return list;
@@ -543,13 +562,13 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					logger?.LogWarning(ex, $"Reading input registers failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 				catch (IOException ex)
 				{
 					logger?.LogWarning(ex, $"Reading input registers failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 
 				return list;
@@ -662,13 +681,13 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					logger?.LogWarning(ex, $"Reading device information failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 				catch (IOException ex)
 				{
 					logger?.LogWarning(ex, $"Reading device information failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 
 				return null;
@@ -745,13 +764,13 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					logger?.LogWarning(ex, $"Writing a coil failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 				catch (IOException ex)
 				{
 					logger?.LogWarning(ex, $"Writing a coil failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 
 				return false;
@@ -822,13 +841,13 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					logger?.LogWarning(ex, $"Writing a register failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 				catch (IOException ex)
 				{
 					logger?.LogWarning(ex, $"Writing a register failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 
 				return false;
@@ -922,13 +941,13 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					logger?.LogWarning(ex, $"Writing coils failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 				catch (IOException ex)
 				{
 					logger?.LogWarning(ex, $"Writing coils failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 
 				return false;
@@ -1014,13 +1033,13 @@ namespace AMWD.Modbus.Tcp.Client
 				{
 					logger?.LogWarning(ex, $"Writing registers failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 				catch (IOException ex)
 				{
 					logger?.LogWarning(ex, $"Writing registers failed: {ex.GetMessage()}, reconnecting.");
 					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
+						ConnectingTask = GetReconnectTask();
 				}
 
 				return false;
@@ -1041,63 +1060,67 @@ namespace AMWD.Modbus.Tcp.Client
 		{
 			try
 			{
-				logger?.LogTrace($"ModbusClient.Reconnect enter");
-				await connectLock.WaitAsync(stopCts.Token);
+				logger?.LogTrace("ModbusClient.Reconnect enter");
+				lock (reconnectLock)
+				{
+					if (isReconnecting || stopCts.IsCancellationRequested)
+						return;
 
-				if (isReconnecting || stopCts.IsCancellationRequested)
-					return;
+					isReconnecting = true;
+					IsConnected = false;
+					reconnectTcs = new TaskCompletionSource<object>();
+				}
 
-				isReconnecting = true;
-				IsConnected = false;
-				
-				logger?.LogInformation($"{(wasConnected ? "Reconnect" : "Connect")} starting.");
-
+				logger?.LogInformation($"{(wasConnected ? "Rec" : "C")}onnect starting.");
 				if (wasConnected)
 				{
 					receiveCts?.Cancel();
+					await receiveTask;
+					receiveCts = null;
+					receiveTask = Task.CompletedTask;
 					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
 				}
 
 				var timeout = TimeSpan.FromSeconds(2);
 				var startTime = DateTime.UtcNow;
 
-				var address = await GetAddress(Host);
+				var address = ResolveHost(Host);
 				while (!stopCts.IsCancellationRequested)
 				{
 					try
 					{
 						stream?.Dispose();
 						stream = null;
+
 						tcpClient?.Dispose();
 						tcpClient = new TcpClient(address.AddressFamily);
-						if (address.AddressFamily == AddressFamily.InterNetworkV6)
-							tcpClient.Client.DualMode = true;
 
 						var connectTask = tcpClient.ConnectAsync(address, Port);
 						if (await Task.WhenAny(connectTask, Task.Delay(timeout, stopCts.Token)) == connectTask && tcpClient.Connected)
 						{
 							stream = tcpClient.GetStream();
-
 							receiveCts = new CancellationTokenSource();
-							Task.Run(async () => await ReceiveLoop(receiveCts.Token)).Forget();
+							receiveTask = Task.Run(async () => await ReceiveLoop());
 
 							IsConnected = true;
-							logger?.LogInformation($"{(wasConnected ? "Reconnect" : "Connect")}ed successfully.");
+							reconnectTcs.TrySetResult(null);
+
+							logger?.LogInformation($"{(wasConnected ? "Rec" : "C")}onnected successfully.");
 							Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
 							wasConnected = true;
-							return;
-						}
-						else if (stopCts.IsCancellationRequested)
-						{
-							logger?.LogInformation($"{(wasConnected ? "Reconnect" : "Connect")} cancelled.");
+
+							lock (reconnectLock)
+							{
+								isReconnecting = false;
+								reconnectTcs = null;
+							}
 							return;
 						}
 						else
 						{
 							if (timeout < MaxConnectTimeout)
 							{
-								logger?.LogWarning($"{(wasConnected ? "Reconnect" : "Connect")} failed within {timeout}.");
-
+								logger?.LogWarning($"{(wasConnected ? "Rec" : "C")}onnect failed within {timeout}.");
 								timeout = timeout.Add(TimeSpan.FromSeconds(2));
 								if (timeout > MaxConnectTimeout)
 									timeout = MaxConnectTimeout;
@@ -1110,134 +1133,64 @@ namespace AMWD.Modbus.Tcp.Client
 						await Task.Delay(1000, stopCts.Token);
 						continue;
 					}
+					catch (OperationCanceledException) when (stopCts.IsCancellationRequested)
+					{
+						throw;
+					}
 					catch (Exception ex)
 					{
-						logger?.LogError(ex, $"{(wasConnected ? "Reconnect" : "Connect")} failed: {ex.GetMessage()}");
+						logger?.LogError(ex, $"{(wasConnected ? "Rec" : "C")}onnecting failed: {ex.GetMessage()}, trying again.");
 					}
 				}
 			}
 			catch (OperationCanceledException) when (stopCts.IsCancellationRequested)
 			{
-				// Client shutting down
-				return;
+				reconnectTcs.TrySetCanceled();
+				lock (reconnectLock)
+				{
+					isReconnecting = false;
+					reconnectTcs = null;
+				}
+			}
+			catch (Exception ex)
+			{
+				logger?.LogError(ex, $"{(wasConnected ? "Rec" : "C")}onnecting failed: {ex.GetMessage()}");
+				reconnectTcs.TrySetException(ex);
+				lock (reconnectLock)
+				{
+					isReconnecting = false;
+					reconnectTcs = null;
+				}
 			}
 			finally
 			{
-				isReconnecting = false;
-				logger?.LogTrace($"ModbusClient.Reconnect leave");
-				connectLock.Release();
+				logger?.LogTrace("ModbusClient.Reconnect leave");
 			}
 		}
 
-		private async Task<Response> SendRequest(Request request, CancellationToken cancellationToken)
-		{
-			try
-			{
-				logger?.LogTrace("ModbusClient.SendRequest enter");
-				CheckDisposed();
-
-				if (!IsConnected)
-				{
-					if (!isReconnecting)
-						ConnectingTask = Task.Run(async () => await Reconnect());
-
-					throw new InvalidOperationException("Modbus client is not connected.");
-				}
-
-				var tcs = new TaskCompletionSource<Response>();
-				lock (sendLock)
-				{
-					request.TransactionId = transactionId;
-					transactionId++;
-				}
-				awaitingResponses[request.TransactionId] = tcs;
-
-				try
-				{
-					int retry = 2;
-					while (retry-- > 0)
-					{
-						using (var cts = new CancellationTokenSource())
-						using (stopCts.Token.Register(() => cts.Cancel()))
-						using (cancellationToken.Register(() => cts.Cancel()))
-						using (cts.Token.Register(() => tcs.TrySetCanceled()))
-						{
-							try
-							{
-								logger?.LogDebug($"Sending {request}");
-								byte[] bytes = request.Serialize();
-								var sendTask = stream.WriteAsync(bytes, 0, bytes.Length, cts.Token);
-								if (await Task.WhenAny(sendTask, Task.Delay(SendTimeout, cts.Token)) == sendTask && !cts.IsCancellationRequested)
-								{
-									if (retry == 0)
-									{
-										logger?.LogWarning($"Request for Transaction #{request.TransactionId} re-sent.");
-									}
-									else
-									{
-										logger?.LogDebug($"Request for Transaction #{request.TransactionId} sent.");
-									}
-
-									if (await Task.WhenAny(tcs.Task, Task.Delay(ReceiveTimeout, cts.Token)) == tcs.Task && !cts.IsCancellationRequested)
-									{
-										logger?.LogTrace($"ModbusClient.SendRequest response received");
-										return await tcs.Task;
-									}
-								}
-							}
-							catch (OperationCanceledException)
-							{
-								throw;
-							}
-							catch (Exception)
-							{
-								await Task.Delay(ReceiveTimeout, cts.Token);
-							}
-						}
-					}
-				}
-				catch (OperationCanceledException) when (stopCts.IsCancellationRequested || cancellationToken.IsCancellationRequested)
-				{
-					tcs.TrySetCanceled();
-				}
-				catch (Exception ex)
-				{
-					logger?.LogError(ex, $"Unexpected error ({ex.GetType().Name}) on send: {ex.GetMessage()}");
-					//tcs.TrySetResult(new Response(new byte[] { 0, 0, 0, 0, 0, 0 }));
-					tcs.TrySetException(ex);
-				}
-
-				return await tcs.Task;
-			}
-			finally
-			{
-				logger?.LogTrace("ModbusClient.SendRequest leave");
-			}
-		}
-
-		private async Task ReceiveLoop(CancellationToken cancellationToken)
+		private async Task ReceiveLoop()
 		{
 			try
 			{
 				logger?.LogTrace("ModbusClient.ReceiveLoop enter");
 				logger?.LogInformation("Receiving responses started.");
 
-				while (!cancellationToken.IsCancellationRequested)
+				while (!receiveCts.IsCancellationRequested)
 				{
 					try
 					{
 						if (stream == null)
 						{
-							await Task.Delay(200, cancellationToken);
+							await Task.Delay(200, receiveCts.Token);
 							continue;
 						}
 
-						while (!cancellationToken.IsCancellationRequested)
+						while (!receiveCts.IsCancellationRequested)
 						{
 							using var responseStream = new MemoryStream();
 
-							using (var cts = new CancellationTokenSource(ReceiveTimeout))
-							using (cancellationToken.Register(() => cts.Cancel()))
+							using (var timeCts = new CancellationTokenSource(ReceiveTimeout))
+							using (var cts = CancellationTokenSource.CreateLinkedTokenSource(timeCts.Token, receiveCts.Token))
 							{
 								try
 								{
@@ -1252,7 +1205,7 @@ namespace AMWD.Modbus.Tcp.Client
 									byte[] payload = await stream.ReadExpectedBytes(following, cts.Token);
 									await responseStream.WriteAsync(payload, 0, payload.Length, cts.Token);
 								}
-								catch (OperationCanceledException) when (cts.IsCancellationRequested)
+								catch (OperationCanceledException) when (timeCts.IsCancellationRequested)
 								{
 									continue;
 								}
@@ -1281,7 +1234,7 @@ namespace AMWD.Modbus.Tcp.Client
 							}
 						}
 					}
-					catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+					catch (OperationCanceledException) when (receiveCts.IsCancellationRequested)
 					{
 						// Receive loop stopping
 						throw;
@@ -1289,9 +1242,9 @@ namespace AMWD.Modbus.Tcp.Client
 					catch (IOException)
 					{
 						if (!isReconnecting)
-							ConnectingTask = Task.Run(async () => await Reconnect());
+							ConnectingTask = GetReconnectTask();
 
-						await Task.Delay(1, cancellationToken);   // make sure the reconnect task has time to start.
+						await Task.Delay(1, receiveCts.Token);   // make sure the reconnect task has time to start.
 					}
 					catch (Exception ex)
 					{
@@ -1299,10 +1252,14 @@ namespace AMWD.Modbus.Tcp.Client
 					}
 				}
 			}
-			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+			catch (OperationCanceledException) when (receiveCts.IsCancellationRequested)
 			{
 				// Receive loop stopping
-				return;
+				var ex = new SocketException((int)SocketError.TimedOut);
+				foreach (var tcs in awaitingResponses.Values)
+					tcs.TrySetException(ex);
+
+				awaitingResponses.Clear();
 			}
 			catch (Exception ex)
 			{
@@ -1314,23 +1271,89 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 		}
 
-		private async Task<IPAddress> GetAddress(string host)
+		private async Task<Response> SendRequest(Request request, CancellationToken cancellationToken)
 		{
-			if (IPAddress.TryParse(host, out var ipAddress))
-				return ipAddress;
-
-			var ipAddresses = await Dns.GetHostAddressesAsync(host);
-
-			ipAddress = ipAddresses
-				.Where(ip => ip.AddressFamily == AddressFamily.InterNetworkV6)
-				.FirstOrDefault();
-			if (ipAddress == null)
+			try
 			{
-				ipAddress = ipAddresses
-					.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)
-					.FirstOrDefault();
+				logger?.LogTrace("ModbusClient.SendRequest enter");
+				CheckDisposed();
+
+				if (!IsConnected)
+				{
+					if (!isReconnecting)
+						ConnectingTask = GetReconnectTask();
+
+					throw new InvalidOperationException("Modbus client is not connected");
+				}
+
+				if (stream == null)
+					throw new InvalidOperationException("Modbus client failed to open stream");
+
+				var tcs = new TaskCompletionSource<Response>();
+				try
+				{
+					using (var cts = CancellationTokenSource.CreateLinkedTokenSource(stopCts.Token, cancellationToken))
+					{
+						await sendLock.WaitAsync(cts.Token);
+					}
+					try
+					{
+						request.TransactionId = transactionId++;
+						awaitingResponses[request.TransactionId] = tcs;
+
+						logger?.LogDebug($"Sending {request}");
+						byte[] bytes = request.Serialize();
+
+						using var timeCts = new CancellationTokenSource(SendTimeout);
+						using var cts = CancellationTokenSource.CreateLinkedTokenSource(stopCts.Token, timeCts.Token, cancellationToken);
+						try
+						{
+							await stream.WriteAsync(bytes, 0, bytes.Length, cts.Token);
+							logger?.LogDebug($"Request for transaction #{request.TransactionId} sent.");
+						}
+						catch (OperationCanceledException) when (timeCts.IsCancellationRequested)
+						{
+							tcs.TrySetCanceled();
+						}
+					}
+					finally
+					{
+						sendLock.Release();
+					}
+				}
+				catch (OperationCanceledException) when (stopCts.IsCancellationRequested || cancellationToken.IsCancellationRequested)
+				{
+					tcs.TrySetCanceled();
+				}
+				catch (Exception ex)
+				{
+					logger?.LogError(ex, $"Unexpected error ({ex.GetType().Name}) on send: {ex.GetMessage()}");
+					tcs.TrySetException(ex);
+				}
+
+				return await tcs.Task;
 			}
-			return ipAddress;
+			finally
+			{
+				logger?.LogTrace("ModbusClient.SendRequest leave");
+			}
+		}
+
+		private Task GetReconnectTask()
+		{
+			Task.Run(async () => await Reconnect()).Forget();
+			return reconnectTcs?.Task ?? Task.Run(() => SpinWait.SpinUntil(() => IsConnected || stopCts.IsCancellationRequested));
+		}
+
+		private IPAddress ResolveHost(string host)
+		{
+			if (IPAddress.TryParse(host, out var address))
+				return address;
+
+			return Dns.GetHostAddresses(host)
+				.OrderBy(ip => ip.AddressFamily)
+				.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork || ip.AddressFamily == AddressFamily.InterNetworkV6)
+				.FirstOrDefault() ?? throw new ArgumentException(nameof(Host), "Host could not be resolved.");
 		}
 
 		#endregion Private methods

@@ -22,40 +22,51 @@ namespace ConsoleDemo
 {
 	internal class Program
 	{
-		private static void Main(string[] args)
+		private static readonly string[] yesList = new[] { "y", "j", "yes", "ja" };
+
+		private static async Task<int> Main(string[] _)
 		{
+			var cts = new CancellationTokenSource();
+			var logger = new ConsoleLogger
+			{
+				//MinLevel = LogLevel.Trace,
+				MinLevel = LogLevel.Information,
+				TimestampFormat = "HH:mm:ss.fff"
+			};
+			Console.CancelKeyPress += (s, a) =>
+			{
+				cts.Cancel();
+				a.Cancel = true;
+			};
+
+			Console.WriteLine("Modbus Console Demo");
+			Console.WriteLine();
+
 			try
 			{
-				ClientMainAsync(args)
-					.ConfigureAwait(false)
-					.GetAwaiter()
-					.GetResult();
-				//ServerMain(args);
+				Console.Write("What to start? [1] Client, [2] Server: ");
+				int type = Convert.ToInt32(Console.ReadLine().Trim());
+
+				switch (type)
+				{
+					case 1:
+						return await RunClientAsync(logger, cts.Token);
+					case 2:
+						return await RunServerAsync(logger, cts.Token);
+					default:
+						Console.Error.WriteLine($"Unknown option: {type}");
+						return 1;
+				}
 			}
 			catch (Exception ex)
 			{
-				Console.Error.WriteLine($"MAIN | {ex.GetType().FullName}: {ex.Message}");
+				logger.LogError(ex, $"App terminated unexpected: {ex.InnerException?.Message ?? ex.Message}");
+				return 1;
 			}
 		}
 
-		private static async Task ClientMainAsync(string[] _)
+		private static async Task<int> RunClientAsync(ILogger logger, CancellationToken cancellationToken)
 		{
-			bool run = true;
-			Console.CancelKeyPress += (object _, ConsoleCancelEventArgs evArgs) =>
-			{
-				evArgs.Cancel = true;
-				run = false;
-			};
-
-			var logger = new ConsoleLogger()
-			{
-				MinLevel = LogLevel.Trace,
-				TimestampFormat = "HH:mm:ss.fff"
-			};
-
-			Console.WriteLine("Console Demo Modbus Client");
-			Console.WriteLine();
-
 			Console.Write("Connection Type [1] TCP, [2] RS485: ");
 			int cType = Convert.ToInt32(Console.ReadLine().Trim());
 
@@ -115,12 +126,15 @@ namespace ConsoleDemo
 						}
 						break;
 					default:
-						throw new ArgumentException("Type unknown");
+						Console.Error.WriteLine($"Unknown type: {cType}");
+						return 1;
 				}
 
-				await client.Connect();
+				await Task.WhenAny(client.Connect(), Task.Delay(Timeout.Infinite, cancellationToken));
+				if (cancellationToken.IsCancellationRequested)
+					return 0;
 
-				while (run)
+				while (!cancellationToken.IsCancellationRequested)
 				{
 					Console.Write("Device ID: ");
 					byte id = Convert.ToByte(Console.ReadLine().Trim());
@@ -128,188 +142,186 @@ namespace ConsoleDemo
 					Console.Write("Function [1] Read Register, [2] Device Info, [9] Write Register : ");
 					int fn = Convert.ToInt32(Console.ReadLine().Trim());
 
-					try
+					switch (fn)
 					{
-						switch (fn)
-						{
-							case 1:
+						case 1:
+							{
+								ushort address = 0;
+								ushort count = 0;
+								string type = "";
+
+								Console.WriteLine();
+								Console.Write("Address : ");
+								address = Convert.ToUInt16(Console.ReadLine().Trim());
+								Console.Write("DataType: ");
+								type = Console.ReadLine().Trim();
+								if (type == "string")
 								{
-									ushort address = 0;
-									ushort count = 0;
-									string type = "";
-
-									Console.WriteLine();
-									Console.Write("Address : ");
-									address = Convert.ToUInt16(Console.ReadLine().Trim());
-									Console.Write("DataType: ");
-									type = Console.ReadLine().Trim();
-									if (type == "string")
-									{
-										Console.Write("Register Count: ");
-										count = Convert.ToUInt16(Console.ReadLine().Trim());
-									}
-									Console.WriteLine();
-
-									Console.Write("Result  : ");
-									List<Register> result = null;
-									switch (type.Trim().ToLower())
-									{
-										case "byte":
-											result = await client.ReadHoldingRegisters(id, address, 1);
-											Console.WriteLine(result?.First().GetByte());
-											break;
-										case "ushort":
-											result = await client.ReadHoldingRegisters(id, address, 1);
-											Console.WriteLine(result?.First().GetUInt16());
-											break;
-										case "uint":
-											result = await client.ReadHoldingRegisters(id, address, 2);
-											Console.WriteLine(result?.GetUInt32());
-											break;
-										case "ulong":
-											result = await client.ReadHoldingRegisters(id, address, 4);
-											Console.WriteLine(result?.GetUInt64());
-											break;
-										case "sbyte":
-											result = await client.ReadHoldingRegisters(id, address, 1);
-											Console.WriteLine(result?.First().GetSByte());
-											break;
-										case "short":
-											result = await client.ReadHoldingRegisters(id, address, 1);
-											Console.WriteLine(result?.First().GetInt16());
-											break;
-										case "int":
-											result = await client.ReadHoldingRegisters(id, address, 2);
-											Console.WriteLine(result?.GetInt32());
-											break;
-										case "long":
-											result = await client.ReadHoldingRegisters(id, address, 4);
-											Console.WriteLine(result?.GetInt64());
-											break;
-										case "float":
-											result = await client.ReadHoldingRegisters(id, address, 2);
-											Console.WriteLine(result?.GetSingle());
-											break;
-										case "double":
-											result = await client.ReadHoldingRegisters(id, address, 4);
-											Console.WriteLine(result?.GetDouble());
-											break;
-										case "string":
-											result = await client.ReadHoldingRegisters(id, address, count);
-											Console.WriteLine();
-											Console.WriteLine("UTF8:             " + result?.GetString(count));
-											Console.WriteLine("Unicode:          " + result?.GetString(count, 0, Encoding.Unicode));
-											Console.WriteLine("BigEndianUnicode: " + result?.GetString(count, 0, Encoding.BigEndianUnicode));
-											break;
-										default:
-											Console.Write("DataType unknown");
-											break;
-									}
+									Console.Write("Register Count: ");
+									count = Convert.ToUInt16(Console.ReadLine().Trim());
 								}
-								break;
-							case 2:
-								{
-									Console.Write("[1] Basic, [2] Regular, [3] Extended: ");
-									int cat = Convert.ToInt32(Console.ReadLine().Trim());
 
-									Dictionary<DeviceIDObject, string> info = null;
-									switch (cat)
+								Console.WriteLine();
+								Console.Write("Run as loop? [y/N]: ");
+								string loop = Console.ReadLine().Trim().ToLower();
+								int interval = 0;
+								if (yesList.Contains(loop))
+								{
+									Console.Write("Loop interval (milliseconds): ");
+									interval = Convert.ToInt32(Console.ReadLine().Trim());
+								}
+
+								Console.WriteLine();
+								do
+								{
+									try
 									{
-										case 1:
-											info = await client.ReadDeviceInformation(id, DeviceIDCategory.Basic);
-											break;
-										case 2:
-											info = await client.ReadDeviceInformation(id, DeviceIDCategory.Regular);
-											break;
-										case 3:
-											info = await client.ReadDeviceInformation(id, DeviceIDCategory.Extended);
-											break;
-									}
-									if (info != null)
-									{
-										foreach (var kvp in info)
+										Console.Write("Result  : ");
+										List<Register> result = null;
+										switch (type.Trim().ToLower())
 										{
-											Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+											case "byte":
+												result = await client.ReadHoldingRegisters(id, address, 1);
+												Console.WriteLine(result?.First().GetByte());
+												break;
+											case "ushort":
+												result = await client.ReadHoldingRegisters(id, address, 1);
+												Console.WriteLine(result?.First().GetUInt16());
+												break;
+											case "uint":
+												result = await client.ReadHoldingRegisters(id, address, 2);
+												Console.WriteLine(result?.GetUInt32());
+												break;
+											case "ulong":
+												result = await client.ReadHoldingRegisters(id, address, 4);
+												Console.WriteLine(result?.GetUInt64());
+												break;
+											case "sbyte":
+												result = await client.ReadHoldingRegisters(id, address, 1);
+												Console.WriteLine(result?.First().GetSByte());
+												break;
+											case "short":
+												result = await client.ReadHoldingRegisters(id, address, 1);
+												Console.WriteLine(result?.First().GetInt16());
+												break;
+											case "int":
+												result = await client.ReadHoldingRegisters(id, address, 2);
+												Console.WriteLine(result?.GetInt32());
+												break;
+											case "long":
+												result = await client.ReadHoldingRegisters(id, address, 4);
+												Console.WriteLine(result?.GetInt64());
+												break;
+											case "float":
+												result = await client.ReadHoldingRegisters(id, address, 2);
+												Console.WriteLine(result?.GetSingle());
+												break;
+											case "double":
+												result = await client.ReadHoldingRegisters(id, address, 4);
+												Console.WriteLine(result?.GetDouble());
+												break;
+											case "string":
+												result = await client.ReadHoldingRegisters(id, address, count);
+												Console.WriteLine();
+												Console.WriteLine("UTF8:             " + result?.GetString(count));
+												Console.WriteLine("Unicode:          " + result?.GetString(count, 0, Encoding.Unicode));
+												Console.WriteLine("BigEndianUnicode: " + result?.GetString(count, 0, Encoding.BigEndianUnicode));
+												break;
+											default:
+												Console.Write("DataType unknown");
+												break;
 										}
 									}
+									catch
+									{ }
+									await Task.Delay(TimeSpan.FromMilliseconds(interval), cancellationToken);
 								}
-								break;
-							case 9:
+								while (interval > 0 && !cancellationToken.IsCancellationRequested);
+							}
+							break;
+						case 2:
+							{
+								Console.Write("[1] Basic, [2] Regular, [3] Extended: ");
+								int cat = Convert.ToInt32(Console.ReadLine().Trim());
+
+								Dictionary<DeviceIDObject, string> info = null;
+								switch (cat)
 								{
-									Console.Write("Address: ");
-									ushort address = Convert.ToUInt16(Console.ReadLine().Trim());
-
-									Console.Write("Bytes (HEX): ");
-									string byteStr = Console.ReadLine().Trim();
-									byteStr = byteStr.Replace(" ", "").ToLower();
-
-									byte[] bytes = Enumerable.Range(0, byteStr.Length)
-										.Where(i => i % 2 == 0)
-										.Select(i => Convert.ToByte(byteStr.Substring(i, 2), 16))
-										.ToArray();
-
-									var registers = Enumerable.Range(0, bytes.Length)
-										.Where(i => i % 2 == 0)
-										.Select(i =>
-										{
-											return new Register
-											{
-												Type = ModbusObjectType.HoldingRegister,
-												Address = address++,
-												HiByte = bytes[i],
-												LoByte = bytes[i + 1]
-											};
-										})
-										.ToList();
-
-									if (!await client.WriteRegisters(id, registers))
-										throw new Exception($"Writing '{byteStr}' to address {address} failed");
+									case 1:
+										info = await client.ReadDeviceInformation(id, DeviceIDCategory.Basic);
+										break;
+									case 2:
+										info = await client.ReadDeviceInformation(id, DeviceIDCategory.Regular);
+										break;
+									case 3:
+										info = await client.ReadDeviceInformation(id, DeviceIDCategory.Extended);
+										break;
 								}
-								break;
-						}
-					}
-					catch (Exception ex)
-					{
-						Console.WriteLine();
-						Console.WriteLine("ERROR: " + ex.Message);
+								if (info != null)
+								{
+									foreach (var kvp in info)
+									{
+										Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+									}
+								}
+							}
+							break;
+						case 9:
+							{
+								Console.Write("Address: ");
+								ushort address = Convert.ToUInt16(Console.ReadLine().Trim());
+
+								Console.Write("Bytes (HEX): ");
+								string byteStr = Console.ReadLine().Trim();
+								byteStr = byteStr.Replace(" ", "").ToLower();
+
+								byte[] bytes = Enumerable.Range(0, byteStr.Length)
+									.Where(i => i % 2 == 0)
+									.Select(i => Convert.ToByte(byteStr.Substring(i, 2), 16))
+									.ToArray();
+
+								var registers = Enumerable.Range(0, bytes.Length)
+									.Where(i => i % 2 == 0)
+									.Select(i =>
+									{
+										return new Register
+										{
+											Type = ModbusObjectType.HoldingRegister,
+											Address = address++,
+											HiByte = bytes[i],
+											LoByte = bytes[i + 1]
+										};
+									})
+									.ToList();
+
+								if (!await client.WriteRegisters(id, registers))
+									throw new Exception($"Writing '{byteStr}' to address {address} failed");
+							}
+							break;
 					}
 
 					Console.Write("New Request? [y/N]: ");
 					string again = Console.ReadLine().Trim().ToLower();
-					if (again == "y" || again == "yes" || again == "j" || again == "ja")
-					{
-						run = true;
-					}
-					else
-					{
-						run = false;
-					}
+					if (!yesList.Contains(again))
+						return 0;
 				}
+
+				return 0;
+			}
+			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+			{
+				return 0;
 			}
 			finally
 			{
+				Console.WriteLine("Disposing");
 				client?.Dispose();
+				Console.WriteLine("Disposed");
 			}
 		}
 
-		private static void ServerMain(string[] _)
+		private static async Task<int> RunServerAsync(ILogger logger, CancellationToken cancellationToken)
 		{
-			bool run = true;
-			Console.CancelKeyPress += (object _, ConsoleCancelEventArgs evArgs) =>
-			{
-				evArgs.Cancel = true;
-				run = false;
-			};
-
-			var logger = new ConsoleLogger()
-			{
-				MinLevel = LogLevel.Trace,
-				TimestampFormat = "HH:mm:ss.fff"
-			};
-
-			Console.WriteLine("Demo Modbus Server");
-			Console.WriteLine();
-
 			Console.Write("Connection Type [1] TCP, [2] RS485: ");
 			int cType = Convert.ToInt32(Console.ReadLine().Trim());
 
@@ -330,8 +342,6 @@ namespace ConsoleDemo
 							{
 								Timeout = TimeSpan.FromSeconds(3)
 							};
-							tcp.ClientConnected += (s, e) => Console.WriteLine($"Client connected: {e.EndPoint}");
-							tcp.ClientDisconnected += (s, e) => Console.WriteLine($"Client disconnected: {e.EndPoint}");
 
 							server = tcp;
 						}
@@ -378,12 +388,15 @@ namespace ConsoleDemo
 				Register.Create(123.45f, 100, false).ForEach(r => server.SetHoldingRegister(1, r));
 
 				Console.WriteLine("Server is running... press CTRL+C to exit.");
-				SpinWait.SpinUntil(() => !run);
+				await Task.Delay(Timeout.Infinite, cancellationToken);
 			}
+			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+			{ }
 			finally
 			{
 				server?.Dispose();
 			}
+			return 0;
 		}
 	}
 }

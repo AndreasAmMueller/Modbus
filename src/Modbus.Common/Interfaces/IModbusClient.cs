@@ -45,14 +45,16 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// <summary>
 		/// Connects the client to the server.
 		/// </summary>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>An awaitable task.</returns>
-		Task Connect();
+		Task Connect(CancellationToken cancellationToken = default);
 
 		/// <summary>
 		/// Disconnects the client.
 		/// </summary>
+		/// <param name="cancellationToken">A cancellation token to abort the action.</param>
 		/// <returns>An awaitable task.</returns>
-		Task Disconnect();
+		Task Disconnect(CancellationToken cancellationToken = default);
 
 		#endregion Control
 
