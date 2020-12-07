@@ -222,7 +222,7 @@ namespace AMWD.Modbus.Tcp.Client
 				bool wasConnected = IsConnected;
 				IsConnected = false;
 
-				await Task.WhenAny(Task.WhenAll(ConnectingTask, receiveTask), Task.Delay(Timeout.Infinite, cancellationToken));
+				await Task.WhenAny(ConnectingTask, Task.Delay(Timeout.Infinite, cancellationToken));
 
 				stream?.Dispose();
 				tcpClient?.Dispose();
@@ -1260,6 +1260,7 @@ namespace AMWD.Modbus.Tcp.Client
 					tcs.TrySetException(ex);
 
 				awaitingResponses.Clear();
+				logger?.LogInformation("Receiving responses stopped.");
 			}
 			catch (Exception ex)
 			{
