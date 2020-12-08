@@ -4,6 +4,18 @@
 
 ----
 
+## 1.0.2 (2020-12-08)
+
+### Fixed (1 change)
+
+- Removed a potential dead-lock scenario when disconnecting while on reconnect.
+
+### Added (1 change)
+
+- Modbus clients have a optional `CancellationToken` on `Connect()` and `Disconnect()`.
+
+
+
 ## 1.0.1 (2020-11-30)
 
 ### Fixed (1 change)
