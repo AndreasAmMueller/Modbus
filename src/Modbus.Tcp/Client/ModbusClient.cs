@@ -32,13 +32,14 @@ namespace AMWD.Modbus.Tcp.Client
 
 		private CancellationTokenSource stopCts;
 		private CancellationTokenSource receiveCts;
-		private TaskCompletionSource<object> reconnectTcs;
+		private TaskCompletionSource<bool> reconnectTcs;
 
 		private Task receiveTask = Task.CompletedTask;
 
 		private TcpClient tcpClient;
 		private NetworkStream stream;
 
+		private bool isStarted;
 		private bool isReconnecting;
 		private bool wasConnected;
 
@@ -169,16 +170,21 @@ namespace AMWD.Modbus.Tcp.Client
 		/// <returns>An awaitable task.</returns>
 		public async Task Connect(CancellationToken cancellationToken = default)
 		{
+			var cancelTask = ReconnectTimeSpan == TimeSpan.MaxValue
+				? Task.Delay(Timeout.Infinite, cancellationToken)
+				: Task.Delay(ReconnectTimeSpan, cancellationToken);
+			
 			try
 			{
 				logger?.LogTrace("ModbusClient.Connect enter");
 				CheckDisposed();
-
-				if (stopCts != null)
+				
+				if (isStarted)
 				{
-					await Task.WhenAny(ConnectingTask, Task.Delay(Timeout.Infinite, cancellationToken));
+					await Task.WhenAny(ConnectingTask, cancelTask);
 					return;
 				}
+				isStarted = true;
 				stopCts = new CancellationTokenSource();
 
 				logger?.LogInformation("Modbus client starting.");
@@ -189,13 +195,14 @@ namespace AMWD.Modbus.Tcp.Client
 				ConnectingTask = GetReconnectTask();
 
 				logger?.LogInformation("Modbus client started.");
-
-				await Task.WhenAny(ConnectingTask, Task.Delay(Timeout.Infinite, cancellationToken));
+				await Task.WhenAny(ConnectingTask, cancelTask);
 			}
 			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
 			{ }
 			finally
 			{
+				if (cancelTask.Status != TaskStatus.WaitingForActivation)
+					cancelTask?.Dispose();
 				logger?.LogTrace("ModbusClient.Connect leave");
 			}
 		}
@@ -211,12 +218,12 @@ namespace AMWD.Modbus.Tcp.Client
 				logger?.LogTrace("ModbusClient.Disconnect enter");
 				CheckDisposed();
 
-				if (stopCts == null)
+				if (!isStarted)
 					return;
 
 				logger?.LogInformation("Modbus client stopping.");
 
-				stopCts?.Cancel();
+				stopCts.Cancel();
 				receiveCts?.Cancel();
 
 				bool wasConnected = IsConnected;
@@ -226,8 +233,8 @@ namespace AMWD.Modbus.Tcp.Client
 
 				stream?.Dispose();
 				tcpClient?.Dispose();
-				stopCts = null;
 
+				isStarted = false;
 				logger?.LogInformation("Modbus client stopped.");
 
 				if (wasConnected)
@@ -1068,7 +1075,6 @@ namespace AMWD.Modbus.Tcp.Client
 
 					isReconnecting = true;
 					IsConnected = false;
-					reconnectTcs = new TaskCompletionSource<object>();
 				}
 
 				logger?.LogInformation($"{(wasConnected ? "Rec" : "C")}onnect starting.");
@@ -1103,7 +1109,7 @@ namespace AMWD.Modbus.Tcp.Client
 							receiveTask = Task.Run(async () => await ReceiveLoop());
 
 							IsConnected = true;
-							reconnectTcs.TrySetResult(null);
+							reconnectTcs?.TrySetResult(true);
 
 							logger?.LogInformation($"{(wasConnected ? "Rec" : "C")}onnected successfully.");
 							Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
@@ -1145,7 +1151,7 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 			catch (OperationCanceledException) when (stopCts.IsCancellationRequested)
 			{
-				reconnectTcs.TrySetCanceled();
+				reconnectTcs?.TrySetCanceled();
 				lock (reconnectLock)
 				{
 					isReconnecting = false;
@@ -1155,7 +1161,7 @@ namespace AMWD.Modbus.Tcp.Client
 			catch (Exception ex)
 			{
 				logger?.LogError(ex, $"{(wasConnected ? "Rec" : "C")}onnecting failed: {ex.GetMessage()}");
-				reconnectTcs.TrySetException(ex);
+				reconnectTcs?.TrySetException(ex);
 				lock (reconnectLock)
 				{
 					isReconnecting = false;
@@ -1342,8 +1348,13 @@ namespace AMWD.Modbus.Tcp.Client
 
 		private Task GetReconnectTask()
 		{
+			lock (reconnectLock)
+			{
+				if (reconnectTcs == null)
+					reconnectTcs = new TaskCompletionSource<bool>();
+			}
 			Task.Run(async () => await Reconnect()).Forget();
-			return reconnectTcs?.Task ?? Task.Run(() => SpinWait.SpinUntil(() => IsConnected || stopCts.IsCancellationRequested));
+			return reconnectTcs.Task;
 		}
 
 		private IPAddress ResolveHost(string host)

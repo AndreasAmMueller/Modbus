@@ -15,7 +15,22 @@ namespace AMWD.Modbus.Common.Util
 	{
 		#region Public extensions
 
-		#region To unsigned data types
+		#region Register to data type
+
+		#region unsigned data types
+
+		/// <summary>
+		/// Converts a register value into a boolean.
+		/// </summary>
+		/// <param name="obj">The Modbus object.</param>
+		/// <returns><c>false</c> if the value is zero (0), else <c>true</c>.</returns>
+		public static bool GetBool(this ModbusObject obj)
+		{
+			if (obj == null)
+				throw new ArgumentNullException(nameof(obj));
+
+			return obj.RegisterValue > 0;
+		}
 
 		/// <summary>
 		/// Converts a register value into a byte.
@@ -24,6 +39,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public static byte GetByte(this ModbusObject register)
 		{
+			if (register == null)
+				throw new ArgumentNullException(nameof(register));
+
 			if (register.Type != ModbusObjectType.HoldingRegister && register.Type != ModbusObjectType.InputRegister)
 				throw new ArgumentException("Invalid register type");
 
@@ -37,6 +55,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public static ushort GetUInt16(this ModbusObject register)
 		{
+			if (register == null)
+				throw new ArgumentNullException(nameof(register));
+
 			if (register.Type != ModbusObjectType.HoldingRegister && register.Type != ModbusObjectType.InputRegister)
 				throw new ArgumentException("Invalid register type");
 
@@ -51,6 +72,16 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public static uint GetUInt32(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (list == null)
+				throw new ArgumentNullException(nameof(list));
+
+			int count = list.Count();
+			if (count < 2)
+				throw new ArgumentException("At least two registers needed", nameof(list));
+
+			if (startIndex < 0 || count < startIndex + 2)
+				throw new ArgumentOutOfRangeException(nameof(startIndex));
+
 			if (!list.All(r => r.Type == ModbusObjectType.HoldingRegister) && !list.All(r => r.Type == ModbusObjectType.InputRegister))
 				throw new ArgumentException("Invalid register type");
 
@@ -77,6 +108,16 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public static ulong GetUInt64(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (list == null)
+				throw new ArgumentNullException(nameof(list));
+
+			int count = list.Count();
+			if (count < 4)
+				throw new ArgumentException("At least four registers needed", nameof(list));
+
+			if (startIndex < 0 || count < startIndex + 4)
+				throw new ArgumentOutOfRangeException(nameof(startIndex));
+
 			if (!list.All(r => r.Type == ModbusObjectType.HoldingRegister) && !list.All(r => r.Type == ModbusObjectType.InputRegister))
 				throw new ArgumentException("Invalid register type");
 
@@ -95,9 +136,9 @@ namespace AMWD.Modbus.Common.Util
 			return BitConverter.ToUInt64(blob, 0);
 		}
 
-		#endregion To unsigned data types
+		#endregion unsigned data types
 
-		#region To signed data types
+		#region signed data types
 
 		/// <summary>
 		/// Converts a register into a signed byte.
@@ -106,6 +147,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public static sbyte GetSByte(this ModbusObject register)
 		{
+			if (register == null)
+				throw new ArgumentNullException(nameof(register));
+
 			if (register.Type != ModbusObjectType.HoldingRegister && register.Type != ModbusObjectType.InputRegister)
 				throw new ArgumentException("Invalid register type");
 
@@ -119,6 +163,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public static short GetInt16(this ModbusObject register)
 		{
+			if (register == null)
+				throw new ArgumentNullException(nameof(register));
+
 			if (register.Type != ModbusObjectType.HoldingRegister && register.Type != ModbusObjectType.InputRegister)
 				throw new ArgumentException("Invalid register type");
 
@@ -137,6 +184,16 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public static int GetInt32(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (list == null)
+				throw new ArgumentNullException(nameof(list));
+
+			int count = list.Count();
+			if (count < 2)
+				throw new ArgumentException("At least two registers needed", nameof(list));
+
+			if (startIndex < 0 || count < startIndex + 2)
+				throw new ArgumentOutOfRangeException(nameof(startIndex));
+
 			if (!list.All(r => r.Type == ModbusObjectType.HoldingRegister) && !list.All(r => r.Type == ModbusObjectType.InputRegister))
 				throw new ArgumentException("Invalid register type");
 
@@ -163,6 +220,16 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public static long GetInt64(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (list == null)
+				throw new ArgumentNullException(nameof(list));
+
+			int count = list.Count();
+			if (count < 4)
+				throw new ArgumentException("At least four registers needed", nameof(list));
+
+			if (startIndex < 0 || count < startIndex + 4)
+
+				throw new ArgumentOutOfRangeException(nameof(startIndex));
 			if (!list.All(r => r.Type == ModbusObjectType.HoldingRegister) && !list.All(r => r.Type == ModbusObjectType.InputRegister))
 				throw new ArgumentException("Invalid register type");
 
@@ -181,9 +248,9 @@ namespace AMWD.Modbus.Common.Util
 			return BitConverter.ToInt64(blob, 0);
 		}
 
-		#endregion To signed data types
+		#endregion signed data types
 
-		#region To floating point types
+		#region floating point types
 
 		/// <summary>
 		/// Converts two registers into a single.
@@ -193,6 +260,16 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public static float GetSingle(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (list == null)
+				throw new ArgumentNullException(nameof(list));
+
+			int count = list.Count();
+			if (count < 2)
+				throw new ArgumentException("At least two registers needed", nameof(list));
+
+			if (startIndex < 0 || count < startIndex + 2)
+
+				throw new ArgumentOutOfRangeException(nameof(startIndex));
 			if (!list.All(r => r.Type == ModbusObjectType.HoldingRegister) && !list.All(r => r.Type == ModbusObjectType.InputRegister))
 				throw new ArgumentException("Invalid register type");
 
@@ -219,6 +296,16 @@ namespace AMWD.Modbus.Common.Util
 		/// <returns></returns>
 		public static double GetDouble(this IEnumerable<ModbusObject> list, int startIndex = 0)
 		{
+			if (list == null)
+				throw new ArgumentNullException(nameof(list));
+
+			int count = list.Count();
+			if (count < 4)
+				throw new ArgumentException("At least four registers needed", nameof(list));
+
+			if (startIndex < 0 || count < startIndex + 4)
+				throw new ArgumentOutOfRangeException(nameof(startIndex));
+
 			if (!list.All(r => r.Type == ModbusObjectType.HoldingRegister) && !list.All(r => r.Type == ModbusObjectType.InputRegister))
 				throw new ArgumentException("Invalid register type");
 
@@ -237,27 +324,37 @@ namespace AMWD.Modbus.Common.Util
 			return BitConverter.ToDouble(blob, 0);
 		}
 
-		#endregion To floating point types
+		#endregion floating point types
 
-		#region To string
+		#region string
 
 		/// <summary>
 		/// Converts a list of registers into a string.
 		/// </summary>
 		/// <param name="list">A list of registers.</param>
 		/// <param name="length">The number of registers to use.</param>
-		/// <param name="index">The start index. Default: 0.</param>
+		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <param name="encoding">The encoding to convert the string. Default: <see cref="Encoding.UTF8"/>.</param>
 		/// <returns></returns>
-		public static string GetString(this IEnumerable<ModbusObject> list, int length, int index = 0, Encoding encoding = null)
+		public static string GetString(this IEnumerable<ModbusObject> list, int length, int startIndex = 0, Encoding encoding = null)
 		{
+			if (list == null)
+				throw new ArgumentNullException(nameof(list));
+
+			int count = list.Count();
+			if (count < length)
+				throw new ArgumentException($"At least {length} registers needed", nameof(list));
+
+			if (startIndex < 0 || count < startIndex + length)
+				throw new ArgumentOutOfRangeException(nameof(startIndex));
+
 			if (!list.All(r => r.Type == ModbusObjectType.HoldingRegister) && !list.All(r => r.Type == ModbusObjectType.InputRegister))
 				throw new ArgumentException("Invalid register type");
 
 			if (encoding == null)
 				encoding = Encoding.UTF8;
 
-			var registers = list.Skip(index).Take(length).ToArray();
+			var registers = list.Skip(startIndex).Take(length).ToArray();
 			byte[] blob = new byte[registers.Length * 2];
 
 			for (int i = 0; i < registers.Length; i++)
@@ -275,7 +372,311 @@ namespace AMWD.Modbus.Common.Util
 			return str;
 		}
 
-		#endregion To string
+		#endregion string
+
+		#endregion Register to data type
+
+		#region Data type to register
+
+		#region unsigned data types
+
+		/// <summary>
+		/// Converts a boolean to a Modbus Coil.
+		/// </summary>
+		/// <param name="value">The boolean value.</param>
+		/// <param name="address">The Modbus coil address.</param>
+		/// <returns></returns>
+		public static ModbusObject ToModbusCoil(this bool value, ushort address)
+		{
+			return new ModbusObject
+			{
+				Address = address,
+				Type = ModbusObjectType.Coil,
+				BoolValue = value
+			};
+		}
+
+		/// <summary>
+		/// Converts a boolean to a Modbus register.
+		/// </summary>
+		/// <param name="value">The boolean value.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <returns></returns>
+		public static ModbusObject ToModbusRegister(this bool value, ushort address)
+		{
+			return new ModbusObject
+			{
+				Address = address,
+				Type = ModbusObjectType.HoldingRegister,
+				RegisterValue = (ushort)(value ? 1 : 0)
+			};
+		}
+
+		/// <summary>
+		/// Converts a byte to a Modbus register.
+		/// </summary>
+		/// <param name="value">The byte to convert.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <returns></returns>
+		public static ModbusObject ToModbusRegister(this byte value, ushort address)
+		{
+			return new ModbusObject
+			{
+				Address = address,
+				Type = ModbusObjectType.HoldingRegister,
+				RegisterValue = value
+			};
+		}
+
+		/// <summary>
+		/// Converts an unsigned short to a Modbus register.
+		/// </summary>
+		/// <param name="value">The unsigned short to convert.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <returns></returns>
+		public static ModbusObject ToModbusRegister(this ushort value, ushort address)
+		{
+			return new ModbusObject
+			{
+				Address = address,
+				Type = ModbusObjectType.HoldingRegister,
+				RegisterValue = value
+			};
+		}
+
+		/// <summary>
+		/// Converts an unsigned integer to two Modbus registers.
+		/// </summary>
+		/// <param name="value">The unsigned integer to convert.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <returns></returns>
+		public static ModbusObject[] ToModbusRegister(this uint value, ushort address)
+		{
+			byte[] bytes = BitConverter.GetBytes(value);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(bytes);
+
+			var registers = new ModbusObject[bytes.Length / 2];
+			for (int i = 0; i < registers.Length; i++)
+			{
+				registers[i] = new ModbusObject
+				{
+					Address = (ushort)(address + i),
+					Type = ModbusObjectType.HoldingRegister,
+					HiByte = bytes[i * 2],
+					LoByte = bytes[i * 2 + 1]
+				};
+			}
+			return registers;
+		}
+
+		/// <summary>
+		/// Converts an unsigned long to four Modbus registers.
+		/// </summary>
+		/// <param name="value">The unsigned long to convert.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <returns></returns>
+		public static ModbusObject[] ToModbusRegister(this ulong value, ushort address)
+		{
+			byte[] bytes = BitConverter.GetBytes(value);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(bytes);
+
+			var registers = new ModbusObject[bytes.Length / 2];
+			for (int i = 0; i < registers.Length; i++)
+			{
+				registers[i] = new ModbusObject
+				{
+					Address = (ushort)(address + i),
+					Type = ModbusObjectType.HoldingRegister,
+					HiByte = bytes[i * 2],
+					LoByte = bytes[i * 2 + 1]
+				};
+			}
+			return registers;
+		}
+
+		#endregion unsigned data types
+
+		#region signed data types
+
+		/// <summary>
+		/// Converts a signed byte to a Modbus register.
+		/// </summary>
+		/// <param name="value">The signed byte to convert.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <returns></returns>
+		public static ModbusObject ToModbusRegister(this sbyte value, ushort address)
+		{
+			return new ModbusObject
+			{
+				Address = address,
+				Type = ModbusObjectType.HoldingRegister,
+				RegisterValue = (ushort)value
+			};
+		}
+
+		/// <summary>
+		/// Converts a signed short to a Modbus register.
+		/// </summary>
+		/// <param name="value">The short to convert.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <returns></returns>
+		public static ModbusObject ToModbusRegister(this short value, ushort address)
+		{
+			return new ModbusObject
+			{
+				Address = address,
+				Type = ModbusObjectType.HoldingRegister,
+				RegisterValue = (ushort)value
+			};
+		}
+
+		/// <summary>
+		/// Converts a signed integer to two Modbus registers.
+		/// </summary>
+		/// <param name="value">The integer to convert.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <returns></returns>
+		public static ModbusObject[] ToModbusRegister(this int value, ushort address)
+		{
+			byte[] bytes = BitConverter.GetBytes(value);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(bytes);
+
+			var registers = new ModbusObject[bytes.Length / 2];
+			for (int i = 0; i < registers.Length; i++)
+			{
+				registers[i] = new ModbusObject
+				{
+					Address = (ushort)(address + i),
+					Type = ModbusObjectType.HoldingRegister,
+					HiByte = bytes[i * 2],
+					LoByte = bytes[i * 2 + 1]
+				};
+			}
+			return registers;
+		}
+
+		/// <summary>
+		/// Converts a signed long to four Modbus registers.
+		/// </summary>
+		/// <param name="value">The long to convert.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <returns></returns>
+		public static ModbusObject[] ToModbusRegister(this long value, ushort address)
+		{
+			byte[] bytes = BitConverter.GetBytes(value);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(bytes);
+
+			var registers = new ModbusObject[bytes.Length / 2];
+			for (int i = 0; i < registers.Length; i++)
+			{
+				registers[i] = new ModbusObject
+				{
+					Address = (ushort)(address + i),
+					Type = ModbusObjectType.HoldingRegister,
+					HiByte = bytes[i * 2],
+					LoByte = bytes[i * 2 + 1]
+				};
+			}
+			return registers;
+		}
+
+		#endregion signed data types
+
+		#region floating point dat types
+
+		/// <summary>
+		/// Converts a single to two Modbus registers.
+		/// </summary>
+		/// <param name="value">The float to convert.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <returns></returns>
+		public static ModbusObject[] ToModbusRegister(this float value, ushort address)
+		{
+			byte[] bytes = BitConverter.GetBytes(value);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(bytes);
+
+			var registers = new ModbusObject[bytes.Length / 2];
+			for (int i = 0; i < registers.Length; i++)
+			{
+				registers[i] = new ModbusObject
+				{
+					Address = (ushort)(address + i),
+					Type = ModbusObjectType.HoldingRegister,
+					HiByte = bytes[i * 2],
+					LoByte = bytes[i * 2 + 1]
+				};
+			}
+			return registers;
+		}
+
+		/// <summary>
+		/// Converts a double to four Modbus registers.
+		/// </summary>
+		/// <param name="value">The double to convert.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <returns></returns>
+		public static ModbusObject[] ToModbusRegister(this double value, ushort address)
+		{
+			byte[] bytes = BitConverter.GetBytes(value);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(bytes);
+
+			var registers = new ModbusObject[bytes.Length / 2];
+			for (int i = 0; i < registers.Length; i++)
+			{
+				registers[i] = new ModbusObject
+				{
+					Address = (ushort)(address + i),
+					Type = ModbusObjectType.HoldingRegister,
+					HiByte = bytes[i * 2],
+					LoByte = bytes[i * 2 + 1]
+				};
+			}
+			return registers;
+		}
+
+		#endregion floating point dat types
+
+		#region string
+
+		/// <summary>
+		/// Converts a string into Modbus registers.
+		/// </summary>
+		/// <param name="str">The string to convert.</param>
+		/// <param name="address">The Modbus register address.</param>
+		/// <param name="encoding">The string encoding. Default: <see cref="Encoding.UTF8"/>.</param>
+		/// <returns></returns>
+		public static ModbusObject[] ToModbusRegister(this string str, ushort address, Encoding encoding = null)
+		{
+			if (str == null)
+				throw new ArgumentNullException(nameof(str));
+
+			if (encoding == null)
+				encoding = Encoding.UTF8;
+
+			byte[] bytes = encoding.GetBytes(str);
+			var registers = new ModbusObject[(int)Math.Ceiling(bytes.Length / 2.0)];
+			for (int i = 0; i < registers.Length; i++)
+			{
+				registers[i] = new ModbusObject
+				{
+					Address = (ushort)(address + i),
+					Type = ModbusObjectType.HoldingRegister,
+					HiByte = bytes[i * 2],
+					LoByte = (i * 2 + 1 < bytes.Length) ? bytes[i * 2 + 1] : (byte)0
+				};
+			}
+			return registers;
+		}
+
+		#endregion string
+
+		#endregion Data type to register
 
 		#endregion Public extensions
 

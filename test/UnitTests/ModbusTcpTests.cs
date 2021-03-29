@@ -650,6 +650,10 @@ namespace UnitTests
 							client?.Dispose();
 						}
 					}
+					catch (OperationCanceledException) when (ct.IsCancellationRequested)
+					{ }
+					catch (ObjectDisposedException) when (ct.IsCancellationRequested)
+					{ }
 					catch (Exception ex)
 					{
 						string msg = ex.GetMessage();
@@ -664,7 +668,7 @@ namespace UnitTests
 		// Time for the scheduler to launch a thread to start the reconnect
 		private async Task EnsureWait()
 		{
-			await Task.Delay(10);
+			await Task.Delay(100);
 		}
 	}
 }

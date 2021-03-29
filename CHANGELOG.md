@@ -4,6 +4,18 @@
 
 ----
 
+## 1.0.3 (2021-03-29)
+
+### Fixed (1 change)
+
+- Resolved null reference errors while reconnecting (TCP and Serial). (Closing Issue #14)
+
+### Added (1 change)
+
+- Extensions to convert values back to `ModbusObject`s are now available.
+
+
+
 ## 1.0.2 (2020-12-08)
 
 ### Fixed (1 change)
