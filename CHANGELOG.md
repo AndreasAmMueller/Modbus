@@ -4,6 +4,14 @@
 
 ----
 
+## 1.0.4 (2021-04-13)
+
+### Added (1 change)
+
+- Extension to convert from/to string enhanced by switch to flip bytes (endianness). (Closing Issue #15)
+
+
+
 ## 1.0.3 (2021-03-29)
 
 ### Fixed (1 change)

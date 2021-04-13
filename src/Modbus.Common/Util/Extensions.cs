@@ -335,8 +335,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="length">The number of registers to use.</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <param name="encoding">The encoding to convert the string. Default: <see cref="Encoding.UTF8"/>.</param>
+		/// <param name="flipBytes">A value indicating whether the bytes within a register (hi/lo byte) should be fliped due to correct character order.</param>
 		/// <returns></returns>
-		public static string GetString(this IEnumerable<ModbusObject> list, int length, int startIndex = 0, Encoding encoding = null)
+		public static string GetString(this IEnumerable<ModbusObject> list, int length, int startIndex = 0, Encoding encoding = null, bool flipBytes = false)
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -359,8 +360,8 @@ namespace AMWD.Modbus.Common.Util
 
 			for (int i = 0; i < registers.Length; i++)
 			{
-				blob[i * 2] = registers[i].HiByte;
-				blob[i * 2 + 1] = registers[i].LoByte;
+				blob[i * 2] = flipBytes ? registers[i].LoByte : registers[i].HiByte;
+				blob[i * 2 + 1] = flipBytes ? registers[i].HiByte : registers[i].LoByte;
 			}
 
 			string str = encoding.GetString(blob).Trim(new[] { ' ', '\t', '\0', '\r', '\n' });
@@ -650,8 +651,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="str">The string to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
 		/// <param name="encoding">The string encoding. Default: <see cref="Encoding.UTF8"/>.</param>
+		/// <param name="flipBytes">A value indicating whether the bytes within a register (hi/lo byte) should be fliped due to correct character order.</param>
 		/// <returns></returns>
-		public static ModbusObject[] ToModbusRegister(this string str, ushort address, Encoding encoding = null)
+		public static ModbusObject[] ToModbusRegister(this string str, ushort address, Encoding encoding = null, bool flipBytes = false)
 		{
 			if (str == null)
 				throw new ArgumentNullException(nameof(str));
@@ -663,12 +665,15 @@ namespace AMWD.Modbus.Common.Util
 			var registers = new ModbusObject[(int)Math.Ceiling(bytes.Length / 2.0)];
 			for (int i = 0; i < registers.Length; i++)
 			{
+				byte hi = flipBytes ? (i * 2 + 1 < bytes.Length) ? bytes[i * 2 + 1] : (byte)0 : bytes[i * 2];
+				byte lo = flipBytes ? bytes[i * 2] : (i * 2 + 1 < bytes.Length) ? bytes[i * 2 + 1] : (byte)0;
+
 				registers[i] = new ModbusObject
 				{
 					Address = (ushort)(address + i),
 					Type = ModbusObjectType.HoldingRegister,
-					HiByte = bytes[i * 2],
-					LoByte = (i * 2 + 1 < bytes.Length) ? bytes[i * 2 + 1] : (byte)0
+					HiByte = hi,
+					LoByte = lo
 				};
 			}
 			return registers;
