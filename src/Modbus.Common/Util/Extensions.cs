@@ -779,7 +779,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="encoding">The string encoding. Default: <see cref="Encoding.UTF8"/>.</param>
 		/// <param name="flipBytes">A value indicating whether the bytes within a register (hi/lo byte) should be fliped due to correct character order.</param>
 		/// <returns></returns>
-		public static ModbusObject[] ToModbusRegister(this string str, ushort address, Encoding encoding = null, bool flipBytes = false)
+		public static ModbusObject[] ToModbusRegister(this string str, ushort address, Encoding encoding = null, bool flipBytes = false, int maxLength = -1)
 		{
 			if (str == null)
 				throw new ArgumentNullException(nameof(str));
@@ -788,6 +788,11 @@ namespace AMWD.Modbus.Common.Util
 				encoding = Encoding.UTF8;
 
 			byte[] bytes = encoding.GetBytes(str);
+			if (maxLength > 0)
+			{
+				Array.Resize(ref bytes, maxLength);
+			}
+
 			var registers = new ModbusObject[(int)Math.Ceiling(bytes.Length / 2.0)];
 			for (int i = 0; i < registers.Length; i++)
 			{
