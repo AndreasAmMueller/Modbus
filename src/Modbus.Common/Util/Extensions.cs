@@ -69,8 +69,9 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="list">The list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static uint GetUInt32(this IEnumerable<ModbusObject> list, int startIndex = 0, bool byteOrderBig = true)
+		public static uint GetUInt32(this IEnumerable<ModbusObject> list, int startIndex = 0, bool bigEndianRegistryOrder = true)
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -86,7 +87,7 @@ namespace AMWD.Modbus.Common.Util
 				throw new ArgumentException("Invalid register type");
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(2);
-			if (!byteOrderBig)
+			if (!bigEndianRegistryOrder)
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -109,8 +110,9 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="list">The list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static ulong GetUInt64(this IEnumerable<ModbusObject> list, int startIndex = 0, bool byteOrderBig = true)
+		public static ulong GetUInt64(this IEnumerable<ModbusObject> list, int startIndex = 0, bool bigEndianRegistryOrder = true)
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -126,7 +128,7 @@ namespace AMWD.Modbus.Common.Util
 				throw new ArgumentException("Invalid register type");
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(4);
-			if (!byteOrderBig)
+			if (!bigEndianRegistryOrder)
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -189,8 +191,9 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="list">A list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static int GetInt32(this IEnumerable<ModbusObject> list, int startIndex = 0, bool byteOrderBig = true)
+		public static int GetInt32(this IEnumerable<ModbusObject> list, int startIndex = 0, bool bigEndianRegistryOrder = true)
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -206,7 +209,7 @@ namespace AMWD.Modbus.Common.Util
 				throw new ArgumentException("Invalid register type");
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(2);
-			if (!byteOrderBig)
+			if (!bigEndianRegistryOrder)
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -229,8 +232,9 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="list">A list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static long GetInt64(this IEnumerable<ModbusObject> list, int startIndex = 0, bool byteOrderBig = true)
+		public static long GetInt64(this IEnumerable<ModbusObject> list, int startIndex = 0, bool bigEndianRegistryOrder = true)
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -246,7 +250,7 @@ namespace AMWD.Modbus.Common.Util
 				throw new ArgumentException("Invalid register type");
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(4);
-			if (!byteOrderBig)
+			if (!bigEndianRegistryOrder)
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -273,8 +277,9 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="list">A list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static float GetSingle(this IEnumerable<ModbusObject> list, int startIndex = 0, bool byteOrderBig = true)
+		public static float GetSingle(this IEnumerable<ModbusObject> list, int startIndex = 0, bool bigEndianRegistryOrder = true)
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -290,7 +295,7 @@ namespace AMWD.Modbus.Common.Util
 				throw new ArgumentException("Invalid register type");
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(2);
-			if (!byteOrderBig)
+			if (!bigEndianRegistryOrder)
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -313,8 +318,9 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="list">A list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static double GetDouble(this IEnumerable<ModbusObject> list, int startIndex = 0, bool byteOrderBig = true)
+		public static double GetDouble(this IEnumerable<ModbusObject> list, int startIndex = 0, bool bigEndianRegistryOrder = true)
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -330,7 +336,7 @@ namespace AMWD.Modbus.Common.Util
 				throw new ArgumentException("Invalid register type");
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(4);
-			if (!byteOrderBig)
+			if (!bigEndianRegistryOrder)
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -474,15 +480,16 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="value">The unsigned integer to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static ModbusObject[] ToModbusRegister(this uint value, ushort address, bool byteOrderBig = true)
+		public static ModbusObject[] ToModbusRegister(this uint value, ushort address, bool bigEndianRegistryOrder = true)
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(bytes);
 
 			var registers = new ModbusObject[bytes.Length / 2];
-			if (byteOrderBig)
+			if (bigEndianRegistryOrder)
 			{
 				for (int i = 0; i < registers.Length; i++)
 				{
@@ -517,15 +524,16 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="value">The unsigned long to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static ModbusObject[] ToModbusRegister(this ulong value, ushort address, bool byteOrderBig = true)
+		public static ModbusObject[] ToModbusRegister(this ulong value, ushort address, bool bigEndianRegistryOrder = true)
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(bytes);
 
 			var registers = new ModbusObject[bytes.Length / 2];
-			if (byteOrderBig)
+			if (bigEndianRegistryOrder)
 			{
 				for (int i = 0; i < registers.Length; i++)
 				{
@@ -596,15 +604,16 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="value">The integer to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static ModbusObject[] ToModbusRegister(this int value, ushort address, bool byteOrderBig = true)
+		public static ModbusObject[] ToModbusRegister(this int value, ushort address, bool bigEndianRegistryOrder = true)
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(bytes);
 
 			var registers = new ModbusObject[bytes.Length / 2];
-			if (byteOrderBig)
+			if (bigEndianRegistryOrder)
 			{
 				for (int i = 0; i < registers.Length; i++)
 				{
@@ -639,15 +648,16 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="value">The long to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static ModbusObject[] ToModbusRegister(this long value, ushort address, bool byteOrderBig = true)
+		public static ModbusObject[] ToModbusRegister(this long value, ushort address, bool bigEndianRegistryOrder = true)
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(bytes);
 
 			var registers = new ModbusObject[bytes.Length / 2];
-			if (byteOrderBig)
+			if (bigEndianRegistryOrder)
 			{
 				for (int i = 0; i < registers.Length; i++)
 				{
@@ -686,15 +696,16 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="value">The float to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static ModbusObject[] ToModbusRegister(this float value, ushort address, bool byteOrderBig = true)
+		public static ModbusObject[] ToModbusRegister(this float value, ushort address, bool bigEndianRegistryOrder = true)
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(bytes);
 
 			var registers = new ModbusObject[bytes.Length / 2];
-			if (byteOrderBig)
+			if (bigEndianRegistryOrder)
 			{
 				for (int i = 0; i < registers.Length; i++)
 				{
@@ -729,15 +740,16 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="value">The double to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
+		/// <param name="bigEndianRegistryOrder">Change the order of WORDs in multi-registry data. True indicates Big Endian encoding, False Little Endian encoding. Default: True</param>
 		/// <returns></returns>
-		public static ModbusObject[] ToModbusRegister(this double value, ushort address, bool byteOrderBig = true)
+		public static ModbusObject[] ToModbusRegister(this double value, ushort address, bool bigEndianRegistryOrder = true)
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(bytes);
 
 			var registers = new ModbusObject[bytes.Length / 2];
-			if (byteOrderBig)
+			if (bigEndianRegistryOrder)
 			{
 				for (int i = 0; i < registers.Length; i++)
 				{
@@ -778,8 +790,9 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="address">The Modbus register address.</param>
 		/// <param name="encoding">The string encoding. Default: <see cref="Encoding.UTF8"/>.</param>
 		/// <param name="flipBytes">A value indicating whether the bytes within a register (hi/lo byte) should be fliped due to correct character order.</param>
+		/// <param name="lenght">The zero-padded string lenght. If 0 the string will occupy the number of bytes equals to the actual lenght of the string.</param>
 		/// <returns></returns>
-		public static ModbusObject[] ToModbusRegister(this string str, ushort address, Encoding encoding = null, bool flipBytes = false, int maxLength = -1)
+		public static ModbusObject[] ToModbusRegister(this string str, ushort address, Encoding encoding = null, bool flipBytes = false, int lenght = 0)
 		{
 			if (str == null)
 				throw new ArgumentNullException(nameof(str));
@@ -788,9 +801,9 @@ namespace AMWD.Modbus.Common.Util
 				encoding = Encoding.UTF8;
 
 			byte[] bytes = encoding.GetBytes(str);
-			if (maxLength > 0)
+			if (lenght > 0)
 			{
-				Array.Resize(ref bytes, maxLength);
+				Array.Resize(ref bytes, lenght);
 			}
 
 			var registers = new ModbusObject[(int)Math.Ceiling(bytes.Length / 2.0)];
