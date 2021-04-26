@@ -38,6 +38,11 @@ namespace AMWD.Modbus.Common.Interfaces
 		/// </summary>
 		TimeSpan ReceiveTimeout { get; set; }
 
+		/// <summary>
+		/// Gets or sets a value indicating whether the remote is delivering the bytes in little-endian order.
+		/// </summary>
+		bool IsLittleEndianRemote { get; set; }
+
 		#endregion Properties
 
 		#region Control

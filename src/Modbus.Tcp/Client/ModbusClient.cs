@@ -26,9 +26,9 @@ namespace AMWD.Modbus.Tcp.Client
 		#region Fields
 
 		private readonly ILogger logger;
-		private readonly object reconnectLock = new object();
-		private readonly SemaphoreSlim sendLock = new SemaphoreSlim(1, 1);
-		private readonly ConcurrentDictionary<ushort, TaskCompletionSource<Response>> awaitingResponses = new ConcurrentDictionary<ushort, TaskCompletionSource<Response>>();
+		private readonly object reconnectLock = new();
+		private readonly SemaphoreSlim sendLock = new(1, 1);
+		private readonly ConcurrentDictionary<ushort, TaskCompletionSource<Response>> awaitingResponses = new();
 
 		private CancellationTokenSource stopCts;
 		private CancellationTokenSource receiveCts;
@@ -123,6 +123,11 @@ namespace AMWD.Modbus.Tcp.Client
 		/// Gets or sets the port.
 		/// </summary>
 		public int Port { get; }
+
+		/// <summary>
+		/// Gets or sets a value indicating whether the remote is delivering the bytes in little-endian order.
+		/// </summary>
+		public bool IsLittleEndianRemote { get; set; }
 
 		/// <summary>
 		/// Gets the result of the asynchronous initialization of this instance.
@@ -474,13 +479,24 @@ namespace AMWD.Modbus.Tcp.Client
 					list = new List<Register>();
 					for (int i = 0; i < count; i++)
 					{
-						list.Add(new Register
+						var register = new Register
 						{
 							Type = ModbusObjectType.HoldingRegister,
-							Address = (ushort)(startAddress + i),
-							HiByte = response.Data[i * 2],
-							LoByte = response.Data[i * 2 + 1]
-						});
+							Address = (ushort)(startAddress + i)
+						};
+
+						if (IsLittleEndianRemote)
+						{
+							register.LoByte = response.Data[i * 2];
+							register.HiByte = response.Data[i * 2 + 1];
+						}
+						else
+						{
+							register.HiByte = response.Data[i * 2];
+							register.LoByte = response.Data[i * 2 + 1];
+						}
+
+						list.Add(register);
 					}
 				}
 				catch (SocketException ex)
@@ -556,13 +572,24 @@ namespace AMWD.Modbus.Tcp.Client
 					list = new List<Register>();
 					for (int i = 0; i < count; i++)
 					{
-						list.Add(new Register
+						var register = new Register
 						{
 							Type = ModbusObjectType.InputRegister,
-							Address = (ushort)(startAddress + i),
-							HiByte = response.Data[i * 2],
-							LoByte = response.Data[i * 2 + 1]
-						});
+							Address = (ushort)(startAddress + i)
+						};
+
+						if (IsLittleEndianRemote)
+						{
+							register.LoByte = response.Data[i * 2];
+							register.HiByte = response.Data[i * 2 + 1];
+						}
+						else
+						{
+							register.HiByte = response.Data[i * 2];
+							register.LoByte = response.Data[i * 2 + 1];
+						}
+
+						list.Add(register);
 					}
 				}
 				catch (SocketException ex)
@@ -817,13 +844,26 @@ namespace AMWD.Modbus.Tcp.Client
 
 				try
 				{
+					
+
+
+
 					var request = new Request
 					{
 						DeviceId = deviceId,
 						Function = FunctionCode.WriteSingleRegister,
-						Address = register.Address,
-						Data = new DataBuffer(new[] { register.HiByte, register.LoByte })
+						Address = register.Address
 					};
+
+					if (IsLittleEndianRemote)
+					{
+						request.Data = new DataBuffer(new[] { register.LoByte, register.HiByte });
+					}
+					else
+					{
+						request.Data = new DataBuffer(new[] { register.HiByte, register.LoByte });
+					}
+
 					var response = await SendRequest(request, cancellationToken);
 					if (response.IsTimeout)
 						throw new SocketException((int)SocketError.TimedOut);
@@ -1005,7 +1045,14 @@ namespace AMWD.Modbus.Tcp.Client
 				var data = new DataBuffer(orderedList.Count * 2);
 				for (int i = 0; i < orderedList.Count; i++)
 				{
-					data.SetUInt16(i * 2, orderedList[i].RegisterValue);
+					if (IsLittleEndianRemote)
+					{
+						data.SetBytes(i * 2, new[] { orderedList[i].LoByte, orderedList[i].HiByte });
+					}
+					else
+					{
+						data.SetBytes(i * 2, new[] { orderedList[i].HiByte, orderedList[i].LoByte });
+					}
 				}
 
 				try

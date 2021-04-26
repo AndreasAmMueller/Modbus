@@ -16,21 +16,21 @@ build:
     - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Tcp/bin/Release/*.nupkg
     - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Serial/bin/Release/*.nupkg
     - dotnet nuget push -s amget -k $AMGET_API_KEY --skip-duplicate src/Modbus.Proxy/bin/Release/*.nupkg
-  artifacts:
-    paths:
-      - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.dll
-      - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.pdb
-      - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.xml
-      - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.dll
-      - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.pdb
-      - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.xml
-      - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.dll
-      - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.pdb
-      - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.xml
-      - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.dll
-      - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.pdb
-      - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.xml
-    expire_in: 1 month
+#  artifacts:
+#    paths:
+#      - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.dll
+#      - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.pdb
+#      - src/Modbus.Common/bin/Release/AMWD.Modbus.Common.xml
+#      - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.dll
+#      - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.pdb
+#      - src/Modbus.Tcp/bin/Release/AMWD.Modbus.Tcp.xml
+#      - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.dll
+#      - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.pdb
+#      - src/Modbus.Serial/bin/Release/AMWD.Modbus.Serial.xml
+#      - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.dll
+#      - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.pdb
+#      - src/Modbus.Proxy/bin/Release/AMWD.Modbus.Proxy.xml
+#    expire_in: 1 month
 
 deploy:
   stage: deploy

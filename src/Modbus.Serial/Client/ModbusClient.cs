@@ -176,6 +176,11 @@ namespace AMWD.Modbus.Serial.Client
 		}
 
 		/// <summary>
+		/// Gets or sets a value indicating whether the remote is delivering the bytes in little-endian order.
+		/// </summary>
+		public bool IsLittleEndianRemote { get; set; }
+
+		/// <summary>
 		/// Gets the result of the asynchronous initialization of this instance.
 		/// </summary>
 		public Task ConnectingTask { get; private set; }
@@ -531,13 +536,24 @@ namespace AMWD.Modbus.Serial.Client
 					list = new List<Register>();
 					for (int i = 0; i < count; i++)
 					{
-						list.Add(new Register
+						var register = new Register
 						{
 							Type = ModbusObjectType.HoldingRegister,
-							Address = (ushort)(startAddress + i),
-							HiByte = response.Data[i * 2],
-							LoByte = response.Data[i * 2 + 1]
-						});
+							Address = (ushort)(startAddress + i)
+						};
+
+						if (IsLittleEndianRemote)
+						{
+							register.LoByte = response.Data[i * 2];
+							register.HiByte = response.Data[i * 2 + 1];
+						}
+						else
+						{
+							register.HiByte = response.Data[i * 2];
+							register.LoByte = response.Data[i * 2 + 1];
+						}
+
+						list.Add(register);
 					}
 				}
 				catch (IOException ex)
@@ -599,13 +615,24 @@ namespace AMWD.Modbus.Serial.Client
 					list = new List<Register>();
 					for (int i = 0; i < count; i++)
 					{
-						list.Add(new Register
+						var register = new Register
 						{
 							Type = ModbusObjectType.InputRegister,
-							Address = (ushort)(startAddress + i),
-							HiByte = response.Data[i * 2],
-							LoByte = response.Data[i * 2 + 1]
-						});
+							Address = (ushort)(startAddress + i)
+						};
+
+						if (IsLittleEndianRemote)
+						{
+							register.LoByte = response.Data[i * 2];
+							register.HiByte = response.Data[i * 2 + 1];
+						}
+						else
+						{
+							register.HiByte = response.Data[i * 2];
+							register.LoByte = response.Data[i * 2 + 1];
+						}
+
+						list.Add(register);
 					}
 				}
 				catch (IOException ex)
@@ -827,9 +854,18 @@ namespace AMWD.Modbus.Serial.Client
 					{
 						DeviceId = deviceId,
 						Function = FunctionCode.WriteSingleRegister,
-						Address = register.Address,
-						Data = new DataBuffer(new[] { register.HiByte, register.LoByte })
+						Address = register.Address
 					};
+
+					if (IsLittleEndianRemote)
+					{
+						request.Data = new DataBuffer(new[] { register.LoByte, register.HiByte });
+					}
+					else
+					{
+						request.Data = new DataBuffer(new[] { register.HiByte, register.LoByte });
+					}
+
 					var response = await SendRequest(request, cancellationToken);
 					if (response.IsTimeout)
 						throw new ModbusException("Response timed out. Device id invalid?");
@@ -992,7 +1028,14 @@ namespace AMWD.Modbus.Serial.Client
 					request.Data.SetByte(0, (byte)(orderedList.Count * 2));
 					for (int i = 0; i < orderedList.Count; i++)
 					{
-						request.Data.SetUInt16(i * 2 + 1, orderedList[i].RegisterValue);
+						if (IsLittleEndianRemote)
+						{
+							request.Data.SetBytes(i * 2, new[] { orderedList[i].LoByte, orderedList[i].HiByte });
+						}
+						else
+						{
+							request.Data.SetBytes(i * 2, new[] { orderedList[i].HiByte, orderedList[i].LoByte });
+						}
 					}
 					var response = await SendRequest(request, cancellationToken);
 					if (response.IsTimeout)
