@@ -44,13 +44,19 @@ namespace AMWD.Modbus.Serial.Client
 		private bool driverModified;
 
 		// Connection handling
-		private readonly object reconnectLock = new object();
-		private CancellationTokenSource stopCts;
 		private bool isStarted = false;
-		private bool wasConnected = false;
+		private CancellationTokenSource stopCts;
+
+		private readonly object reconnectLock = new object();
 		private bool isReconnecting = false;
+		private bool wasConnected = false;
 		private TaskCompletionSource<bool> reconnectTcs;
-		private readonly SemaphoreSlim sendLock = new SemaphoreSlim(1, 1);
+
+		private readonly object queueLock = new object();
+		private readonly List<RequestTask> sendQueue = new List<RequestTask>();
+
+		private CancellationTokenSource sendCts;
+		private Task sendTask = Task.CompletedTask;
 
 		#endregion Fields
 
@@ -242,6 +248,11 @@ namespace AMWD.Modbus.Serial.Client
 		/// </summary>
 		public bool DriverEnableRS485 { get; set; }
 
+		/// <summary>
+		/// Gets or sets a delay between two requests in a row.
+		/// </summary>
+		public TimeSpan InterRequestDelay { get; set; } = TimeSpan.Zero;
+
 		#endregion Properties
 
 		#region Public Methods
@@ -287,7 +298,7 @@ namespace AMWD.Modbus.Serial.Client
 
 				logger?.LogInformation("ModbusClient starting.");
 
-				if (DriverEnableRS485 && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+				if (DriverEnableRS485 && RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 				{
 					try
 					{
@@ -1028,7 +1039,7 @@ namespace AMWD.Modbus.Serial.Client
 
 		#region Private Methods
 
-		private async Task<Response> SendRequest(Request request, CancellationToken ct)
+		private async Task<Response> SendRequest(Request request, CancellationToken cancellationToken)
 		{
 			try
 			{
@@ -1046,101 +1057,23 @@ namespace AMWD.Modbus.Serial.Client
 					}
 				}
 
-				using (var cts = new CancellationTokenSource())
-				using (ct.Register(() => cts.Cancel()))
-				using (stopCts.Token.Register(() => cts.Cancel()))
+				var task = new RequestTask
 				{
-					try
-					{
-						await sendLock.WaitAsync(cts.Token);
-						logger?.LogTrace(request.ToString());
-
-						// clear all data
-						await serialPort.BaseStream.FlushAsync();
-						serialPort.DiscardInBuffer();
-						serialPort.DiscardOutBuffer();
-
-						logger?.LogDebug($"Sending {request}");
-						byte[] bytes = request.Serialize();
-						await serialPort.WriteAsync(bytes, 0, bytes.Length, cts.Token);
-						logger?.LogDebug("Request sent.");
-
-						var responseBytes = new List<byte>
-						{
-							// Device/Slave ID
-							await ReadByte(cts.Token)
-						};
-
-						// Function number
-						byte fn = await ReadByte(cts.Token);
-						responseBytes.Add(fn);
-
-						byte expectedBytes = 0;
-						var function = (FunctionCode)((fn & Consts.ErrorMask) > 0 ? fn ^ Consts.ErrorMask : fn);
-						switch (function)
-						{
-							case FunctionCode.ReadCoils:
-							case FunctionCode.ReadDiscreteInputs:
-							case FunctionCode.ReadHoldingRegisters:
-							case FunctionCode.ReadInputRegisters:
-								expectedBytes = await ReadByte(cts.Token);
-								responseBytes.Add(expectedBytes);
-								break;
-							case FunctionCode.WriteSingleCoil:
-							case FunctionCode.WriteSingleRegister:
-							case FunctionCode.WriteMultipleCoils:
-							case FunctionCode.WriteMultipleRegisters:
-								expectedBytes = 4;
-								break;
-							case FunctionCode.EncapsulatedInterface:
-								responseBytes.AddRange(await ReadBytes(6, cts.Token));
-								byte count = responseBytes.Last();
-								for (int i = 0; i < count; i++)
-								{
-									// id
-									responseBytes.Add(await ReadByte(cts.Token));
-									// length
-									expectedBytes = await ReadByte(cts.Token);
-									responseBytes.Add(expectedBytes);
-									// value
-									responseBytes.AddRange(await ReadBytes(expectedBytes, cts.Token));
-								}
-								expectedBytes = 0;
-								break;
-							default:
-								if ((fn & Consts.ErrorMask) == 0)
-									throw new NotImplementedException();
-
-								expectedBytes = 1;
-								break;
-						}
-
-						expectedBytes += 2; // CRC Check
-
-						responseBytes.AddRange(await ReadBytes(expectedBytes, cts.Token));
-						logger?.LogDebug("Response received.");
-
-						return new Response(responseBytes.ToArray());
-					}
-					catch (OperationCanceledException) when (stopCts.IsCancellationRequested)
-					{
-						// keep it quiet on shutdown
-					}
-					catch (TimeoutException)
-					{
-						// request timed out, will be logged in the requesting method.
-						// no need to log here.
-					}
-					catch (Exception ex)
-					{
-						logger?.LogError(ex, $"Unexpected error ({ex.GetType().Name}) on send: {ex.GetMessage()}");
-					}
-					finally
-					{
-						sendLock.Release();
-					}
+					Request = request,
+					TaskCompletionSource = new TaskCompletionSource<Response>()
+				};
+				task.Registration = cancellationToken.Register(() => RemoveTask(task));
+				
+				lock (queueLock)
+				{
+					sendQueue.Add(task);
 				}
 
+				return await task.TaskCompletionSource.Task;
+			}
+			catch (Exception ex)
+			{
+				logger?.LogError(ex, $"Enqueueing request failed: {ex.GetMessage()}");
 				return new Response(new byte[] { 0, 0, 0, 0, 0, 0 });
 			}
 			finally
@@ -1149,7 +1082,17 @@ namespace AMWD.Modbus.Serial.Client
 			}
 		}
 
-		private async void Reconnect()
+		private void RemoveTask(RequestTask task)
+		{
+			lock (queueLock)
+			{
+				sendQueue.Remove(task);
+				task.Registration.Dispose();
+				task.TaskCompletionSource.TrySetCanceled();
+			}
+		}
+
+		private async Task Reconnect()
 		{
 			try
 			{
@@ -1166,6 +1109,10 @@ namespace AMWD.Modbus.Serial.Client
 				logger?.LogInformation($"{(wasConnected ? "Reconnect" : "Connect")} starting.");
 				if (wasConnected)
 					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
+
+				sendCts?.Cancel();
+				await sendTask;
+				sendCts = null;
 
 				int timeout = 2;
 				int maxTimeout = 30;
@@ -1209,8 +1156,10 @@ namespace AMWD.Modbus.Serial.Client
 										reconnectTcs?.TrySetResult(true);
 										Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
 									}
-
 									logger?.LogInformation($"{(wasConnected ? "Reconnect" : "Connect")}ed successfully.");
+
+									sendCts = new CancellationTokenSource();
+									sendTask = Task.Run(async () => await ProcessSendQueue());
 									return;
 								}
 								else
@@ -1262,6 +1211,127 @@ namespace AMWD.Modbus.Serial.Client
 					reconnectTcs = null;
 				}
 				logger?.LogTrace("ModbusClient.Reconnect leave");
+			}
+		}
+
+		private async Task ProcessSendQueue()
+		{
+			try
+			{
+				logger?.LogTrace("ModbusClient.ProcessSendQueue enter");
+				while (!sendCts.IsCancellationRequested)
+				{
+					RequestTask task = null;
+					try
+					{
+						SpinWait.SpinUntil(() => sendCts.IsCancellationRequested || sendQueue.Any());
+						if (sendCts.IsCancellationRequested)
+							return;
+
+						lock (queueLock)
+						{
+							task = sendQueue.First();
+							sendQueue.Remove(task);
+						}
+
+						logger?.LogTrace(task.Request.ToString());
+
+						// clear all data
+						await serialPort.BaseStream.FlushAsync();
+						serialPort.DiscardInBuffer();
+						serialPort.DiscardOutBuffer();
+
+						logger?.LogDebug($"Sending {task.Request}");
+						byte[] bytes = task.Request.Serialize();
+						await serialPort.WriteAsync(bytes, 0, bytes.Length, sendCts.Token);
+						logger?.LogDebug("Request sent.");
+
+						var responseBytes = new List<byte>
+						{
+							// Device/Slave ID
+							await ReadByte(sendCts.Token)
+						};
+
+						// Function number
+						byte fn = await ReadByte(sendCts.Token);
+						responseBytes.Add(fn);
+
+						byte expectedBytes = 0;
+						var function = (FunctionCode)((fn & Consts.ErrorMask) > 0 ? fn ^ Consts.ErrorMask : fn);
+						switch (function)
+						{
+							case FunctionCode.ReadCoils:
+							case FunctionCode.ReadDiscreteInputs:
+							case FunctionCode.ReadHoldingRegisters:
+							case FunctionCode.ReadInputRegisters:
+								expectedBytes = await ReadByte(sendCts.Token);
+								responseBytes.Add(expectedBytes);
+								break;
+							case FunctionCode.WriteSingleCoil:
+							case FunctionCode.WriteSingleRegister:
+							case FunctionCode.WriteMultipleCoils:
+							case FunctionCode.WriteMultipleRegisters:
+								expectedBytes = 4;
+								break;
+							case FunctionCode.EncapsulatedInterface:
+								responseBytes.AddRange(await ReadBytes(6, sendCts.Token));
+								byte count = responseBytes.Last();
+								for (int i = 0; i < count; i++)
+								{
+									// id
+									responseBytes.Add(await ReadByte(sendCts.Token));
+									// length
+									expectedBytes = await ReadByte(sendCts.Token);
+									responseBytes.Add(expectedBytes);
+									// value
+									responseBytes.AddRange(await ReadBytes(expectedBytes, sendCts.Token));
+								}
+								expectedBytes = 0;
+								break;
+							default:
+								if ((fn & Consts.ErrorMask) == 0)
+									throw new NotImplementedException();
+
+								expectedBytes = 1;
+								break;
+						}
+
+						expectedBytes += 2; // CRC Check
+
+						responseBytes.AddRange(await ReadBytes(expectedBytes, sendCts.Token));
+						logger?.LogDebug("Response received.");
+
+						var response = new Response(responseBytes.ToArray());
+						task.TaskCompletionSource.TrySetResult(response);
+					}
+					catch (OperationCanceledException) when (sendCts.IsCancellationRequested)
+					{
+						task?.TaskCompletionSource.TrySetResult(new Response(new byte[] { 0, 0, 0, 0, 0, 0 }));
+					}
+					catch (TimeoutException)
+					{
+						task?.TaskCompletionSource.TrySetResult(new Response(new byte[] { 0, 0, 0, 0, 0, 0 }));
+					}
+					catch (Exception ex)
+					{
+						logger?.LogError(ex, $"Unexpected error ({ex.GetType().Name}) on send: {ex.GetMessage()}");
+						task?.TaskCompletionSource.TrySetResult(new Response(new byte[] { 0, 0, 0, 0, 0, 0 }));
+					}
+					finally
+					{
+						task?.Registration.Dispose();
+						try
+						{
+							await Task.Delay(InterRequestDelay, sendCts.Token);
+						}
+						catch
+						{ }
+					}
+				}
+			}
+			finally
+			{
+				logger?.LogTrace("ModbusClient.ProcessSendQueue leave");
 			}
 		}
 
@@ -1332,14 +1402,6 @@ namespace AMWD.Modbus.Serial.Client
 				if (!isStarted)
 					return;
 
-				bool connected = false;
-				lock (reconnectLock)
-				{
-					connected = IsConnected;
-					IsConnected = false;
-					wasConnected = false;
-				}
-
 				try
 				{
 					stopCts?.Cancel();
@@ -1348,6 +1410,30 @@ namespace AMWD.Modbus.Serial.Client
 				}
 				catch
 				{ }
+
+				try
+				{
+					sendCts?.Cancel();
+					lock (queueLock)
+					{
+						foreach (var task in sendQueue)
+						{
+							task.TaskCompletionSource.TrySetCanceled();
+							task.Registration.Dispose();
+						}
+						sendQueue.Clear();
+					}
+				}
+				catch
+				{ }
+
+				bool connected = false;
+				lock (reconnectLock)
+				{
+					connected = IsConnected;
+					IsConnected = false;
+					wasConnected = false;
+				}
 
 				try
 				{

@@ -31,7 +31,7 @@ namespace AMWD.Modbus.Serial.Util
 				var attrs = (T[])fi?.GetCustomAttributes(typeof(T), inherit: false);
 				return attrs?.FirstOrDefault();
 			}
-			return default(T);
+			return default;
 		}
 
 		/// <summary>
