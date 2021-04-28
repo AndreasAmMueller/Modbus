@@ -183,7 +183,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <summary>
 		/// Gets a value indicating whether the connection is established.
 		/// </summary>
-		public bool IsConnected => serialPort?.IsOpen ?? false;
+		public bool IsConnected { get; private set; }
 
 		/// <summary>
 		/// Gets or sets the max reconnect timespan until the reconnect is aborted.
@@ -305,8 +305,12 @@ namespace AMWD.Modbus.Serial.Client
 					}
 				}
 
-				wasConnected = false;
-				ConnectingTask = GetReconnectTask();
+				lock (reconnectLock)
+				{
+					IsConnected = false;
+					wasConnected = false;
+					ConnectingTask = GetReconnectTask(true);
+				}
 
 				logger?.LogInformation("Modbus client started.");
 				await Task.WhenAny(ConnectingTask, cancelTask);
@@ -314,7 +318,7 @@ namespace AMWD.Modbus.Serial.Client
 			finally
 			{
 				if (cancelTask.Status != TaskStatus.WaitingForActivation)
-					cancelTask?.Dispose();
+					cancelTask.Dispose();
 				logger?.LogTrace("ModbusClient.Connect leave");
 			}
 		}
@@ -1031,12 +1035,15 @@ namespace AMWD.Modbus.Serial.Client
 				logger?.LogTrace("ModbusClient.SendRequest enter");
 				CheckDisposed();
 
-				if (!IsConnected)
+				lock (reconnectLock)
 				{
-					if (!isReconnecting)
-						ConnectingTask = GetReconnectTask();
+					if (!IsConnected)
+					{
+						if (!isReconnecting)
+							ConnectingTask = GetReconnectTask(true);
 
-					throw new InvalidOperationException("Modbus client is not connected.");
+						throw new InvalidOperationException("Modbus client is not connected.");
+					}
 				}
 
 				using (var cts = new CancellationTokenSource())
@@ -1153,8 +1160,9 @@ namespace AMWD.Modbus.Serial.Client
 						return;
 
 					isReconnecting = true;
+					IsConnected = false;
 				}
-				
+
 				logger?.LogInformation($"{(wasConnected ? "Reconnect" : "Connect")} starting.");
 				if (wasConnected)
 					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
@@ -1193,12 +1201,16 @@ namespace AMWD.Modbus.Serial.Client
 							{
 								if (serialPort.IsOpen)
 								{
-									logger?.LogInformation($"{(wasConnected ? "Reconnect" : "Connect")}ed successfully.");
-									Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
+									lock (reconnectLock)
+									{
+										IsConnected = true;
+										wasConnected = true;
 
-									reconnectTcs?.TrySetResult(true);
-									reconnectTcs = null;
-									wasConnected = true;
+										reconnectTcs?.TrySetResult(true);
+										Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
+									}
+
+									logger?.LogInformation($"{(wasConnected ? "Reconnect" : "Connect")}ed successfully.");
 									return;
 								}
 								else
@@ -1244,20 +1256,38 @@ namespace AMWD.Modbus.Serial.Client
 			}
 			finally
 			{
-				isReconnecting = false;
+				lock (reconnectLock)
+				{
+					isReconnecting = false;
+					reconnectTcs = null;
+				}
 				logger?.LogTrace("ModbusClient.Reconnect leave");
 			}
 		}
 
-		private Task GetReconnectTask()
+		private Task GetReconnectTask(bool isAlreadyLocked = false)
 		{
-			lock (reconnectLock)
+			Task task = Task.CompletedTask;
+			if (isAlreadyLocked)
 			{
 				if (reconnectTcs == null)
 					reconnectTcs = new TaskCompletionSource<bool>();
+
+				task = reconnectTcs.Task;
 			}
+			else
+			{
+				lock (reconnectLock)
+				{
+					if (reconnectTcs == null)
+						reconnectTcs = new TaskCompletionSource<bool>();
+
+					task = reconnectTcs.Task;
+				}
+			}
+
 			Task.Run(() => Reconnect()).Forget();
-			return reconnectTcs.Task;
+			return task;
 		}
 
 		private SerialRS485 GetDriverState()
@@ -1302,14 +1332,18 @@ namespace AMWD.Modbus.Serial.Client
 				if (!isStarted)
 					return;
 
-				isStarted = false;
-
-				bool wasConnected = IsConnected;
+				bool connected = false;
+				lock (reconnectLock)
+				{
+					connected = IsConnected;
+					IsConnected = false;
+					wasConnected = false;
+				}
 
 				try
 				{
-					reconnectTcs?.TrySetResult(false);
 					stopCts?.Cancel();
+					reconnectTcs?.TrySetResult(false);
 					reconnectTcs = null;
 				}
 				catch
@@ -1324,8 +1358,10 @@ namespace AMWD.Modbus.Serial.Client
 				catch
 				{ }
 
-				if (wasConnected)
+				if (connected)
 					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
+
+				isStarted = false;
 
 				if (driverModified)
 				{
@@ -1350,9 +1386,7 @@ namespace AMWD.Modbus.Serial.Client
 		}
 
 		private async Task<byte> ReadByte(CancellationToken cancellationToken)
-		{
-			return (await ReadBytes(1, cancellationToken))[0];
-		}
+			=> (await ReadBytes(1, cancellationToken)).First();
 
 		private async Task<byte[]> ReadBytes(int length, CancellationToken cancellationToken)
 		{

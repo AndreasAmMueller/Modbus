@@ -173,12 +173,12 @@ namespace AMWD.Modbus.Tcp.Client
 			var cancelTask = ReconnectTimeSpan == TimeSpan.MaxValue
 				? Task.Delay(Timeout.Infinite, cancellationToken)
 				: Task.Delay(ReconnectTimeSpan, cancellationToken);
-			
+
 			try
 			{
 				logger?.LogTrace("ModbusClient.Connect enter");
 				CheckDisposed();
-				
+
 				if (isStarted)
 				{
 					await Task.WhenAny(ConnectingTask, cancelTask);
@@ -189,10 +189,13 @@ namespace AMWD.Modbus.Tcp.Client
 
 				logger?.LogInformation("Modbus client starting.");
 
-				transactionId = 0;
-				IsConnected = false;
-				wasConnected = false;
-				ConnectingTask = GetReconnectTask();
+				lock (reconnectLock)
+				{
+					transactionId = 0;
+					IsConnected = false;
+					wasConnected = false;
+					ConnectingTask = GetReconnectTask(true);
+				}
 
 				logger?.LogInformation("Modbus client started.");
 				await Task.WhenAny(ConnectingTask, cancelTask);
@@ -202,7 +205,7 @@ namespace AMWD.Modbus.Tcp.Client
 			finally
 			{
 				if (cancelTask.Status != TaskStatus.WaitingForActivation)
-					cancelTask?.Dispose();
+					cancelTask.Dispose();
 				logger?.LogTrace("ModbusClient.Connect leave");
 			}
 		}
@@ -226,8 +229,13 @@ namespace AMWD.Modbus.Tcp.Client
 				stopCts.Cancel();
 				receiveCts?.Cancel();
 
-				bool wasConnected = IsConnected;
-				IsConnected = false;
+				bool connected = false;
+				lock (reconnectLock)
+				{
+					connected = IsConnected;
+					IsConnected = false;
+					wasConnected = false;
+				}
 
 				await Task.WhenAny(ConnectingTask, Task.Delay(Timeout.Infinite, cancellationToken));
 
@@ -237,7 +245,7 @@ namespace AMWD.Modbus.Tcp.Client
 				isStarted = false;
 				logger?.LogInformation("Modbus client stopped.");
 
-				if (wasConnected)
+				if (connected)
 					Task.Run(() => Disconnected?.Invoke(this, EventArgs.Empty)).Forget();
 			}
 			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -1105,21 +1113,19 @@ namespace AMWD.Modbus.Tcp.Client
 						if (await Task.WhenAny(connectTask, Task.Delay(timeout, stopCts.Token)) == connectTask && tcpClient.Connected)
 						{
 							stream = tcpClient.GetStream();
+
 							receiveCts = new CancellationTokenSource();
 							receiveTask = Task.Run(async () => await ReceiveLoop());
 
-							IsConnected = true;
-							reconnectTcs?.TrySetResult(true);
-
-							logger?.LogInformation($"{(wasConnected ? "Rec" : "C")}onnected successfully.");
-							Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
-							wasConnected = true;
-
 							lock (reconnectLock)
 							{
-								isReconnecting = false;
-								reconnectTcs = null;
+								IsConnected = true;
+								wasConnected = true;
+								
+								reconnectTcs?.TrySetResult(true);
+								Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
 							}
+							logger?.LogInformation($"{(wasConnected ? "Rec" : "C")}onnected successfully.");
 							return;
 						}
 						else
@@ -1152,24 +1158,19 @@ namespace AMWD.Modbus.Tcp.Client
 			catch (OperationCanceledException) when (stopCts.IsCancellationRequested)
 			{
 				reconnectTcs?.TrySetCanceled();
-				lock (reconnectLock)
-				{
-					isReconnecting = false;
-					reconnectTcs = null;
-				}
 			}
 			catch (Exception ex)
 			{
 				logger?.LogError(ex, $"{(wasConnected ? "Rec" : "C")}onnecting failed: {ex.GetMessage()}");
 				reconnectTcs?.TrySetException(ex);
+			}
+			finally
+			{
 				lock (reconnectLock)
 				{
 					isReconnecting = false;
 					reconnectTcs = null;
 				}
-			}
-			finally
-			{
 				logger?.LogTrace("ModbusClient.Reconnect leave");
 			}
 		}
@@ -1285,12 +1286,15 @@ namespace AMWD.Modbus.Tcp.Client
 				logger?.LogTrace("ModbusClient.SendRequest enter");
 				CheckDisposed();
 
-				if (!IsConnected)
+				lock (reconnectLock)
 				{
-					if (!isReconnecting)
-						ConnectingTask = GetReconnectTask();
+					if (!IsConnected)
+					{
+						if (!isReconnecting)
+							ConnectingTask = GetReconnectTask(true);
 
-					throw new InvalidOperationException("Modbus client is not connected");
+						throw new InvalidOperationException("Modbus client is not connected");
+					}
 				}
 
 				if (stream == null)
@@ -1346,15 +1350,29 @@ namespace AMWD.Modbus.Tcp.Client
 			}
 		}
 
-		private Task GetReconnectTask()
+		private Task GetReconnectTask(bool isAlreadyLocked = false)
 		{
-			lock (reconnectLock)
+			Task task = Task.CompletedTask;
+			if (isAlreadyLocked)
 			{
 				if (reconnectTcs == null)
 					reconnectTcs = new TaskCompletionSource<bool>();
+
+				task = reconnectTcs.Task;
 			}
+			else
+			{
+				lock (reconnectLock)
+				{
+					if (reconnectTcs == null)
+						reconnectTcs = new TaskCompletionSource<bool>();
+
+					task = reconnectTcs.Task;
+				}
+			}
+
 			Task.Run(async () => await Reconnect()).Forget();
-			return reconnectTcs.Task;
+			return task;
 		}
 
 		private IPAddress ResolveHost(string host)
