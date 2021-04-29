@@ -70,7 +70,6 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">The list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static uint GetUInt32(this IEnumerable<ModbusObject> list, int startIndex = 0, bool inverseRegisters = false)
 
@@ -90,7 +89,6 @@ namespace AMWD.Modbus.Common.Util
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(2);
 			if (inverseRegisters)
-
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -114,10 +112,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">The list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static ulong GetUInt64(this IEnumerable<ModbusObject> list, int startIndex = 0, bool inverseRegisters = false)
-
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -134,7 +130,6 @@ namespace AMWD.Modbus.Common.Util
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(4);
 			if (inverseRegisters)
-
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -201,7 +196,6 @@ namespace AMWD.Modbus.Common.Util
 
 		/// <returns></returns>
 		public static int GetInt32(this IEnumerable<ModbusObject> list, int startIndex = 0, bool inverseRegisters = false)
-
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -218,7 +212,6 @@ namespace AMWD.Modbus.Common.Util
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(2);
 			if (inverseRegisters)
-
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -242,10 +235,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static long GetInt64(this IEnumerable<ModbusObject> list, int startIndex = 0, bool inverseRegisters = false)
-
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -255,14 +246,13 @@ namespace AMWD.Modbus.Common.Util
 				throw new ArgumentException("At least four registers needed", nameof(list));
 
 			if (startIndex < 0 || count < startIndex + 4)
-
 				throw new ArgumentOutOfRangeException(nameof(startIndex));
+
 			if (!list.All(r => r.Type == ModbusObjectType.HoldingRegister) && !list.All(r => r.Type == ModbusObjectType.InputRegister))
 				throw new ArgumentException("Invalid register type");
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(4);
 			if (inverseRegisters)
-
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -290,10 +280,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static float GetSingle(this IEnumerable<ModbusObject> list, int startIndex = 0, bool inverseRegisters = false)
-
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -303,14 +291,13 @@ namespace AMWD.Modbus.Common.Util
 				throw new ArgumentException("At least two registers needed", nameof(list));
 
 			if (startIndex < 0 || count < startIndex + 2)
-
 				throw new ArgumentOutOfRangeException(nameof(startIndex));
+
 			if (!list.All(r => r.Type == ModbusObjectType.HoldingRegister) && !list.All(r => r.Type == ModbusObjectType.InputRegister))
 				throw new ArgumentException("Invalid register type");
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(2);
 			if (inverseRegisters)
-
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -334,10 +321,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 4).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static double GetDouble(this IEnumerable<ModbusObject> list, int startIndex = 0, bool inverseRegisters = false)
-
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -354,7 +339,6 @@ namespace AMWD.Modbus.Common.Util
 
 			list = list.OrderBy(r => r.Address).Skip(startIndex).Take(4);
 			if (inverseRegisters)
-
 				list = list.Reverse();
 
 			var registers = list.ToArray();
@@ -499,10 +483,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The unsigned integer to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static ModbusObject[] ToModbusRegister(this uint value, ushort address, bool inverseRegisters = false)
-
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
@@ -510,11 +492,9 @@ namespace AMWD.Modbus.Common.Util
 
 			var registers = new ModbusObject[bytes.Length / 2];
 			if (inverseRegisters)
-
 			{
 				int startAddress = address + registers.Length - 1;
 				for (int i = 0; i < registers.Length; i++)
-
 				{
 					registers[i] = new ModbusObject
 					{
@@ -547,10 +527,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The unsigned long to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static ModbusObject[] ToModbusRegister(this ulong value, ushort address, bool inverseRegisters = false)
-
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
@@ -558,7 +536,6 @@ namespace AMWD.Modbus.Common.Util
 
 			var registers = new ModbusObject[bytes.Length / 2];
 			if (inverseRegisters)
-
 			{
 				int startAddress = address + registers.Length - 1;
 				for (int i = 0; i < registers.Length; i++)
@@ -585,7 +562,6 @@ namespace AMWD.Modbus.Common.Util
 						LoByte = bytes[i * 2 + 1]
 					};
 				}
-
 			}
 			return registers;
 		}
@@ -632,10 +608,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The integer to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static ModbusObject[] ToModbusRegister(this int value, ushort address, bool inverseRegisters = false)
-
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
@@ -643,11 +617,9 @@ namespace AMWD.Modbus.Common.Util
 
 			var registers = new ModbusObject[bytes.Length / 2];
 			if (inverseRegisters)
-
 			{
 				int startAddress = address + registers.Length - 1;
 				for (int i = 0; i < registers.Length; i++)
-
 				{
 					registers[i] = new ModbusObject
 					{
@@ -670,7 +642,6 @@ namespace AMWD.Modbus.Common.Util
 						LoByte = bytes[i * 2 + 1]
 					};
 				}
-
 			}
 			return registers;
 		}
@@ -684,7 +655,6 @@ namespace AMWD.Modbus.Common.Util
 
 		/// <returns></returns>
 		public static ModbusObject[] ToModbusRegister(this long value, ushort address, bool inverseRegisters = false)
-
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
@@ -692,11 +662,9 @@ namespace AMWD.Modbus.Common.Util
 
 			var registers = new ModbusObject[bytes.Length / 2];
 			if (inverseRegisters)
-
 			{
 				int startAddress = address + registers.Length - 1;
 				for (int i = 0; i < registers.Length; i++)
-
 				{
 					registers[i] = new ModbusObject
 					{
@@ -719,7 +687,6 @@ namespace AMWD.Modbus.Common.Util
 						LoByte = bytes[i * 2 + 1]
 					};
 				}
-
 			}
 			return registers;
 		}
@@ -734,10 +701,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The float to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static ModbusObject[] ToModbusRegister(this float value, ushort address, bool inverseRegisters = false)
-
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
@@ -745,11 +710,9 @@ namespace AMWD.Modbus.Common.Util
 
 			var registers = new ModbusObject[bytes.Length / 2];
 			if (inverseRegisters)
-
 			{
 				int startAddress = address + registers.Length - 1;
 				for (int i = 0; i < registers.Length; i++)
-
 				{
 					registers[i] = new ModbusObject
 					{
@@ -782,10 +745,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The double to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static ModbusObject[] ToModbusRegister(this double value, ushort address, bool inverseRegisters = false)
-
 		{
 			byte[] bytes = BitConverter.GetBytes(value);
 			if (BitConverter.IsLittleEndian)
@@ -793,11 +754,9 @@ namespace AMWD.Modbus.Common.Util
 
 			var registers = new ModbusObject[bytes.Length / 2];
 			if (inverseRegisters)
-
 			{
 				int startAddress = address + registers.Length - 1;
 				for (int i = 0; i < registers.Length; i++)
-
 				{
 					registers[i] = new ModbusObject
 					{
@@ -820,7 +779,6 @@ namespace AMWD.Modbus.Common.Util
 						LoByte = bytes[i * 2 + 1]
 					};
 				}
-
 			}
 			return registers;
 		}
@@ -837,10 +795,8 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="encoding">The string encoding. Default: <see cref="Encoding.UTF8"/>.</param>
 		/// <param name="flipBytes">A value indicating whether the bytes within a register (hi/lo byte) should be fliped due to correct character order.</param>
 		/// <param name="length">The zero-padded string length. If 0 (zero) the string will occupy the number of bytes equals to the actual lenght of the string.</param>
-
 		/// <returns></returns>
 		public static ModbusObject[] ToModbusRegister(this string str, ushort address, Encoding encoding = null, bool flipBytes = false, int length = 0)
-
 		{
 			if (str == null)
 				throw new ArgumentNullException(nameof(str));
