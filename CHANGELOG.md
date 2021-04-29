@@ -4,6 +4,23 @@
 
 ----
 
+## 1.1.0 (2021-04-30)
+
+### Added (1 change)
+
+- Extensions to convert from/to naive data types have a parameter to `inverseRegisters` order. (by @Luke092) (Closing Issue #15 more precisely)
+
+### Fixed (1 change)
+
+- Better async behaviour for serial client.
+
+### Updated (2 changes)
+
+- Updated to C# 9.0
+- Updated packages
+
+
+
 ## 1.0.4 (2021-04-13)
 
 ### Added (1 change)
