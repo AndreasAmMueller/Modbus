@@ -518,7 +518,7 @@ namespace AMWD.Modbus.Common.Util
 				{
 					registers[i] = new ModbusObject
 					{
-						Address = (ushort)(address + i),
+						Address = (ushort)(startAddress - i),
 						Type = ModbusObjectType.HoldingRegister,
 						HiByte = bytes[i * 2],
 						LoByte = bytes[i * 2 + 1]
@@ -527,12 +527,11 @@ namespace AMWD.Modbus.Common.Util
 			}
 			else
 			{
-				var startAddress = address + registers.Length - 1;
 				for (int i = 0; i < registers.Length; i++)
 				{
 					registers[i] = new ModbusObject
 					{
-						Address = (ushort)(startAddress - i),
+						Address = (ushort)(address - i),
 						Type = ModbusObjectType.HoldingRegister,
 						HiByte = bytes[i * 2],
 						LoByte = bytes[i * 2 + 1]
@@ -754,7 +753,7 @@ namespace AMWD.Modbus.Common.Util
 				{
 					registers[i] = new ModbusObject
 					{
-						Address = (ushort)(address + i),
+						Address = (ushort)(startAddress - i),
 						Type = ModbusObjectType.HoldingRegister,
 						HiByte = bytes[i * 2],
 						LoByte = bytes[i * 2 + 1]
@@ -763,12 +762,11 @@ namespace AMWD.Modbus.Common.Util
 			}
 			else
 			{
-				var startAddress = address + registers.Length - 1;
 				for (int i = 0; i < registers.Length; i++)
 				{
 					registers[i] = new ModbusObject
 					{
-						Address = (ushort)(startAddress - i),
+						Address = (ushort)(address + i),
 						Type = ModbusObjectType.HoldingRegister,
 						HiByte = bytes[i * 2],
 						LoByte = bytes[i * 2 + 1]
