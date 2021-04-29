@@ -12,7 +12,7 @@ namespace AMWD.Modbus.Common.Util
 	{
 		#region Fields
 
-		private static readonly DateTime unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+		private static readonly DateTime unixEpoch = new(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 
 		#endregion Fields
 
@@ -125,9 +125,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="index">The index to start with the bytes.</param>
 		/// <param name="block">The DataBlock for the bytes.</param>
 		public void SetBytes(int index, DataBuffer block)
-		{
-			SetBytes(index, block.Buffer);
-		}
+			=> SetBytes(index, block.Buffer);
 
 		#region Unsigned
 
@@ -150,9 +148,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="index">The index.</param>
 		/// <param name="value">The value.</param>
 		public void SetBoolean(int index, bool value)
-		{
-			SetByte(index, (byte)(value ? 1 : 0));
-		}
+			=> SetByte(index, (byte)(value ? 1 : 0));
 
 		/// <summary>
 		/// Sets a unsigned short at the specified position.
@@ -265,9 +261,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="index">The index.</param>
 		/// <param name="value">The value.</param>
 		public void SetDouble(int index, double value)
-		{
-			SetInt64(index, BitConverter.DoubleToInt64Bits(value));
-		}
+			=> SetInt64(index, BitConverter.DoubleToInt64Bits(value));
 
 		#endregion Floating point
 
@@ -279,9 +273,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="index">The index.</param>
 		/// <param name="value">The value.</param>
 		public void SetTimeSpan(int index, TimeSpan value)
-		{
-			SetInt64(index, value.Ticks);
-		}
+			=> SetInt64(index, value.Ticks);
 
 		/// <summary>
 		/// Sets a timestamp (DateTime => TimeSpan) at the specified position.
@@ -306,9 +298,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="index">The index.</param>
 		/// <param name="value">The value.</param>
 		public void SetChar(int index, char value)
-		{
-			SetByte(index, Convert.ToByte(value));
-		}
+			=> SetByte(index, Convert.ToByte(value));
 
 		/// <summary>
 		/// Sets a string at the specified position.
@@ -353,18 +343,14 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public void AddByte(byte value)
-		{
-			AddBytes(new[] { value });
-		}
+			=> AddBytes(new[] { value });
 
 		/// <summary>
 		/// Adds a boolean.
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public void AddBoolean(bool value)
-		{
-			AddByte((byte)(value ? 1 : 0));
-		}
+			=> AddByte((byte)(value ? 1 : 0));
 
 		/// <summary>
 		/// Adds an unsigned short.
@@ -408,9 +394,7 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public void AddSByte(sbyte value)
-		{
-			AddBytes(new[] { Convert.ToByte(value) });
-		}
+			=> AddBytes(new[] { Convert.ToByte(value) });
 
 		/// <summary>
 		/// Adds a short.
@@ -480,9 +464,7 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public void AddTimeSpan(TimeSpan value)
-		{
-			AddInt64(value.Ticks);
-		}
+			=> AddInt64(value.Ticks);
 
 		/// <summary>
 		/// Adds a timestamp (DateTime => TimeSpan).
@@ -490,8 +472,13 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The value.</param>
 		public void AddDateTime(DateTime value)
 		{
-			var dt = value.ToUniversalTime();
-			var ts = value.Subtract(unixEpoch);
+			var dt = value.Kind switch
+			{
+				DateTimeKind.Utc => value,
+				DateTimeKind.Local => value.ToUniversalTime(),
+				_ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+			};
+			var ts = dt.Subtract(unixEpoch);
 			AddTimeSpan(ts);
 		}
 
@@ -504,9 +491,7 @@ namespace AMWD.Modbus.Common.Util
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public void AddChar(char value)
-		{
-			AddByte(Convert.ToByte(value));
-		}
+			=> AddByte(Convert.ToByte(value));
 
 		/// <summary>
 		/// Adds a string.
@@ -686,9 +671,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="index">The index.</param>
 		/// <returns>The value.</returns>
 		public double GetDouble(int index)
-		{
-			return BitConverter.Int64BitsToDouble(GetInt64(index));
-		}
+			=> BitConverter.Int64BitsToDouble(GetInt64(index));
 
 		#endregion Floating point
 
@@ -727,9 +710,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="index">The index.</param>
 		/// <returns>The char.</returns>
 		public char GetChar(int index)
-		{
-			return Convert.ToChar(GetByte(index));
-		}
+			=> Convert.ToChar(GetByte(index));
 
 		/// <summary>
 		/// Returns a string.
@@ -795,7 +776,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <inheritdoc/>
 		public override bool Equals(object obj)
 		{
-			if (!(obj is DataBuffer block))
+			if (obj is not DataBuffer block)
 				return false;
 
 			if (block.IsLittleEndian != IsLittleEndian)
@@ -809,12 +790,10 @@ namespace AMWD.Modbus.Common.Util
 
 		/// <inheritdoc/>
 		public override int GetHashCode()
-		{
-			return base.GetHashCode()
+			=> base.GetHashCode()
 				^ Length.GetHashCode()
 				^ Buffer.GetHashCode()
 				^ IsLittleEndian.GetHashCode();
-		}
 
 		/// <inheritdoc/>
 		public override string ToString()

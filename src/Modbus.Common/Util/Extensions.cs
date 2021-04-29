@@ -72,7 +72,6 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
 		/// <returns></returns>
 		public static uint GetUInt32(this IEnumerable<ModbusObject> list, int startIndex = 0, bool inverseRegisters = false)
-
 		{
 			if (list == null)
 				throw new ArgumentNullException(nameof(list));
@@ -193,7 +192,6 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="list">A list of registers (min. 2).</param>
 		/// <param name="startIndex">The start index. Default: 0.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static int GetInt32(this IEnumerable<ModbusObject> list, int startIndex = 0, bool inverseRegisters = false)
 		{
@@ -420,14 +418,12 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="address">The Modbus coil address.</param>
 		/// <returns></returns>
 		public static ModbusObject ToModbusCoil(this bool value, ushort address)
-		{
-			return new ModbusObject
+			=> new()
 			{
 				Address = address,
 				Type = ModbusObjectType.Coil,
 				BoolValue = value
 			};
-		}
 
 		/// <summary>
 		/// Converts a boolean to a Modbus register.
@@ -436,14 +432,12 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="address">The Modbus register address.</param>
 		/// <returns></returns>
 		public static ModbusObject ToModbusRegister(this bool value, ushort address)
-		{
-			return new ModbusObject
+			=> new()
 			{
 				Address = address,
 				Type = ModbusObjectType.HoldingRegister,
 				RegisterValue = (ushort)(value ? 1 : 0)
 			};
-		}
 
 		/// <summary>
 		/// Converts a byte to a Modbus register.
@@ -452,14 +446,12 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="address">The Modbus register address.</param>
 		/// <returns></returns>
 		public static ModbusObject ToModbusRegister(this byte value, ushort address)
-		{
-			return new ModbusObject
+			=> new()
 			{
 				Address = address,
 				Type = ModbusObjectType.HoldingRegister,
 				RegisterValue = value
 			};
-		}
 
 		/// <summary>
 		/// Converts an unsigned short to a Modbus register.
@@ -468,14 +460,12 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="address">The Modbus register address.</param>
 		/// <returns></returns>
 		public static ModbusObject ToModbusRegister(this ushort value, ushort address)
-		{
-			return new ModbusObject
+			=> new()
 			{
 				Address = address,
 				Type = ModbusObjectType.HoldingRegister,
 				RegisterValue = value
 			};
-		}
 
 		/// <summary>
 		/// Converts an unsigned integer to two Modbus registers.
@@ -511,13 +501,14 @@ namespace AMWD.Modbus.Common.Util
 				{
 					registers[i] = new ModbusObject
 					{
-						Address = (ushort)(address - i),
+						Address = (ushort)(address + i),
 						Type = ModbusObjectType.HoldingRegister,
 						HiByte = bytes[i * 2],
 						LoByte = bytes[i * 2 + 1]
 					};
 				}
 			}
+
 			return registers;
 		}
 
@@ -577,14 +568,12 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="address">The Modbus register address.</param>
 		/// <returns></returns>
 		public static ModbusObject ToModbusRegister(this sbyte value, ushort address)
-		{
-			return new ModbusObject
+			=> new()
 			{
 				Address = address,
 				Type = ModbusObjectType.HoldingRegister,
 				RegisterValue = (ushort)value
 			};
-		}
 
 		/// <summary>
 		/// Converts a signed short to a Modbus register.
@@ -593,14 +582,12 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="address">The Modbus register address.</param>
 		/// <returns></returns>
 		public static ModbusObject ToModbusRegister(this short value, ushort address)
-		{
-			return new ModbusObject
+			=> new()
 			{
 				Address = address,
 				Type = ModbusObjectType.HoldingRegister,
 				RegisterValue = (ushort)value
 			};
-		}
 
 		/// <summary>
 		/// Converts a signed integer to two Modbus registers.
@@ -652,7 +639,6 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="value">The long to convert.</param>
 		/// <param name="address">The Modbus register address.</param>
 		/// <param name="inverseRegisters">Inverses the register order as required by some implementations. Default: false.</param>
-
 		/// <returns></returns>
 		public static ModbusObject[] ToModbusRegister(this long value, ushort address, bool inverseRegisters = false)
 		{

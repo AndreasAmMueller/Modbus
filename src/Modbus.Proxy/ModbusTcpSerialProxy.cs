@@ -17,19 +17,19 @@ using ModbusServer = AMWD.Modbus.Tcp.Server.ModbusServer;
 namespace AMWD.Modbus.Proxy
 {
 	/// <summary>
-	/// This proxy acceppts incoming TCP requests and forwards them to a TCP device.
+	/// This proxy accepts incoming TCP requests and forwards them to a serial device.
 	/// </summary>
 	public class ModbusTcpSerialProxy : IDisposable
 	{
 		private readonly ILogger logger;
 		private readonly ModbusTcpSerialSettings settings;
-		private readonly ReaderWriterLockSlim syncLock = new ReaderWriterLockSlim();
+		private readonly ReaderWriterLockSlim syncLock = new();
 
 		private bool isStarted;
 		private ModbusClient client;
 		private ModbusServer server;
 
-		private readonly Dictionary<byte, ProxyDevice> devices = new Dictionary<byte, ProxyDevice>();
+		private readonly Dictionary<byte, ProxyDevice> devices = new();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ModbusTcpSerialProxy"/> class.

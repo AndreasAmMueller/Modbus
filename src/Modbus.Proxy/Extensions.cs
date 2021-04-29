@@ -55,7 +55,7 @@ namespace AMWD.Modbus.Proxy
 
 		private class DisposableReaderWriterLockSlim : IDisposable
 		{
-			private ReaderWriterLockSlim rwLock;
+			private readonly ReaderWriterLockSlim rwLock;
 			private LockMode mode;
 
 			public DisposableReaderWriterLockSlim(ReaderWriterLockSlim rwLock, LockMode mode)

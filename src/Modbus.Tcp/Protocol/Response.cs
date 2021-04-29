@@ -185,9 +185,7 @@ namespace AMWD.Modbus.Tcp.Protocol
 						{
 							case MEIType.CANOpenGeneralReference:
 								if (Data?.Length > 0)
-								{
 									buffer.AddBytes(Data.Buffer);
-								}
 								break;
 							case MEIType.ReadDeviceInformation:
 								buffer.AddByte((byte)MEICategory);
@@ -324,20 +322,18 @@ namespace AMWD.Modbus.Tcp.Protocol
 
 		/// <inheritdoc/>
 		public override int GetHashCode()
-		{
-			return base.GetHashCode() ^
+			=> base.GetHashCode() ^
 				TransactionId.GetHashCode() ^
 				DeviceId.GetHashCode() ^
 				Function.GetHashCode() ^
 				Address.GetHashCode() ^
 				Count.GetHashCode() ^
 				Data.GetHashCode();
-		}
 
 		/// <inheritdoc/>
 		public override bool Equals(object obj)
 		{
-			if (!(obj is Response res))
+			if (obj is not Response res)
 				return false;
 
 			return res.TransactionId == TransactionId &&

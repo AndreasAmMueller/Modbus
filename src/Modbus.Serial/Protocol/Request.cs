@@ -125,17 +125,13 @@ namespace AMWD.Modbus.Serial.Protocol
 					buffer.AddUInt16(Address);
 					buffer.AddUInt16(Count);
 					if (Data?.Length > 0)
-					{
 						buffer.AddBytes(Data.Buffer);
-					}
 					break;
 				case FunctionCode.WriteSingleCoil:
 				case FunctionCode.WriteSingleRegister:
 					buffer.AddUInt16(Address);
 					if (Data?.Length > 0)
-					{
 						buffer.AddBytes(Data.Buffer);
-					}
 					break;
 				case FunctionCode.EncapsulatedInterface:
 					buffer.AddByte((byte)MEIType);
@@ -143,9 +139,7 @@ namespace AMWD.Modbus.Serial.Protocol
 					{
 						case MEIType.CANOpenGeneralReference:
 							if (Data?.Length > 0)
-							{
 								buffer.AddBytes(Data.Buffer);
-							}
 							break;
 						case MEIType.ReadDeviceInformation:
 							buffer.AddByte((byte)MEICategory);
@@ -224,25 +218,21 @@ namespace AMWD.Modbus.Serial.Protocol
 
 		/// <inheritdoc/>
 		public override string ToString()
-		{
-			return $"Request | Device#{DeviceId}, Fn: {Function}, Address: {Address}, Count: {Count} | {string.Join(" ", Bytes.Select(b => b.ToString("X2")).ToArray())}";
-		}
+			=> $"Request | Device#{DeviceId}, Fn: {Function}, Address: {Address}, Count: {Count} | {string.Join(" ", Bytes.Select(b => b.ToString("X2")))}";
 
 		/// <inheritdoc/>
 		public override int GetHashCode()
-		{
-			return base.GetHashCode() ^
+			=> base.GetHashCode() ^
 				DeviceId.GetHashCode() ^
 				Function.GetHashCode() ^
 				Address.GetHashCode() ^
 				Count.GetHashCode() ^
 				Bytes.GetHashCode();
-		}
 
 		/// <inheritdoc/>
 		public override bool Equals(object obj)
 		{
-			if (!(obj is Request req))
+			if (obj is not Request req)
 				return false;
 
 			return req.DeviceId == DeviceId &&

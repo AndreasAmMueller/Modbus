@@ -178,9 +178,7 @@ namespace AMWD.Modbus.Serial.Protocol
 						{
 							case MEIType.CANOpenGeneralReference:
 								if (Data?.Length > 0)
-								{
 									buffer.AddBytes(Data.Buffer);
-								}
 								break;
 							case MEIType.ReadDeviceInformation:
 								buffer.AddByte((byte)MEICategory);
@@ -296,25 +294,21 @@ namespace AMWD.Modbus.Serial.Protocol
 
 		/// <inheritdoc/>
 		public override string ToString()
-		{
-			return $"Response | Device#{DeviceId}, Fn: {Function}, Error: {IsError}, Address: {Address}, Count: {Count} | {string.Join(" ", Data.Buffer.Select(b => b.ToString("X2")).ToArray())}";
-		}
+			=> $"Response | Device#{DeviceId}, Fn: {Function}, Error: {IsError}, Address: {Address}, Count: {Count} | {string.Join(" ", Data.Buffer.Select(b => b.ToString("X2")))}";
 
 		/// <inheritdoc/>
 		public override int GetHashCode()
-		{
-			return base.GetHashCode() ^
+			=> base.GetHashCode() ^
 				DeviceId.GetHashCode() ^
 				Function.GetHashCode() ^
 				Address.GetHashCode() ^
 				Count.GetHashCode() ^
 				Data.GetHashCode();
-		}
 
 		/// <inheritdoc/>
 		public override bool Equals(object obj)
 		{
-			if (!(obj is Response res))
+			if (obj is not Response res)
 				return false;
 
 			return res.DeviceId == DeviceId &&

@@ -9,15 +9,15 @@ namespace AMWD.Modbus.Common.Util
 	/// </summary>
 	public class ModbusDevice
 	{
-		private readonly ReaderWriterLockSlim coilsLock = new ReaderWriterLockSlim();
-		private readonly ReaderWriterLockSlim discreteInputsLock = new ReaderWriterLockSlim();
-		private readonly ReaderWriterLockSlim inputRegistersLock = new ReaderWriterLockSlim();
-		private readonly ReaderWriterLockSlim holdingRegistersLock = new ReaderWriterLockSlim();
+		private readonly ReaderWriterLockSlim coilsLock = new();
+		private readonly ReaderWriterLockSlim discreteInputsLock = new();
+		private readonly ReaderWriterLockSlim inputRegistersLock = new();
+		private readonly ReaderWriterLockSlim holdingRegistersLock = new();
 
-		private readonly List<ushort> coils = new List<ushort>();
-		private readonly List<ushort> discreteInputs = new List<ushort>();
-		private readonly Dictionary<ushort, ushort> inputRegisters = new Dictionary<ushort, ushort>();
-		private readonly Dictionary<ushort, ushort> holdingRegisters = new Dictionary<ushort, ushort>();
+		private readonly List<ushort> coils = new();
+		private readonly List<ushort> discreteInputs = new();
+		private readonly Dictionary<ushort, ushort> inputRegisters = new();
+		private readonly Dictionary<ushort, ushort> holdingRegisters = new();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ModbusDevice"/> class.

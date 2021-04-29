@@ -47,13 +47,13 @@ namespace AMWD.Modbus.Serial.Client
 		private bool isStarted = false;
 		private CancellationTokenSource stopCts;
 
-		private readonly object reconnectLock = new object();
+		private readonly object reconnectLock = new();
 		private bool isReconnecting = false;
 		private bool wasConnected = false;
 		private TaskCompletionSource<bool> reconnectTcs;
 
-		private readonly object queueLock = new object();
-		private readonly List<RequestTask> sendQueue = new List<RequestTask>();
+		private readonly object queueLock = new();
+		private readonly List<RequestTask> sendQueue = new();
 
 		private CancellationTokenSource sendCts;
 		private Task sendTask = Task.CompletedTask;
@@ -184,7 +184,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// <summary>
 		/// Gets the result of the asynchronous initialization of this instance.
 		/// </summary>
-		public Task ConnectingTask { get; private set; }
+		public Task ConnectingTask { get; private set; } = Task.CompletedTask;
 
 		/// <summary>
 		/// Gets a value indicating whether the connection is established.
@@ -263,10 +263,7 @@ namespace AMWD.Modbus.Serial.Client
 		/// Returns a list of available serial ports.
 		/// </summary>
 		/// <returns></returns>
-		public static string[] AvailablePorts()
-		{
-			return SerialPort.GetPortNames();
-		}
+		public static string[] AvailablePorts() => SerialPort.GetPortNames();
 
 		#endregion Static
 

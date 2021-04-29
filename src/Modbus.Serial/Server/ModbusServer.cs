@@ -43,7 +43,7 @@ namespace AMWD.Modbus.Serial.Server
 
 		private readonly ModbusSerialRequestHandler requestHandler;
 
-		private readonly ConcurrentDictionary<byte, ModbusDevice> modbusDevices = new ConcurrentDictionary<byte, ModbusDevice>();
+		private readonly ConcurrentDictionary<byte, ModbusDevice> modbusDevices = new();
 
 		#endregion Fields
 
@@ -99,7 +99,7 @@ namespace AMWD.Modbus.Serial.Server
 		/// <summary>
 		/// Gets the result of the asynchronous initialization of this instance.
 		/// </summary>
-		public Task Initialization { get; }
+		public Task Initialization { get; } = Task.CompletedTask;
 
 		/// <summary>
 		/// Gets the serial port name.

@@ -24,14 +24,12 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="isInput">Flag to create an input register.</param>
 		/// <returns></returns>
 		public static Register Create(byte value, ushort address, bool isInput = false)
-		{
-			return new Register
+			=> new()
 			{
 				Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 				Address = address,
 				RegisterValue = value
 			};
-		}
 
 		/// <summary>
 		/// Initializes a new register from a unsigned short.
@@ -41,14 +39,11 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="isInput">Flag to create an input register.</param>
 		/// <returns></returns>
 		public static Register Create(ushort value, ushort address, bool isInput = false)
-		{
-			return new Register
+			=> new()
 			{
 				Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
-				Address = address,
-				RegisterValue = value
+				Address = address, RegisterValue = value
 			};
-		}
 
 		/// <summary>
 		/// Initializes new registers from an unsigned int.
@@ -60,9 +55,7 @@ namespace AMWD.Modbus.Common.Structures
 		public static List<Register> Create(uint value, ushort address, bool isInput = false)
 		{
 			if (address + 1 > Consts.MaxAddress)
-			{
 				throw new ArgumentOutOfRangeException(nameof(address));
-			}
 
 			var list = new List<Register>();
 			byte[] blob = BitConverter.GetBytes(value);
@@ -128,14 +121,12 @@ namespace AMWD.Modbus.Common.Structures
 		/// <param name="isInput">Flag to create an input register.</param>
 		/// <returns></returns>
 		public static Register Create(sbyte value, ushort address, bool isInput = false)
-		{
-			return new Register
+			=> new()
 			{
 				Type = isInput ? ModbusObjectType.InputRegister : ModbusObjectType.HoldingRegister,
 				Address = address,
 				RegisterValue = (ushort)value
 			};
-		}
 
 		/// <summary>
 		/// Initializes a new register from a short.

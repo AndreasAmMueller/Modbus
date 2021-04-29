@@ -20,13 +20,11 @@ namespace AMWD.Modbus.Tcp.Util
 				var attrs = (T[])fi?.GetCustomAttributes(typeof(T), inherit: false);
 				return attrs?.FirstOrDefault();
 			}
-			return default(T);
+			return default;
 		}
 
 		public static string GetDescription(this Enum enumValue)
-		{
-			return enumValue.GetAttribute<DescriptionAttribute>()?.Description ?? enumValue.ToString();
-		}
+			=> enumValue.GetAttribute<DescriptionAttribute>()?.Description ?? enumValue.ToString();
 
 		#endregion Enums
 
@@ -69,9 +67,7 @@ namespace AMWD.Modbus.Tcp.Util
 		#region Exception
 
 		public static string GetMessage(this Exception exception)
-		{
-			return exception.InnerException?.Message ?? exception.Message;
-		}
+			=> exception.InnerException?.Message ?? exception.Message;
 
 		#endregion Exception
 	}

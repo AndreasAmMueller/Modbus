@@ -13,9 +13,7 @@ namespace AMWD.Modbus.Common.Util
 		/// <param name="array">The array with data.</param>
 		/// <returns>CRC16 Checksum as byte array. [0] = low byte, [1] = high byte.</returns>
 		public static byte[] CRC16(this byte[] array)
-		{
-			return array.CRC16(0, array.Length);
-		}
+			=> array.CRC16(0, array.Length);
 
 		/// <summary>
 		/// Calculates the CRC checksum with 16 bits of an array.

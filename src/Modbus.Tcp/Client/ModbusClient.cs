@@ -26,9 +26,9 @@ namespace AMWD.Modbus.Tcp.Client
 		#region Fields
 
 		private readonly ILogger logger;
-		private readonly object reconnectLock = new object();
-		private readonly SemaphoreSlim sendLock = new SemaphoreSlim(1, 1);
-		private readonly ConcurrentDictionary<ushort, TaskCompletionSource<Response>> awaitingResponses = new ConcurrentDictionary<ushort, TaskCompletionSource<Response>>();
+		private readonly object reconnectLock = new();
+		private readonly SemaphoreSlim sendLock = new(1, 1);
+		private readonly ConcurrentDictionary<ushort, TaskCompletionSource<Response>> awaitingResponses = new();
 
 		private CancellationTokenSource stopCts;
 		private CancellationTokenSource receiveCts;

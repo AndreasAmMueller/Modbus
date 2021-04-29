@@ -8,15 +8,15 @@ namespace AMWD.Modbus.Proxy
 	{
 		#region Fields
 
-		private readonly ReaderWriterLockSlim coilsLock = new ReaderWriterLockSlim();
-		private readonly ReaderWriterLockSlim discreteInputsLock = new ReaderWriterLockSlim();
-		private readonly ReaderWriterLockSlim inputRegistersLock = new ReaderWriterLockSlim();
-		private readonly ReaderWriterLockSlim holdingRegistersLock = new ReaderWriterLockSlim();
+		private readonly ReaderWriterLockSlim coilsLock = new();
+		private readonly ReaderWriterLockSlim discreteInputsLock = new();
+		private readonly ReaderWriterLockSlim inputRegistersLock = new();
+		private readonly ReaderWriterLockSlim holdingRegistersLock = new();
 
-		private readonly Dictionary<ushort, (DateTime Timestamp, bool Value)> coils = new Dictionary<ushort, (DateTime Timestamp, bool Value)>();
-		private readonly Dictionary<ushort, (DateTime Timestamp, bool Value)> discreteInputs = new Dictionary<ushort, (DateTime Timestamp, bool Value)>();
-		private readonly Dictionary<ushort, (DateTime Timestamp, ushort Value)> inputRegisters = new Dictionary<ushort, (DateTime Timestamp, ushort Value)>();
-		private readonly Dictionary<ushort, (DateTime Timestamp, ushort Value)> holdingRegisters = new Dictionary<ushort, (DateTime Timestamp, ushort Value)>();
+		private readonly Dictionary<ushort, (DateTime Timestamp, bool Value)> coils = new();
+		private readonly Dictionary<ushort, (DateTime Timestamp, bool Value)> discreteInputs = new();
+		private readonly Dictionary<ushort, (DateTime Timestamp, ushort Value)> inputRegisters = new();
+		private readonly Dictionary<ushort, (DateTime Timestamp, ushort Value)> holdingRegisters = new();
 
 		#endregion Fields
 

@@ -78,9 +78,7 @@ namespace AMWD.Modbus.Serial.Util
 		public override void GetObjectData(SerializationInfo info, StreamingContext context)
 		{
 			if (info == null)
-			{
 				throw new ArgumentNullException(nameof(info));
-			}
 
 			info.AddValue("NativeErrorCode", NativeErrorCode);
 			base.GetObjectData(info, context);

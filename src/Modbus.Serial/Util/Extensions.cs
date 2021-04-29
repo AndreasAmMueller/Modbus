@@ -40,9 +40,7 @@ namespace AMWD.Modbus.Serial.Util
 		/// <param name="enumValue">The enum value.</param>
 		/// <returns>The description or the <see cref="Enum.ToString()"/></returns>
 		public static string GetDescription(this Enum enumValue)
-		{
-			return enumValue.GetAttribute<DescriptionAttribute>()?.Description ?? enumValue.ToString();
-		}
+			=> enumValue.GetAttribute<DescriptionAttribute>()?.Description ?? enumValue.ToString();
 
 		#endregion Enums
 
@@ -147,9 +145,7 @@ namespace AMWD.Modbus.Serial.Util
 		#region Exception
 
 		public static string GetMessage(this Exception exception)
-		{
-			return exception.InnerException?.Message ?? exception.Message;
-		}
+			=> exception.InnerException?.Message ?? exception.Message;
 
 		#endregion Exception
 	}

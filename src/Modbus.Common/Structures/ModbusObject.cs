@@ -75,8 +75,7 @@ namespace AMWD.Modbus.Common.Structures
 
 		/// <inheritdoc/>
 		public override string ToString()
-		{
-			return Type switch
+			=> Type switch
 			{
 				ModbusObjectType.Coil => $"Coil #{Address} | {BoolValue}",
 				ModbusObjectType.DiscreteInput => $"Discrete Input #{Address} | {BoolValue}",
@@ -84,12 +83,11 @@ namespace AMWD.Modbus.Common.Structures
 				ModbusObjectType.InputRegister => $"Input Register #{Address} | Hi: {HiByte:X2} Lo: {LoByte:X2} | {RegisterValue}",
 				_ => base.ToString(),
 			};
-		}
 
 		/// <inheritdoc/>
 		public override bool Equals(object obj)
 		{
-			if (!(obj is ModbusObject register))
+			if (obj is not ModbusObject register)
 				return false;
 
 			return Type == register.Type
@@ -100,12 +98,10 @@ namespace AMWD.Modbus.Common.Structures
 
 		/// <inheritdoc/>
 		public override int GetHashCode()
-		{
-			return base.GetHashCode() ^
+			=> base.GetHashCode() ^
 				Address.GetHashCode() ^
 				HiByte.GetHashCode() ^
 				LoByte.GetHashCode();
-		}
 
 		#endregion Overrides
 	}

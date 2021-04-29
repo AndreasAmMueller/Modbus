@@ -36,13 +36,13 @@ namespace AMWD.Modbus.Tcp.Server
 
 		private readonly ILogger logger;
 
-		private readonly CancellationTokenSource stopCts = new CancellationTokenSource();
+		private readonly CancellationTokenSource stopCts = new();
 		private TcpListener tcpListener;
-		private readonly ConcurrentDictionary<byte, ModbusDevice> modbusDevices = new ConcurrentDictionary<byte, ModbusDevice>();
+		private readonly ConcurrentDictionary<byte, ModbusDevice> modbusDevices = new();
 
 		private Task clientConnect;
-		private readonly ConcurrentDictionary<TcpClient, bool> tcpClients = new ConcurrentDictionary<TcpClient, bool>();
-		private readonly List<Task> clientTasks = new List<Task>();
+		private readonly ConcurrentDictionary<TcpClient, bool> tcpClients = new();
+		private readonly List<Task> clientTasks = new();
 		private readonly ModbusTcpRequestHandler requestHandler;
 
 		#endregion Fields
@@ -114,7 +114,7 @@ namespace AMWD.Modbus.Tcp.Server
 		/// <summary>
 		/// Gets the result of the asynchronous initialization of this instance.
 		/// </summary>
-		public Task Initialization { get; }
+		public Task Initialization { get; } = Task.CompletedTask;
 
 		/// <summary>
 		/// Gets the UTC timestamp of the server start.
@@ -1185,12 +1185,12 @@ namespace AMWD.Modbus.Tcp.Server
 
 			tcpListener.Stop();
 			foreach (var client in tcpClients.Keys)
-			{
 				client.Dispose();
-			}
 
 			Task.WaitAll(clientTasks.ToArray());
 			Task.WaitAll(clientConnect);
+
+			tcpClients.Clear();
 
 			IsRunning = false;
 		}
