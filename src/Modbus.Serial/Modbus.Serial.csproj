@@ -6,12 +6,12 @@
 
     <AssemblyName>AMWD.Modbus.Serial</AssemblyName>
     <RootNamespace>AMWD.Modbus.Serial</RootNamespace>
-    <NrtRevisionFormat>{semvertag:master}{!:-mod}</NrtRevisionFormat>
+    <NrtRevisionFormat>{semvertag:master}</NrtRevisionFormat>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
 
     <PackageId>AMWD.Modbus.Serial</PackageId>
     <Product>Modbus.Serial</Product>
