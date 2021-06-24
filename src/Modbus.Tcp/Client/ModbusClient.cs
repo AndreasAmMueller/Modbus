@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,6 +30,8 @@ namespace AMWD.Modbus.Tcp.Client
 		private readonly object reconnectLock = new();
 		private readonly SemaphoreSlim sendLock = new(1, 1);
 		private readonly ConcurrentDictionary<ushort, TaskCompletionSource<Response>> awaitingResponses = new();
+
+		private TimeSpan keepAlive = TimeSpan.FromSeconds(30);
 
 		private CancellationTokenSource stopCts;
 		private CancellationTokenSource receiveCts;
@@ -157,6 +160,25 @@ namespace AMWD.Modbus.Tcp.Client
 		/// Gets ors sets the receive timeout. Default: 1 second.
 		/// </summary>
 		public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromSeconds(1);
+
+		/// <summary>
+		/// WINDOWS ONLY: Gets or sets the timespan when a keep alive package should be sent.
+		/// </summary>
+		/// <remarks>
+		/// Set it to <see cref="TimeSpan.Zero"/> to disable keep-alive packages.
+		/// </remarks>
+		public TimeSpan KeepAliveTimeSpan
+		{
+			get => keepAlive;
+			set
+			{
+				if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+					logger?.LogWarning("You're setting a windows-only property. See: https://github.com/AndreasAmMueller/Modbus/issues/17#issuecomment-867412794");
+
+				keepAlive = value.TotalMilliseconds < 0 ? TimeSpan.Zero : value;
+				SetKeepAlive();
+			}
+		}
 
 		#endregion Properties
 
@@ -1112,6 +1134,7 @@ namespace AMWD.Modbus.Tcp.Client
 						var connectTask = tcpClient.ConnectAsync(address, Port);
 						if (await Task.WhenAny(connectTask, Task.Delay(timeout, stopCts.Token)) == connectTask && tcpClient.Connected)
 						{
+							SetKeepAlive();
 							stream = tcpClient.GetStream();
 
 							receiveCts = new CancellationTokenSource();
@@ -1121,7 +1144,7 @@ namespace AMWD.Modbus.Tcp.Client
 							{
 								IsConnected = true;
 								wasConnected = true;
-								
+
 								reconnectTcs?.TrySetResult(true);
 								Task.Run(() => Connected?.Invoke(this, EventArgs.Empty)).Forget();
 							}
@@ -1384,6 +1407,23 @@ namespace AMWD.Modbus.Tcp.Client
 				.OrderBy(ip => ip.AddressFamily)
 				.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork || ip.AddressFamily == AddressFamily.InterNetworkV6)
 				.FirstOrDefault() ?? throw new ArgumentException(nameof(Host), "Host could not be resolved.");
+		}
+
+		private void SetKeepAlive()
+		{
+			if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+				return;
+
+			bool isEnabled = keepAlive.TotalMilliseconds > 0;
+			uint interval = keepAlive.TotalMilliseconds > uint.MaxValue ? uint.MaxValue : (uint)keepAlive.TotalMilliseconds;
+
+			int uintSize = sizeof(uint);
+			byte[] config = new byte[uintSize * 3];
+
+			Array.Copy(BitConverter.GetBytes(isEnabled ? 1U : 0U), 0, config, 0, uintSize);
+			Array.Copy(BitConverter.GetBytes(interval), 0, config, uintSize * 1, uintSize);
+			Array.Copy(BitConverter.GetBytes(interval), 0, config, uintSize * 2, uintSize);
+			tcpClient?.Client?.IOControl(IOControlCode.KeepAliveValues, config, null);
 		}
 
 		#endregion Private methods
