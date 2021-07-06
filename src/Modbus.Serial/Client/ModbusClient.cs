@@ -253,6 +253,11 @@ namespace AMWD.Modbus.Serial.Client
 		/// </summary>
 		public TimeSpan InterRequestDelay { get; set; } = TimeSpan.Zero;
 
+		/// <summary>
+		/// Gets or sets a value indicating whether to disable the transaction id check.  NOT RECOMMENDED
+		/// </summary>
+		public bool DisableTransactionId { get; set; }
+
 		#endregion Properties
 
 		#region Public Methods

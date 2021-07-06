@@ -34,9 +34,14 @@ namespace AMWD.Modbus.Common.Interfaces
 		TimeSpan SendTimeout { get; set; }
 
 		/// <summary>
-		/// Gets ors sets the receive timeout in milliseconds. Default: 1000;
+		/// Gets or sets the receive timeout in milliseconds. Default: 1000;
 		/// </summary>
 		TimeSpan ReceiveTimeout { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating whether to disable the transaction id check.  NOT RECOMMENDED
+		/// </summary>
+		bool DisableTransactionId { get; set; }
 
 		#endregion Properties
 

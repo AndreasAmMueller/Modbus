@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,8 +27,11 @@ namespace AMWD.Modbus.Tcp.Client
 
 		private readonly ILogger logger;
 		private readonly object reconnectLock = new();
+
+		private readonly object trxIdLock = new();
 		private readonly SemaphoreSlim sendLock = new(1, 1);
-		private readonly ConcurrentDictionary<ushort, TaskCompletionSource<Response>> awaitingResponses = new();
+		private readonly SemaphoreSlim queueLock = new(1, 1);
+		private readonly List<QueuedRequest> awaitingResponses = new();
 
 		private TimeSpan keepAlive = TimeSpan.FromSeconds(30);
 
@@ -179,6 +181,11 @@ namespace AMWD.Modbus.Tcp.Client
 				SetKeepAlive();
 			}
 		}
+
+		/// <summary>
+		/// Gets or sets a value indicating whether to disable the transaction id check.  NOT RECOMMENDED
+		/// </summary>
+		public bool DisableTransactionId { get; set; }
 
 		#endregion Properties
 
@@ -1244,14 +1251,43 @@ namespace AMWD.Modbus.Tcp.Client
 							try
 							{
 								var response = new Response(responseStream.GetBuffer());
-								if (awaitingResponses.TryRemove(response.TransactionId, out var tcs))
+
+								QueuedRequest queueItem = null;
+								await queueLock.WaitAsync(receiveCts.Token);
+								try
 								{
-									logger?.LogDebug($"Received response for transaction #{response.TransactionId}.");
-									tcs.TrySetResult(response);
+									if (DisableTransactionId)
+									{
+										queueItem = awaitingResponses.FirstOrDefault();
+									}
+									else
+									{
+										queueItem = awaitingResponses
+											.Where(i => i.TransactionId == response.TransactionId)
+											.FirstOrDefault();
+										if (queueItem == null)
+											logger?.LogWarning($"Received response for transaction #{response.TransactionId}. The matching request could not be resolved.");
+									}
+
+									if (queueItem != null)
+									{
+										queueItem.Registration.Dispose();
+										awaitingResponses.Remove(queueItem);
+									}
 								}
-								else
+								finally
 								{
-									logger?.LogWarning($"Received response for NOT REQUESTED transaction #{response.TransactionId}.");
+									queueLock.Release();
+								}
+
+								if (queueItem != null)
+								{
+									if (!DisableTransactionId)
+										logger?.LogDebug($"Received response for transaction #{response.TransactionId}.");
+
+									queueItem.CancellationTokenSource.Dispose();
+									queueItem.TaskCompletionSource.TrySetResult(response);
+									queueItem.TimeoutCancellationTokenSource.Dispose();
 								}
 							}
 							catch (ArgumentException ex)
@@ -1286,10 +1322,25 @@ namespace AMWD.Modbus.Tcp.Client
 			{
 				// Receive loop stopping
 				var ex = new SocketException((int)SocketError.TimedOut);
-				foreach (var tcs in awaitingResponses.Values)
-					tcs.TrySetException(ex);
 
-				awaitingResponses.Clear();
+				await queueLock.WaitAsync(stopCts.Token);
+				try
+				{
+					foreach (var queuedItem in awaitingResponses)
+					{
+						queuedItem.Registration.Dispose();
+						queuedItem.CancellationTokenSource.Dispose();
+						queuedItem.TaskCompletionSource.TrySetCanceled();
+						queuedItem.TimeoutCancellationTokenSource.Dispose();
+					}
+					awaitingResponses.Clear();
+				}
+				catch
+				{ }
+				finally
+				{
+					queueLock.Release();
+				}
 				logger?.LogInformation("Receiving responses stopped.");
 			}
 			catch (Exception ex)
@@ -1323,54 +1374,108 @@ namespace AMWD.Modbus.Tcp.Client
 				if (stream == null)
 					throw new InvalidOperationException("Modbus client failed to open stream");
 
-				var tcs = new TaskCompletionSource<Response>();
+				using var sendCts = CancellationTokenSource.CreateLinkedTokenSource(stopCts.Token, cancellationToken);
+				
+				var queueItem = new QueuedRequest
+				{
+					TaskCompletionSource = new TaskCompletionSource<Response>()
+				};
+
+				lock (trxIdLock)
+				{
+					queueItem.TransactionId = transactionId++;
+				}
+
+				await queueLock.WaitAsync(sendCts.Token);
 				try
 				{
-					using (var cts = CancellationTokenSource.CreateLinkedTokenSource(stopCts.Token, cancellationToken))
-					{
-						await sendLock.WaitAsync(cts.Token);
-					}
+					awaitingResponses.Add(queueItem);
+					logger?.LogDebug($"Added transaction #{queueItem.TransactionId} to receive queue");
+				}
+				finally
+				{
+					queueLock.Release();
+				}
+
+				await sendLock.WaitAsync(sendCts.Token);
+				try
+				{
+					request.TransactionId = queueItem.TransactionId;
+					logger?.LogDebug($"Sending {request}");
+
+					byte[] bytes = request.Serialize();
+					using var timeCts = new CancellationTokenSource(SendTimeout);
+					using var cts = CancellationTokenSource.CreateLinkedTokenSource(stopCts.Token, timeCts.Token, cancellationToken);
 					try
 					{
-						request.TransactionId = transactionId++;
-						awaitingResponses[request.TransactionId] = tcs;
+						await stream.WriteAsync(bytes, 0, bytes.Length, cts.Token);
+						logger?.LogDebug($"Request for transaction #{request.TransactionId} sent");
 
-						logger?.LogDebug($"Sending {request}");
-						byte[] bytes = request.Serialize();
-
-						using var timeCts = new CancellationTokenSource(SendTimeout);
-						using var cts = CancellationTokenSource.CreateLinkedTokenSource(stopCts.Token, timeCts.Token, cancellationToken);
+						queueItem.TimeoutCancellationTokenSource = new CancellationTokenSource(ReceiveTimeout);
+						queueItem.CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stopCts.Token, cancellationToken, queueItem.TimeoutCancellationTokenSource.Token);
+						queueItem.Registration = queueItem.CancellationTokenSource.Token.Register(() => RemoveQueuedItem(queueItem));
+					}
+					catch (OperationCanceledException) when (timeCts.IsCancellationRequested)
+					{
+						queueItem.TaskCompletionSource.TrySetCanceled();
+						await queueLock.WaitAsync(stopCts.Token);
 						try
 						{
-							await stream.WriteAsync(bytes, 0, bytes.Length, cts.Token);
-							logger?.LogDebug($"Request for transaction #{request.TransactionId} sent.");
+							awaitingResponses.Remove(queueItem);
 						}
-						catch (OperationCanceledException) when (timeCts.IsCancellationRequested)
+						finally
 						{
-							tcs.TrySetCanceled();
+							queueLock.Release();
 						}
 					}
-					finally
-					{
-						sendLock.Release();
-					}
-				}
-				catch (OperationCanceledException) when (stopCts.IsCancellationRequested || cancellationToken.IsCancellationRequested)
-				{
-					tcs.TrySetCanceled();
 				}
 				catch (Exception ex)
 				{
 					logger?.LogError(ex, $"Unexpected error ({ex.GetType().Name}) on send: {ex.GetMessage()}");
-					tcs.TrySetException(ex);
+					queueItem.TaskCompletionSource.TrySetException(ex);
+					await queueLock.WaitAsync(stopCts.Token);
+					try
+					{
+						awaitingResponses.Remove(queueItem);
+					}
+					finally
+					{
+						queueLock.Release();
+					}
+				}
+				finally
+				{
+					sendLock.Release();
 				}
 
-				return await tcs.Task;
+				return await queueItem.TaskCompletionSource.Task;
 			}
 			finally
 			{
 				logger?.LogTrace("ModbusClient.SendRequest leave");
 			}
+		}
+
+		private async void RemoveQueuedItem(QueuedRequest item)
+		{
+			try
+			{
+				await queueLock.WaitAsync(stopCts.Token);
+				try
+				{
+					awaitingResponses.Remove(item);
+					item.CancellationTokenSource?.Dispose();
+					item.Registration.Dispose();
+					item.TaskCompletionSource?.TrySetCanceled();
+					item.TimeoutCancellationTokenSource?.Dispose();
+				}
+				finally
+				{
+					queueLock.Release();
+				}
+			}
+			catch
+			{ }
 		}
 
 		private Task GetReconnectTask(bool isAlreadyLocked = false)
