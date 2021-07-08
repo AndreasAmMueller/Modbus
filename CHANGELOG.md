@@ -4,6 +4,18 @@
 
 ----
 
+## 1.2.0 (2021-07-08)
+
+### Added (1 change)
+
+- New property to disable the transaction id check (not recommended but requested)
+
+### Fixed (1 change)
+
+- Optimized an issue with non-responding Modbus TCP servers.
+
+
+
 ## 1.1.0 (2021-04-30)
 
 ### Added (1 change)
