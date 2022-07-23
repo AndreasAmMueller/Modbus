@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30711.63
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0A7CE6D2-374F-4EBC-BFD3-DE2587A6701C}"
 	ProjectSection(SolutionItems) = preProject
@@ -28,6 +28,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "test\UnitTests\UnitTests.csproj", "{33EB4212-B2B4-4CFA-A374-1DD9D2675822}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Modbus.Proxy", "src\Modbus.Proxy\Modbus.Proxy.csproj", "{F2428E7C-FB89-48F2-8E4B-85F8E44F2319}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Modbus.SerialOverTCP", "src\Modbus.SerialOverTCP\Modbus.SerialOverTCP.csproj", "{F6E94BC0-9922-4732-9C93-DEE96AD286CA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -59,6 +61,10 @@ Global
 		{F2428E7C-FB89-48F2-8E4B-85F8E44F2319}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2428E7C-FB89-48F2-8E4B-85F8E44F2319}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2428E7C-FB89-48F2-8E4B-85F8E44F2319}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6E94BC0-9922-4732-9C93-DEE96AD286CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6E94BC0-9922-4732-9C93-DEE96AD286CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6E94BC0-9922-4732-9C93-DEE96AD286CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6E94BC0-9922-4732-9C93-DEE96AD286CA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -70,6 +76,7 @@ Global
 		{BF60D1D4-3767-4EC4-AC53-C1772958BE14} = {D4E6650D-2156-4660-B531-0B2AAD475BA1}
 		{33EB4212-B2B4-4CFA-A374-1DD9D2675822} = {3B6130C0-9168-4208-A677-29DD20301220}
 		{F2428E7C-FB89-48F2-8E4B-85F8E44F2319} = {D4E6650D-2156-4660-B531-0B2AAD475BA1}
+		{F6E94BC0-9922-4732-9C93-DEE96AD286CA} = {D4E6650D-2156-4660-B531-0B2AAD475BA1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FC7F1581-0E3C-4E35-9DBC-CC7952DE19C1}

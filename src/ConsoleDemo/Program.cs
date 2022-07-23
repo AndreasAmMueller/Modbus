@@ -17,7 +17,7 @@ using SerialClient = AMWD.Modbus.Serial.Client.ModbusClient;
 using SerialServer = AMWD.Modbus.Serial.Server.ModbusServer;
 using TcpClient = AMWD.Modbus.Tcp.Client.ModbusClient;
 using TcpServer = AMWD.Modbus.Tcp.Server.ModbusServer;
-
+using SerialOverTcpClient = AMWD.Modbus.SerialOverTCP.Client.ModbusClient;
 namespace ConsoleDemo
 {
 	internal class Program
@@ -67,7 +67,7 @@ namespace ConsoleDemo
 
 		private static async Task<int> RunClientAsync(ILogger logger, CancellationToken cancellationToken)
 		{
-			Console.Write("Connection Type [1] TCP, [2] RS485: ");
+			Console.Write("Connection Type [1] TCP, [2] RS485 [3] DTUoverTCP: ");
 			int cType = Convert.ToInt32(Console.ReadLine().Trim());
 
 			IModbusClient client = null;
@@ -75,14 +75,21 @@ namespace ConsoleDemo
 			{
 				switch (cType)
 				{
+					case 3:
 					case 1:
 						{
 							Console.Write("Hostname: ");
 							string host = Console.ReadLine().Trim();
 							Console.Write("Port: ");
 							int port = Convert.ToInt32(Console.ReadLine().Trim());
-
-							client = new TcpClient(host, port, logger);
+							if (cType == 3)
+							{
+								client = new SerialOverTcpClient(host, port, logger);
+							}
+							else
+							{
+								client = new TcpClient(host, port, logger);
+							}
 						}
 						break;
 					case 2:

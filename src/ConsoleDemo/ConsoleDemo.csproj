@@ -10,6 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Modbus.SerialOverTCP\Modbus.SerialOverTCP.csproj" />
     <ProjectReference Include="..\Modbus.Serial\Modbus.Serial.csproj" />
     <ProjectReference Include="..\Modbus.Tcp\Modbus.Tcp.csproj" />
   </ItemGroup>
