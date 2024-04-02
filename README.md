@@ -1,14 +1,10 @@
+> **Impotant Information!**    
+> As this implementation has way too many pitfalls, I decided to re-write the whole library.    
+> You can find the new implementation here: https://github.com/AM-WD/AMWD.Protocols.Modbus
+
 # Modbus
 
 Implements the Modbus communication protocol, written as a .NET Standard 2.0 library.
-
-| Package         | NuGet                                                                                                                                                    |
-|-----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Modbus.Common   | [![NuGet](https://img.shields.io/nuget/v/AMWD.Modbus.Common.svg?style=flat-square)](https://www.nuget.org/packages/AMWD.Modbus.Common)                   |
-| Modbus.Tcp      | [![NuGet](https://img.shields.io/nuget/v/AMWD.Modbus.Tcp.svg?style=flat-square)](https://www.nuget.org/packages/AMWD.Modbus.Tcp)                         |
-| Modbus.Serial   | [![NuGet](https://img.shields.io/nuget/v/AMWD.Modbus.Serial.svg?style=flat-square)](https://www.nuget.org/packages/AMWD.Modbus.Serial)                   |
-| Modbus.Proxy    | [![NuGet](https://img.shields.io/nuget/v/AMWD.Modbus.Proxy.svg?style=flat-square)](https://www.nuget.org/packages/AMWD.Modbus.Proxy)                     |
-| Build Artifacts | [![pipeline status](https://git.am-wd.de/AM.WD/Modbus/badges/master/pipeline.svg?style=flat-square)](https://git.am-wd.de/AM.WD/Modbus/-/commits/master) |
 
 
 
